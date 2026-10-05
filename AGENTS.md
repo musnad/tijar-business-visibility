@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep public marketing pages as separate TanStack routes under the shared site shell so every page remains directly linkable and SEO-specific.
+- Keep TIJAR forms client-only prototypes until persistent storage is explicitly requested, so the interface never implies data was saved when it was not.
