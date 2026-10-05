@@ -1,24 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, BookOpen, Calculator, Eye, Scissors, ShoppingBasket, Store, Utensils, Wrench, BadgeCheck, Lightbulb, MapPinOff, NotebookPen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BusinessProfileCard, FeatureCard, FinalCta, LessonCard, PhoneMockup, SectionIntro } from "@/components/tijar-ui";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
-export const Route = createFileRoute("/")({
-  component: Index,
-});
+export const Route = createFileRoute("/")({ head: () => ({ meta: [{ title: "TIJAR — Making Every Business Visible" },{ name: "description", content: "TIJAR helps everyday African businesses record, learn, verify and become visible online." },{ property: "og:title", content: "TIJAR — Making Every Business Visible" },{ property: "og:description", content: "Learn, run, verify and grow your business with TIJAR." },{ property: "og:type", content: "website" },{ name: "twitter:card", content: "summary_large_image" }] }), component: Home });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
+const businesses = [[ShoppingBasket,"Food & Provisions"],[Scissors,"Fashion & Tailoring"],[Utensils,"Restaurants"],[Eye,"Beauty"],[Store,"Electronics"],[Wrench,"Auto & Mechanics"],[Calculator,"Building Materials"],[Store,"General Retail"],[Lightbulb,"Artisans"],[Store,"Other Businesses"]] as const;
+function Home() { return <>
+  <section className="overflow-hidden"><div className="mx-auto grid max-w-7xl gap-14 px-5 py-14 sm:py-20 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:px-8"><div><p className="text-sm font-extrabold uppercase tracking-[0.14em] text-primary">Making Every Business Visible.</p><h1 className="mt-5 max-w-3xl text-5xl font-extrabold leading-[1.02] sm:text-6xl lg:text-7xl">Your business deserves to be seen.</h1><p className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">TIJAR helps everyday business owners record their business, learn practical skills, build a verified digital identity and become visible online.</p><div className="mt-8 flex flex-wrap gap-3"><Button asChild size="lg" className="h-12"><Link to="/get-started">Get Started <ArrowRight/></Link></Button><Button asChild variant="outline" size="lg" className="h-12"><Link to="/how-it-works">Learn How It Works</Link></Button></div><div className="mt-10 flex items-center gap-5 border-t border-border pt-6"><span className="font-extrabold text-primary">Learn.</span><span className="font-extrabold">Run.</span><span className="font-extrabold text-secondary-foreground">Grow.</span></div></div><PhoneMockup /></div></section>
+  <section className="bg-muted"><div className="mx-auto max-w-7xl px-5 py-18 sm:py-24 lg:px-8"><SectionIntro title="Your business is real. But is it visible?" copy="Millions of people run successful businesses every day without proper business records, a digital presence or a verified business identity. Their businesses exist physically, but online they may be almost invisible. TIJAR helps change that."/><div className="mt-10 grid gap-4 md:grid-cols-3"><FeatureCard icon={NotebookPen} title="No Records" copy="Important business information is often kept in notebooks or memory."/><FeatureCard icon={MapPinOff} title="No Digital Presence" copy="Customers may not know where to find the business."/><FeatureCard icon={Lightbulb} title="Limited Opportunities" copy="Without reliable business information, it can be harder to access new opportunities."/></div></div></section>
+  <section><div className="mx-auto max-w-7xl px-5 py-18 sm:py-24 lg:px-8"><SectionIntro title="Everything you need to build a better business."/><div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4"><FeatureCard number="01" title="Record" copy="Keep track of what happens. Record sales, expenses and customer debts simply."/><FeatureCard number="02" title="Understand" copy="See sales, expenses and other simple business insights."/><FeatureCard number="03" title="Learn" copy="Short, interactive lessons designed around real business situations."/><FeatureCard number="04" title="Get Verified" copy="Complete KYC and create a professional TIJAR business profile."/></div></div></section>
+  <section className="bg-primary text-primary-foreground"><div className="mx-auto grid max-w-7xl gap-12 px-5 py-18 sm:py-24 lg:grid-cols-2 lg:items-center lg:px-8"><div><p className="text-sm font-extrabold uppercase tracking-[0.14em] text-secondary">Learn with TIJAR</p><h2 className="mt-4 text-4xl font-extrabold leading-tight sm:text-5xl">Learn business like you learn a language.</h2><p className="mt-5 text-lg leading-8 text-primary-foreground/75">Short lessons. Simple questions. Real business situations. Learn a little every day.</p><Button asChild variant="secondary" size="lg" className="mt-8 h-12"><Link to="/learn">Explore TIJAR Learning <ArrowRight/></Link></Button></div><div className="text-foreground"><LessonCard/></div></div></section>
+  <section><div className="mx-auto grid max-w-7xl gap-12 px-5 py-18 sm:py-24 lg:grid-cols-2 lg:items-center lg:px-8"><div><SectionIntro eyebrow="Business Visibility" title="Turn your business into a digital business." copy="Once a business completes verification, TIJAR can create a professional public business profile that makes it easier for customers to discover and contact the business."/><p className="mt-6 text-xl font-bold">Your shop may be in the market. Your business can also be online.</p><Button asChild size="lg" className="mt-8 h-12"><Link to="/get-started">Create Your Business Profile</Link></Button></div><BusinessProfileCard/></div></section>
+  <section className="bg-muted"><div className="mx-auto max-w-7xl px-5 py-18 sm:py-24 lg:px-8"><SectionIntro align="center" title="Start in three simple steps."/><div className="relative mt-12 grid gap-5 md:grid-cols-3">{[["01","Create your business","Tell us what you do."],["02","Record and learn","Keep simple records and learn practical business skills."],["03","Get verified and grow","Build your digital business identity and become easier to discover."]].map(([n,t,c]) => <div key={n} className="relative rounded-lg border border-border bg-card p-6"><span className="text-sm font-extrabold text-primary">{n}</span><h3 className="mt-7 text-xl font-bold">{t}</h3><p className="mt-3 leading-7 text-muted-foreground">{c}</p></div>)}</div></div></section>
+  <section><div className="mx-auto max-w-7xl px-5 py-18 sm:py-24 lg:px-8"><SectionIntro align="center" title="Built for the businesses that keep communities moving."/><div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">{businesses.map(([Icon,label]) => <div key={label} className="flex min-h-28 flex-col items-center justify-center rounded-lg border border-border bg-card p-4 text-center"><Icon className="size-6 text-primary"/><span className="mt-3 text-sm font-bold">{label}</span></div>)}</div></div></section>
+  <section className="border-y border-border bg-card"><div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 lg:grid-cols-[1fr_auto] lg:items-center lg:px-8"><SectionIntro title="Business education in your language." copy="TIJAR is designed to make business knowledge accessible — not complicated."/><div className="flex max-w-lg flex-wrap gap-3">{["English","Hausa","Yoruba","Igbo"].map((language)=><span key={language} className="rounded-full bg-accent px-5 py-3 font-bold text-accent-foreground">{language}</span>)}<span className="px-2 py-3 text-sm text-muted-foreground">More African languages are planned.</span></div></div></section>
+  <FinalCta/>
+</>; }
