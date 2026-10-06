@@ -167,7 +167,7 @@ export function AppDeviceShowcase({ className }: { className?: string }) {
         aria-hidden
       />
       <div className="relative flex items-end justify-center gap-3 sm:gap-6">
-        <AndroidDevice className="mb-2 scale-[0.92] opacity-95 sm:mb-4" />
+        <AndroidDevice className="mb-2 hidden scale-[0.92] opacity-95 sm:mb-4 sm:block" />
         <IosDevice className="z-10 sm:-translate-y-2" />
       </div>
     </div>

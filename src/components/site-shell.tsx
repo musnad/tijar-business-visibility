@@ -31,7 +31,6 @@ export function SiteHeader() {
       [
         { labelKey: "nav.howItWorks", to: "/how-it-works" as const },
         { labelKey: "nav.learn", to: "/learn" as const },
-        { labelKey: "nav.businessVisibility", to: "/business-visibility" as const },
         { labelKey: "nav.about", to: "/about" as const },
       ] as const,
     [],
@@ -45,7 +44,7 @@ export function SiteHeader() {
       >
         {t("nav.skipToContent")}
       </a>
-      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-5 lg:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 lg:px-6">
         <BrandMark />
         <nav
           aria-label={t("nav.mainNavigation")}
@@ -61,8 +60,8 @@ export function SiteHeader() {
               {t(link.labelKey)}
             </Link>
           ))}
-          <SitePreferencesControls />
-          <Button asChild size="lg">
+          <SitePreferencesControls compact />
+          <Button asChild>
             <Link to="/" hash="download-app">
               {t("nav.downloadApp")}
             </Link>

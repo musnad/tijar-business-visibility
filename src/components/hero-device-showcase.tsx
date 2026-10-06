@@ -24,12 +24,12 @@ export function HeroAnimatedDeviceShowcase({ className }: { className?: string }
 
   return (
     <div className={cn("hero-device-stage relative mx-auto w-full max-w-[420px]", className)}>
-      <div className="hero-device-orbit pointer-events-none" aria-hidden />
-      <div className="hero-device-orbit hero-device-orbit--delayed pointer-events-none" aria-hidden />
-      <div className="hero-device-ring pointer-events-none" aria-hidden />
+      <div className="hero-device-orbit pointer-events-none hidden sm:block" aria-hidden />
+      <div className="hero-device-orbit hero-device-orbit--delayed pointer-events-none hidden sm:block" aria-hidden />
+      <div className="hero-device-ring pointer-events-none hidden sm:block" aria-hidden />
 
       <div className="relative flex items-end justify-center gap-2 sm:gap-4">
-        <div className="hero-device-android relative w-[38%] max-w-[168px] pb-6 sm:pb-8">
+        <div className="hero-device-android relative hidden w-[38%] max-w-[168px] pb-6 sm:block sm:pb-8">
           <div className="hero-device-frame hero-device-frame--android overflow-hidden rounded-[1.65rem] border-2 border-[#2b2b2b] bg-[#2b2b2b] p-[5px] shadow-xl">
             <div className="relative aspect-[390/844] overflow-hidden rounded-[1.35rem] bg-white">
               <div
@@ -41,7 +41,7 @@ export function HeroAnimatedDeviceShowcase({ className }: { className?: string }
           </div>
         </div>
 
-        <div className="hero-device-iphone relative z-10 w-[44%] max-w-[200px] sm:max-w-[220px]">
+        <div className="hero-device-iphone relative z-10 w-full max-w-[220px] sm:w-[44%] sm:max-w-[220px]">
           <div className="hero-device-frame hero-device-frame--ios overflow-hidden rounded-[2rem] border-[3px] border-[#141414] bg-[#141414] p-[6px] shadow-2xl">
             <div className="relative aspect-[390/844] overflow-hidden rounded-[1.65rem] bg-white">
               <div

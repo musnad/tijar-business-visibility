@@ -12,7 +12,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function LanguageSelect({ className }: { className?: string }) {
+export function LanguageSelect({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   const { locale, setLocale, t } = useSitePreferences();
 
   return (
@@ -21,7 +27,14 @@ export function LanguageSelect({ className }: { className?: string }) {
         {t("nav.language")}
       </label>
       <Select value={locale} onValueChange={(value) => setLocale(value as Locale)}>
-        <SelectTrigger id="site-language" className="h-10 min-w-[9.5rem] bg-background">
+        <SelectTrigger
+          id="site-language"
+          className={
+            compact
+              ? "h-9 w-[7.25rem] bg-background px-2 text-sm"
+              : "h-10 min-w-[9.5rem] bg-background"
+          }
+        >
           <SelectValue placeholder={t("nav.language")} />
         </SelectTrigger>
         <SelectContent>
@@ -55,11 +68,17 @@ export function ThemeToggle({ className }: { className?: string }) {
   );
 }
 
-export function SitePreferencesControls({ stacked = false }: { stacked?: boolean }) {
+export function SitePreferencesControls({
+  stacked = false,
+  compact = false,
+}: {
+  stacked?: boolean;
+  compact?: boolean;
+}) {
   return (
     <div className={stacked ? "flex flex-col gap-3" : "flex flex-wrap items-center gap-2"}>
-      <LanguageSelect className={stacked ? "w-full" : undefined} />
-      <ThemeToggle />
+      <LanguageSelect compact={compact} className={stacked ? "w-full" : undefined} />
+      <ThemeToggle className={compact ? "size-9" : undefined} />
     </div>
   );
 }

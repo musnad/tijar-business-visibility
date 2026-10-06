@@ -320,8 +320,8 @@ export function AchievementStrip() {
 
 export function LandingDownloadCta() {
   return (
-    <section id="download-app" className="scroll-mt-24 px-5 py-16 sm:py-24">
-      <div className="mx-auto max-w-6xl overflow-hidden rounded-[1.5rem] bg-foreground px-6 py-12 text-background sm:px-10 sm:py-16 lg:px-12 lg:py-20">
+    <section id="download-app" className="scroll-mt-20 px-4 py-14 sm:px-5 sm:py-20">
+      <div className="mx-auto max-w-6xl overflow-hidden rounded-[1.75rem] bg-foreground px-5 py-10 text-background sm:px-10 sm:py-14 lg:px-12">
         <AppDownloadShowcase theme="dark" />
       </div>
     </section>
