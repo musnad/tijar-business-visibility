@@ -1,5 +1,38 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ContactForm } from "@/components/forms";
 import { PageHero } from "@/components/tijar-ui";
-export const Route=createFileRoute("/contact")({head:()=>({meta:[{title:"Contact TIJAR"},{name:"description",content:"Contact the TIJAR team about the platform, partnerships or general questions."},{property:"og:title",content:"Contact TIJAR"},{property:"og:description",content:"Get in touch with the team building TIJAR."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary_large_image"}]}),component:Page});
-function Page(){return <><PageHero eyebrow="Contact" title="We’d like to hear from you." copy="Have a question about TIJAR or want to explore working together? Send a short message."/><section><div className="mx-auto max-w-2xl px-5 py-24 sm:py-32"><ContactForm/></div></section></>}
+import { useTranslation } from "@/lib/i18n/context";
+import { enMessages } from "@/lib/i18n/messages/en";
+
+export const Route = createFileRoute("/contact")({
+  head: () => ({
+    meta: [
+      { title: enMessages.meta.contact.title },
+      { name: "description", content: enMessages.meta.contact.description },
+      { property: "og:title", content: enMessages.meta.contact.ogTitle },
+      { property: "og:description", content: enMessages.meta.contact.ogDescription },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: Page,
+});
+
+function Page() {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <PageHero
+        eyebrow={t("pages.contact.heroEyebrow")}
+        title={t("pages.contact.heroTitle")}
+        copy={t("pages.contact.heroCopy")}
+      />
+      <section>
+        <div className="mx-auto max-w-2xl px-5 py-24 sm:py-32">
+          <ContactForm />
+        </div>
+      </section>
+    </>
+  );
+}

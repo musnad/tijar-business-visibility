@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as BusinessVisibilityRouteImport } from './routes/business-visibility'
 import { Route as ContactRouteImport } from './routes/contact'
-import { Route as GetStartedRouteImport } from './routes/get-started'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -37,11 +36,6 @@ const BusinessVisibilityRoute = BusinessVisibilityRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GetStartedRoute = GetStartedRouteImport.update({
-  id: '/get-started',
-  path: '/get-started',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -70,7 +64,6 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
-  '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/privacy': typeof PrivacyRoute
@@ -81,7 +74,6 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
-  '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/privacy': typeof PrivacyRoute
@@ -93,7 +85,6 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
-  '/get-started': typeof GetStartedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/privacy': typeof PrivacyRoute
@@ -106,7 +97,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/business-visibility'
     | '/contact'
-    | '/get-started'
     | '/how-it-works'
     | '/learn'
     | '/privacy'
@@ -117,7 +107,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/business-visibility'
     | '/contact'
-    | '/get-started'
     | '/how-it-works'
     | '/learn'
     | '/privacy'
@@ -128,7 +117,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/business-visibility'
     | '/contact'
-    | '/get-started'
     | '/how-it-works'
     | '/learn'
     | '/privacy'
@@ -140,7 +128,6 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   BusinessVisibilityRoute: typeof BusinessVisibilityRoute
   ContactRoute: typeof ContactRoute
-  GetStartedRoute: typeof GetStartedRoute
   HowItWorksRoute: typeof HowItWorksRoute
   LearnRoute: typeof LearnRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -175,13 +162,6 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/get-started': {
-      id: '/get-started'
-      path: '/get-started'
-      fullPath: '/get-started'
-      preLoaderRoute: typeof GetStartedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works': {
@@ -220,7 +200,6 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   BusinessVisibilityRoute: BusinessVisibilityRoute,
   ContactRoute: ContactRoute,
-  GetStartedRoute: GetStartedRoute,
   HowItWorksRoute: HowItWorksRoute,
   LearnRoute: LearnRoute,
   PrivacyRoute: PrivacyRoute,

@@ -1,5 +1,83 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Eye, HeartHandshake, Lightbulb, Users } from "lucide-react";
 import { FeatureCard, FinalCta, PageHero, SectionIntro } from "@/components/tijar-ui";
-export const Route=createFileRoute("/about")({head:()=>({meta:[{title:"About TIJAR — Making Every Business Visible"},{name:"description",content:"TIJAR is built for everyday African business owners who deserve simple tools, useful knowledge and digital visibility."},{property:"og:title",content:"About TIJAR"},{property:"og:description",content:"A simple, human platform for the businesses that keep communities moving."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary_large_image"}]}),component:Page});
-function Page(){return <><PageHero eyebrow="About TIJAR" title="Built for everyday businesses with big potential." copy="TIJAR is a digital platform for the market traders, food sellers, tailors, artisans, retailers, mechanics and small shops that keep communities moving."><div className="grid grid-cols-2 gap-4"><div className="rounded-[1.25rem] bg-primary p-6 text-primary-foreground"><Users className="size-8"/><p className="mt-12 text-xl font-extrabold">For everyday business owners</p></div><div className="mt-10 rounded-[1.25rem] bg-secondary p-6 text-secondary-foreground"><Eye className="size-8"/><p className="mt-12 text-xl font-extrabold">Built for visibility</p></div></div></PageHero><section><div className="mx-auto max-w-6xl px-5 py-24 sm:py-32 lg:px-6"><SectionIntro title="Simple tools. Clear knowledge. A stronger identity." copy="Many business owners are already doing the hard work. TIJAR is being built to make the next steps easier to understand and easier to take."/><div className="mt-12 grid gap-4 md:grid-cols-3"><FeatureCard icon={HeartHandshake} title="Human" copy="Designed around real business owners and familiar daily activities."/><FeatureCard icon={Lightbulb} title="Clear" copy="Simple words, visual choices and useful information without jargon."/><FeatureCard icon={Eye} title="Visible" copy="A path from daily activity to a trusted identity customers can discover."/></div></div></section><section className=""><div className="mx-auto max-w-4xl px-5 py-18 text-center sm:py-24"><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-muted-foreground">Our philosophy</p><h2 className="mt-5 text-5xl font-extrabold sm:text-6xl">Learn. Run. Grow.</h2><p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">Business knowledge should be accessible. Business records should be simple. Every real business should have a chance to be visible.</p></div></section><FinalCta/></>}
+import { useTranslation } from "@/lib/i18n/context";
+import { enMessages } from "@/lib/i18n/messages/en";
+
+export const Route = createFileRoute("/about")({
+  head: () => ({
+    meta: [
+      { title: enMessages.meta.about.title },
+      { name: "description", content: enMessages.meta.about.description },
+      { property: "og:title", content: enMessages.meta.about.ogTitle },
+      { property: "og:description", content: enMessages.meta.about.ogDescription },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: Page,
+});
+
+function Page() {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <PageHero
+        eyebrow={t("pages.about.heroEyebrow")}
+        title={t("pages.about.heroTitle")}
+        copy={t("pages.about.heroCopy")}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-[1.25rem] bg-primary p-6 text-primary-foreground">
+            <Users className="size-8" />
+            <p className="mt-12 text-xl font-extrabold">{t("pages.about.highlightOwners")}</p>
+          </div>
+          <div className="mt-10 rounded-[1.25rem] bg-secondary p-6 text-secondary-foreground">
+            <Eye className="size-8" />
+            <p className="mt-12 text-xl font-extrabold">{t("pages.about.highlightVisibility")}</p>
+          </div>
+        </div>
+      </PageHero>
+      <section>
+        <div className="mx-auto max-w-6xl px-5 py-24 sm:py-32 lg:px-6">
+          <SectionIntro
+            title={t("pages.about.introTitle")}
+            copy={t("pages.about.introCopy")}
+          />
+          <div className="mt-12 grid gap-4 md:grid-cols-3">
+            <FeatureCard
+              icon={HeartHandshake}
+              title={t("pages.about.values.human.title")}
+              copy={t("pages.about.values.human.copy")}
+            />
+            <FeatureCard
+              icon={Lightbulb}
+              title={t("pages.about.values.clear.title")}
+              copy={t("pages.about.values.clear.copy")}
+            />
+            <FeatureCard
+              icon={Eye}
+              title={t("pages.about.values.visible.title")}
+              copy={t("pages.about.values.visible.copy")}
+            />
+          </div>
+        </div>
+      </section>
+      <section>
+        <div className="mx-auto max-w-4xl px-5 py-18 text-center sm:py-24">
+          <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-muted-foreground">
+            {t("pages.about.philosophyEyebrow")}
+          </p>
+          <h2 className="mt-5 text-5xl font-extrabold sm:text-6xl">
+            {t("pages.about.philosophyTitle")}
+          </h2>
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
+            {t("pages.about.philosophyCopy")}
+          </p>
+        </div>
+      </section>
+      <FinalCta />
+    </>
+  );
+}

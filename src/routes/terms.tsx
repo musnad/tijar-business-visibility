@@ -1,4 +1,57 @@
 import { createFileRoute } from "@tanstack/react-router";
-export const Route=createFileRoute("/terms")({head:()=>({meta:[{title:"Terms — TIJAR"},{name:"description",content:"Read the terms for using the TIJAR website preview."},{property:"og:title",content:"TIJAR Terms"},{property:"og:description",content:"Terms for the TIJAR website preview."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary_large_image"}]}),component:Page});
-function Page(){return <article className="mx-auto max-w-3xl px-5 py-16 sm:py-24"><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-muted-foreground">Legal</p><h1 className="mt-4 text-4xl font-extrabold sm:text-5xl">Terms</h1><p className="mt-5 text-muted-foreground">Last updated: October 5, 2026</p><div className="mt-12 space-y-10 leading-8 text-muted-foreground"><Term title="Website preview">This website describes TIJAR’s intended direction. Product screens, lessons and business profiles shown here are examples and may change before release.</Term><Term title="No financial promise">TIJAR is not presented as a lender, loan app or financial institution. Nothing on this website promises financing, customer growth or search ranking.</Term><Term title="Acceptable use">Do not attempt to disrupt the website, misuse its forms or use its content in a way that violates applicable law or another person’s rights.</Term><Term title="Information and availability">We aim to keep information clear and accurate, but features described here may not yet be available. The Download TIJAR action is marked as coming soon.</Term><Term title="Changes">These terms may be updated as TIJAR develops. A complete set of service terms and contact details will be provided before the platform begins serving users.</Term></div></article>}
-function Term({title,children}:{title:string;children:React.ReactNode}){return <section><h2 className="text-2xl font-extrabold text-foreground">{title}</h2><p className="mt-3">{children}</p></section>}
+import { useTranslation } from "@/lib/i18n/context";
+import { enMessages } from "@/lib/i18n/messages/en";
+
+export const Route = createFileRoute("/terms")({
+  head: () => ({
+    meta: [
+      { title: enMessages.meta.terms.title },
+      { name: "description", content: enMessages.meta.terms.description },
+      { property: "og:title", content: enMessages.meta.terms.ogTitle },
+      { property: "og:description", content: enMessages.meta.terms.ogDescription },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: Page,
+});
+
+const sectionKeys = [
+  "preview",
+  "noFinancialPromise",
+  "acceptableUse",
+  "information",
+  "changes",
+] as const;
+
+function Page() {
+  const { t } = useTranslation();
+
+  return (
+    <article className="mx-auto max-w-3xl px-5 py-16 sm:py-24">
+      <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-muted-foreground">
+        {t("pages.terms.eyebrow")}
+      </p>
+      <h1 className="mt-4 text-4xl font-extrabold sm:text-5xl">{t("pages.terms.title")}</h1>
+      <p className="mt-5 text-muted-foreground">{t("pages.terms.lastUpdated")}</p>
+      <div className="mt-12 space-y-10 leading-8 text-muted-foreground">
+        {sectionKeys.map((key) => (
+          <TermSection
+            key={key}
+            title={t(`pages.terms.sections.${key}.title`)}
+            body={t(`pages.terms.sections.${key}.body`)}
+          />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function TermSection({ title, body }: { title: string; body: string }) {
+  return (
+    <section>
+      <h2 className="text-2xl font-extrabold text-foreground">{title}</h2>
+      <p className="mt-3">{body}</p>
+    </section>
+  );
+}

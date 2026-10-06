@@ -610,7 +610,7 @@ The website should be ready for integration with a real app later.
 
 TECHNICAL REQUIREMENTS
 
-Build the site using a modern production-ready React/Next.js-style architecture supported by Lovable.
+Build the site using a modern production-ready React stack (TanStack Start + Vite).
 
 Requirements:
 
@@ -677,16 +677,6 @@ The final visual feeling should be:
 Simple. Trustworthy. Human. African. Scalable.
 
 Do not add features or sections that are not requested above.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/646cb7fa-9f14-419a-8354-737af988738e).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 

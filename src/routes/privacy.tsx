@@ -1,4 +1,58 @@
 import { createFileRoute } from "@tanstack/react-router";
-export const Route=createFileRoute("/privacy")({head:()=>({meta:[{title:"Privacy Policy — TIJAR"},{name:"description",content:"Read how TIJAR plans to handle personal and business information."},{property:"og:title",content:"TIJAR Privacy Policy"},{property:"og:description",content:"How TIJAR plans to respect and protect your information."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary_large_image"}]}),component:Page});
-function Page(){return <article className="mx-auto max-w-3xl px-5 py-16 sm:py-24"><p className="text-xs font-extrabold uppercase tracking-[0.16em] text-muted-foreground">Legal</p><h1 className="mt-4 text-4xl font-extrabold sm:text-5xl">Privacy Policy</h1><p className="mt-5 text-muted-foreground">Last updated: October 5, 2026</p><div className="mt-12 space-y-10 leading-8 text-muted-foreground"><Policy title="Our approach">TIJAR is being built to help everyday businesses learn, keep records and build a digital identity. We aim to collect only the information needed to provide these services.</Policy><Policy title="Information you may provide">When TIJAR launches, this may include your name, contact details, business information, business records, verification information and information you choose to add to a public business profile.</Policy><Policy title="How information may be used">Information may be used to provide TIJAR services, improve the product, support verification, protect accounts, communicate with users and meet legal obligations.</Policy><Policy title="Public business profiles">Only information intended for a business profile should be made public. Business owners should be able to understand which details are public before publishing them.</Policy><Policy title="Your choices">You should be able to review, correct or request deletion of eligible personal information. Contact options will be added before TIJAR begins collecting information through this website.</Policy><Policy title="This preview">The forms on this website preview do not send or store personal information. This policy will be expanded before live data collection begins.</Policy></div></article>}
-function Policy({title,children}:{title:string;children:React.ReactNode}){return <section><h2 className="text-2xl font-extrabold text-foreground">{title}</h2><p className="mt-3">{children}</p></section>}
+import { useTranslation } from "@/lib/i18n/context";
+import { enMessages } from "@/lib/i18n/messages/en";
+
+export const Route = createFileRoute("/privacy")({
+  head: () => ({
+    meta: [
+      { title: enMessages.meta.privacy.title },
+      { name: "description", content: enMessages.meta.privacy.description },
+      { property: "og:title", content: enMessages.meta.privacy.ogTitle },
+      { property: "og:description", content: enMessages.meta.privacy.ogDescription },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: Page,
+});
+
+const sectionKeys = [
+  "approach",
+  "information",
+  "usage",
+  "publicProfiles",
+  "choices",
+  "preview",
+] as const;
+
+function Page() {
+  const { t } = useTranslation();
+
+  return (
+    <article className="mx-auto max-w-3xl px-5 py-16 sm:py-24">
+      <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-muted-foreground">
+        {t("pages.privacy.eyebrow")}
+      </p>
+      <h1 className="mt-4 text-4xl font-extrabold sm:text-5xl">{t("pages.privacy.title")}</h1>
+      <p className="mt-5 text-muted-foreground">{t("pages.privacy.lastUpdated")}</p>
+      <div className="mt-12 space-y-10 leading-8 text-muted-foreground">
+        {sectionKeys.map((key) => (
+          <PolicySection
+            key={key}
+            title={t(`pages.privacy.sections.${key}.title`)}
+            body={t(`pages.privacy.sections.${key}.body`)}
+          />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function PolicySection({ title, body }: { title: string; body: string }) {
+  return (
+    <section>
+      <h2 className="text-2xl font-extrabold text-foreground">{title}</h2>
+      <p className="mt-3">{body}</p>
+    </section>
+  );
+}

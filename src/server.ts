@@ -44,8 +44,21 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+type BunRequestServer = {
+  timeout?: (request: Request, seconds: number) => void;
+};
+
+// Bun.serve drops a request that sends no bytes for 10 seconds. Dev SSR often
+// takes longer than that, and the browser then reports a closed socket.
+function keepBunConnectionOpen(request: Request) {
+  const server = (request as Request & { runtime?: { bun?: { server?: BunRequestServer } } })
+    .runtime?.bun?.server;
+  server?.timeout?.(request, 0);
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    keepBunConnectionOpen(request);
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
