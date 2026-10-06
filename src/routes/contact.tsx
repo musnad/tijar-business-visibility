@@ -2,4 +2,4 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ContactForm } from "@/components/forms";
 import { PageHero } from "@/components/tijar-ui";
 export const Route=createFileRoute("/contact")({head:()=>({meta:[{title:"Contact TIJAR"},{name:"description",content:"Contact the TIJAR team about the platform, partnerships or general questions."},{property:"og:title",content:"Contact TIJAR"},{property:"og:description",content:"Get in touch with the team building TIJAR."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary_large_image"}]}),component:Page});
-function Page(){return <><PageHero eyebrow="Contact" title="We’d like to hear from you." copy="Have a question about TIJAR or want to explore working together? Send a short message."/><section><div className="mx-auto max-w-2xl px-5 py-18 sm:py-24"><ContactForm/></div></section></>}
+function Page(){return <><PageHero eyebrow="Contact" title="We’d like to hear from you." copy="Have a question about TIJAR or want to explore working together? Send a short message."/><section><div className="mx-auto max-w-2xl px-5 py-24 sm:py-32"><ContactForm/></div></section></>}

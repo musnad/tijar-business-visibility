@@ -40,10 +40,10 @@ export function SiteHeader() {
       </div>
       {open && (
         <nav aria-label="Mobile navigation" className="border-t border-border bg-background px-5 py-5 lg:hidden">
-          <div className="mx-auto flex max-w-7xl flex-col gap-1">
-            {links.map((link) => <Link key={link.to} to={link.to} onClick={() => setOpen(false)} className="rounded-md px-3 py-3 text-base font-semibold hover:bg-muted">{link.label}</Link>)}
-            <Link to="/contact" onClick={() => setOpen(false)} className="rounded-md px-3 py-3 text-base font-semibold hover:bg-muted">Contact</Link>
-            <Button asChild size="lg" className="mt-3 h-12"><Link to="/get-started" onClick={() => setOpen(false)}>Get Started</Link></Button>
+          <div className="mx-auto flex max-w-6xl flex-col gap-1">
+            {links.map((link) => <Link key={link.to} to={link.to} onClick={() => setOpen(false)} className="rounded-md px-3 py-3 text-base font-semibold hover:">{link.label}</Link>)}
+            <Link to="/contact" onClick={() => setOpen(false)} className="rounded-md px-3 py-3 text-base font-semibold hover:">Contact</Link>
+            <Button asChild size="lg" className="mt-3 "><Link to="/get-started" onClick={() => setOpen(false)}>Get Started</Link></Button>
           </div>
         </nav>
       )}
