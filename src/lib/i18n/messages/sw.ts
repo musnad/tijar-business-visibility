@@ -277,6 +277,15 @@ export const swMessages = {
       swahili: "Kiswahili",
       morePlanned: "Lugha zaidi za Kiafrika zinapangwa.",
     },
+    scenes: {
+      label: "Biashara zisizo rasmi nchini Nigeria",
+      market: "Kibanda cha soko",
+      marketAlt: "Mfanyabiashara akipanga pilipili, nyanya, na vitunguu kwenye soko la Nigeria",
+      tailor: "Mshonaji",
+      tailorAlt: "Mshonaji akishona kitambaa katika duka dogo nchini Nigeria",
+      food: "Muuzaji wa chakula",
+      foodAlt: "Mpishi akiandaa wali wa jollof na samaki kwenye jiko la barabarani nchini Nigeria",
+    },
   },
 
   businessTypes: {

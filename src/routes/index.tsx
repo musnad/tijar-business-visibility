@@ -53,6 +53,12 @@ const businessTypeKeys = [
   "buildingMaterials",
   "other",
 ] as const;
+const sceneKeys = [
+  { src: "/tijar-market-stall.jpg", label: "home.scenes.market", alt: "home.scenes.marketAlt" },
+  { src: "/tijar-tailor-shop.jpg", label: "home.scenes.tailor", alt: "home.scenes.tailorAlt" },
+  { src: "/tijar-food-stall.jpg", label: "home.scenes.food", alt: "home.scenes.foodAlt" },
+] as const;
+
 const languageKeys = [
   "home.languages.english",
   "home.languages.hausa",
@@ -91,6 +97,27 @@ function Home() {
             </div>
           </div>
           <HeroAnimatedDeviceShowcase className="mx-auto w-full max-w-[280px] sm:max-w-[420px] lg:max-w-none lg:justify-self-end" />
+        </div>
+      </section>
+
+      <section aria-label={t("home.scenes.label")} className="border-b border-border">
+        <div className="mx-auto max-w-6xl px-5 py-8 lg:px-6">
+          <ul className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:grid md:grid-cols-3 md:gap-4 md:overflow-visible [&::-webkit-scrollbar]:hidden">
+            {sceneKeys.map((scene) => (
+              <li key={scene.src} className="w-[84%] shrink-0 snap-start md:w-auto">
+                <figure>
+                  <img
+                    src={scene.src}
+                    alt={t(scene.alt)}
+                    width={1200}
+                    height={900}
+                    className="aspect-[4/3] w-full rounded-2xl object-cover shadow-lg"
+                  />
+                  <figcaption className="mt-3 text-sm font-semibold">{t(scene.label)}</figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 

@@ -277,6 +277,15 @@ export const yoMessages = {
       swahili: "Kiswahili",
       morePlanned: "A ń pín sí àwọn èdè Afíríkà mìíràn.",
     },
+    scenes: {
+      label: "Òwò àìforúkọsílẹ̀ ní Nàìjíríà",
+      market: "Pẹpẹ ọjà",
+      marketAlt: "Oníṣòwò ń tò ata, tòmátì, àti àlùbọ́sà ní ọjà Nàìjíríà",
+      tailor: "Aránṣọ",
+      tailorAlt: "Aránṣọ ń ran aṣọ ní ilé kékeré ní Nàìjíríà",
+      food: "Olùtajà oúnjẹ",
+      foodAlt: "Aláṣe ń bu jollof àti ẹja dín ní ìdáná etí ọ̀nà ní Nàìjíríà",
+    },
   },
 
   businessTypes: {

@@ -277,6 +277,15 @@ export const haMessages = {
       swahili: "Kiswahili",
       morePlanned: "Ana shirin ƙarin harsunan Afirka.",
     },
+    scenes: {
+      label: "Kasuwancin da ba a yi musu rajista ba a Najeriya",
+      market: "Rumfar kasuwa",
+      marketAlt: "Mace tana tsara tattasai da albasa a rumfar kasuwa a Najeriya",
+      tailor: "Madinki",
+      tailorAlt: "Madinki yana dinki a kananan shago a Najeriya",
+      food: "Mai sayar da abinci",
+      foodAlt: "Mace tana shirya shinkafa da kifi a gidan abinci na gefen titi a Najeriya",
+    },
   },
 
   businessTypes: {

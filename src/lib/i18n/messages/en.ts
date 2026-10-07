@@ -277,6 +277,15 @@ export const enMessages = {
       swahili: "Kiswahili",
       morePlanned: "More African languages are planned.",
     },
+    scenes: {
+      label: "Informal businesses in Nigeria",
+      market: "Market stall",
+      marketAlt: "A trader arranging peppers, tomatoes, and onions at a Nigerian market stall",
+      tailor: "Tailor",
+      tailorAlt: "A tailor sewing patterned cloth in a small Nigerian shop",
+      food: "Food seller",
+      foodAlt: "A cook plating jollof rice and grilled fish at a Nigerian roadside kitchen",
+    },
   },
 
   businessTypes: {

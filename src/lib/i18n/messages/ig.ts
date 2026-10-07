@@ -277,6 +277,15 @@ export const igMessages = {
       swahili: "Kiswahili",
       morePlanned: "A na-atụ anya ịgbakwunye asụsụ Afrịka ndị ọzọ.",
     },
+    scenes: {
+      label: "Azụmahịa na-edeghị aha na Naịjirịa",
+      market: "Tebụl ahịa",
+      marketAlt: "Onye na-ere ihe na-edozi ose, tomato, na yabasị n’ahịa Naịjirịa",
+      tailor: "Onye na-akwa akwa",
+      tailorAlt: "Onye na-akwa akwa na-akwa akwa n’obere ụlọ ahịa na Naịjirịa",
+      food: "Onye na-ere nri",
+      foodAlt: "Onye na-esi nri na-etinye jollof na azụ̀ n’akụkụ ụzọ na Naịjirịa",
+    },
   },
 
   businessTypes: {
