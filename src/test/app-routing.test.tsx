@@ -14,4 +14,34 @@ describe("App routing", () => {
 
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
+
+  it("matches Record Sales at /app/sales", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    const matches = router.matchRoutes("/app/sales");
+    expect(matches.some((m) => m.routeId.includes("/sales"))).toBe(true);
+  });
+
+  it("matches new sale form at /app/record", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    const matches = router.matchRoutes("/app/record");
+    expect(matches.at(-1)?.routeId).toBe("/app/record");
+  });
+
+  it("matches Record Expense at /app/expenses", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    const matches = router.matchRoutes("/app/expenses");
+    expect(matches.some((m) => m.routeId.includes("/expenses"))).toBe(true);
+  });
+
+  it("matches add customer at /app/customers/new", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    const matches = router.matchRoutes("/app/customers/new");
+    expect(matches.at(-1)?.routeId).toBe("/app/customers/new");
+  });
+
+  it("matches new credit at /app/customers/credit/new", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    const matches = router.matchRoutes("/app/customers/credit/new");
+    expect(matches.at(-1)?.routeId).toBe("/app/customers/credit/new");
+  });
 });

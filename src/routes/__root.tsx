@@ -9,9 +9,12 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { type ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router";
+import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
 import { SiteFooter, SiteHeader } from "../components/site-shell";
+import { AuthProvider } from "@/features/auth/auth-context";
 import { SitePreferencesProvider, useTranslation } from "../lib/i18n/context";
 import { enMessages } from "../lib/i18n/messages/en";
 
@@ -135,17 +138,23 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isAppRoute = useRouterState({
+    select: (s) => s.location.pathname.startsWith("/app"),
+  });
 
   return (
     <QueryClientProvider client={queryClient}>
       <SitePreferencesProvider>
-        <div className="min-h-screen bg-background text-foreground">
-          <SiteHeader />
-          <main id="main-content">
-            <Outlet />
-          </main>
-          <SiteFooter />
-        </div>
+        <AuthProvider>
+          <div className="min-h-screen bg-background text-foreground">
+            {!isAppRoute && <SiteHeader />}
+            <main id="main-content">
+              <Outlet />
+            </main>
+            {!isAppRoute && <SiteFooter />}
+          </div>
+          <Toaster richColors position="top-center" />
+        </AuthProvider>
       </SitePreferencesProvider>
     </QueryClientProvider>
   );

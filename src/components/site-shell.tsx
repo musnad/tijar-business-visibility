@@ -61,6 +61,9 @@ export function SiteHeader() {
             </Link>
           ))}
           <SitePreferencesControls compact />
+          <Button variant="outline" asChild>
+            <Link to="/login">{t("nav.signIn")}</Link>
+          </Button>
           <Button asChild>
             <Link to="/" hash="download-app">
               {t("nav.downloadApp")}
@@ -103,7 +106,12 @@ export function SiteHeader() {
             <div className="mt-4">
               <SitePreferencesControls stacked />
             </div>
-            <Button asChild size="lg" className="mt-4">
+            <Button variant="outline" asChild size="lg" className="mt-4">
+              <Link to="/login" onClick={() => setOpen(false)}>
+                {t("nav.signIn")}
+              </Link>
+            </Button>
+            <Button asChild size="lg" className="mt-2">
               <Link to="/" hash="download-app" onClick={() => setOpen(false)}>
                 {t("nav.downloadApp")}
               </Link>

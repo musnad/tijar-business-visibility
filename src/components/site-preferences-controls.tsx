@@ -15,18 +15,27 @@ import {
 export function LanguageSelect({
   className,
   compact = false,
+  onLocaleChange,
 }: {
   className?: string;
   compact?: boolean;
+  /** Runs after the locale is updated in site preferences. */
+  onLocaleChange?: (locale: Locale) => void;
 }) {
   const { locale, setLocale, t } = useSitePreferences();
+
+  function handleChange(value: string) {
+    const next = value as Locale;
+    setLocale(next);
+    onLocaleChange?.(next);
+  }
 
   return (
     <div className={className}>
       <label htmlFor="site-language" className="sr-only">
         {t("nav.language")}
       </label>
-      <Select value={locale} onValueChange={(value) => setLocale(value as Locale)}>
+      <Select value={locale} onValueChange={handleChange}>
         <SelectTrigger
           id="site-language"
           className={

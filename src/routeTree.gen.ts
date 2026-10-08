@@ -11,12 +11,40 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as BusinessVisibilityRouteImport } from './routes/business-visibility'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LearnRouteImport } from './routes/learn'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as ApiSupabaseHealthRouteImport } from './routes/api.supabase-health'
+import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AppBusinessRouteImport } from './routes/app/business'
+import { Route as AppCustomersRouteRouteImport } from './routes/app/customers/route'
+import { Route as AppExpensesRouteImport } from './routes/app/expenses'
+import { Route as AppLearnRouteRouteImport } from './routes/app/learn/route'
+import { Route as AppLoginRouteImport } from './routes/app/login'
+import { Route as AppOnboardingRouteImport } from './routes/app/onboarding'
+import { Route as AppProductsRouteImport } from './routes/app/products'
+import { Route as AppProfileRouteImport } from './routes/app/profile'
+import { Route as AppRecordRouteImport } from './routes/app/record'
+import { Route as AppRecordsRouteImport } from './routes/app/records'
+import { Route as AppRegisterRouteImport } from './routes/app/register'
+import { Route as AppSalesRouteImport } from './routes/app/sales'
+import { Route as AppSuppliersRouteImport } from './routes/app/suppliers'
+import { Route as AppTransactionsRouteImport } from './routes/app/transactions'
+import { Route as AppBusinessEditRouteImport } from './routes/app/business/edit'
+import { Route as AppCustomersIndexRouteImport } from './routes/app/customers/index'
+import { Route as AppCustomersNewRouteImport } from './routes/app/customers/new'
+import { Route as AppLearnIndexRouteImport } from './routes/app/learn/index'
+import { Route as AppLearnLessonIdRouteImport } from './routes/app/learn/$lessonId'
+import { Route as AppProductsAdjustRouteImport } from './routes/app/products/adjust'
+import { Route as AppProductsNewRouteImport } from './routes/app/products/new'
+import { Route as AppProfileEditRouteImport } from './routes/app/profile/edit'
+import { Route as AppProfileSettingsRouteImport } from './routes/app/profile/settings'
+import { Route as AppCustomersCreditNewRouteImport } from './routes/app/customers/credit/new'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -26,6 +54,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRouteRoute = AppRouteRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BusinessVisibilityRoute = BusinessVisibilityRouteImport.update({
@@ -48,6 +81,11 @@ const LearnRoute = LearnRouteImport.update({
   path: '/learn',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -58,16 +96,174 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSupabaseHealthRoute = ApiSupabaseHealthRouteImport.update({
+  id: '/api/supabase-health',
+  path: '/api/supabase-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppBusinessRoute = AppBusinessRouteImport.update({
+  id: '/business',
+  path: '/business',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppCustomersRouteRoute = AppCustomersRouteRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppExpensesRoute = AppExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppLearnRouteRoute = AppLearnRouteRouteImport.update({
+  id: '/learn',
+  path: '/learn',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppLoginRoute = AppLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppOnboardingRoute = AppOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppProductsRoute = AppProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRecordRoute = AppRecordRouteImport.update({
+  id: '/record',
+  path: '/record',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRecordsRoute = AppRecordsRouteImport.update({
+  id: '/records',
+  path: '/records',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRegisterRoute = AppRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSalesRoute = AppSalesRouteImport.update({
+  id: '/sales',
+  path: '/sales',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSuppliersRoute = AppSuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppTransactionsRoute = AppTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppBusinessEditRoute = AppBusinessEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AppBusinessRoute,
+} as any)
+const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppCustomersRouteRoute,
+} as any)
+const AppCustomersNewRoute = AppCustomersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppCustomersRouteRoute,
+} as any)
+const AppLearnIndexRoute = AppLearnIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppLearnRouteRoute,
+} as any)
+const AppLearnLessonIdRoute = AppLearnLessonIdRouteImport.update({
+  id: '/$lessonId',
+  path: '/$lessonId',
+  getParentRoute: () => AppLearnRouteRoute,
+} as any)
+const AppProductsAdjustRoute = AppProductsAdjustRouteImport.update({
+  id: '/adjust',
+  path: '/adjust',
+  getParentRoute: () => AppProductsRoute,
+} as any)
+const AppProductsNewRoute = AppProductsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppProductsRoute,
+} as any)
+const AppProfileEditRoute = AppProfileEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => AppProfileRoute,
+} as any)
+const AppProfileSettingsRoute = AppProfileSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppProfileRoute,
+} as any)
+const AppCustomersCreditNewRoute = AppCustomersCreditNewRouteImport.update({
+  id: '/credit/new',
+  path: '/credit/new',
+  getParentRoute: () => AppCustomersRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/app/customers': typeof AppCustomersRouteRouteWithChildren
+  '/app/learn': typeof AppLearnRouteRouteWithChildren
+  '/api/supabase-health': typeof ApiSupabaseHealthRoute
+  '/app/business': typeof AppBusinessRouteWithChildren
+  '/app/expenses': typeof AppExpensesRoute
+  '/app/login': typeof AppLoginRoute
+  '/app/onboarding': typeof AppOnboardingRoute
+  '/app/products': typeof AppProductsRouteWithChildren
+  '/app/profile': typeof AppProfileRouteWithChildren
+  '/app/record': typeof AppRecordRoute
+  '/app/records': typeof AppRecordsRoute
+  '/app/register': typeof AppRegisterRoute
+  '/app/sales': typeof AppSalesRoute
+  '/app/suppliers': typeof AppSuppliersRoute
+  '/app/transactions': typeof AppTransactionsRoute
+  '/app/': typeof AppIndexRoute
+  '/app/business/edit': typeof AppBusinessEditRoute
+  '/app/customers/new': typeof AppCustomersNewRoute
+  '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
+  '/app/products/adjust': typeof AppProductsAdjustRoute
+  '/app/products/new': typeof AppProductsNewRoute
+  '/app/profile/edit': typeof AppProfileEditRoute
+  '/app/profile/settings': typeof AppProfileSettingsRoute
+  '/app/customers/': typeof AppCustomersIndexRoute
+  '/app/learn/': typeof AppLearnIndexRoute
+  '/app/customers/credit/new': typeof AppCustomersCreditNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,31 +272,112 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/api/supabase-health': typeof ApiSupabaseHealthRoute
+  '/app/business': typeof AppBusinessRouteWithChildren
+  '/app/expenses': typeof AppExpensesRoute
+  '/app/login': typeof AppLoginRoute
+  '/app/onboarding': typeof AppOnboardingRoute
+  '/app/products': typeof AppProductsRouteWithChildren
+  '/app/profile': typeof AppProfileRouteWithChildren
+  '/app/record': typeof AppRecordRoute
+  '/app/records': typeof AppRecordsRoute
+  '/app/register': typeof AppRegisterRoute
+  '/app/sales': typeof AppSalesRoute
+  '/app/suppliers': typeof AppSuppliersRoute
+  '/app/transactions': typeof AppTransactionsRoute
+  '/app': typeof AppIndexRoute
+  '/app/business/edit': typeof AppBusinessEditRoute
+  '/app/customers/new': typeof AppCustomersNewRoute
+  '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
+  '/app/products/adjust': typeof AppProductsAdjustRoute
+  '/app/products/new': typeof AppProductsNewRoute
+  '/app/profile/edit': typeof AppProfileEditRoute
+  '/app/profile/settings': typeof AppProfileSettingsRoute
+  '/app/customers': typeof AppCustomersIndexRoute
+  '/app/learn': typeof AppLearnIndexRoute
+  '/app/customers/credit/new': typeof AppCustomersCreditNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
+  '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/app/customers': typeof AppCustomersRouteRouteWithChildren
+  '/app/learn': typeof AppLearnRouteRouteWithChildren
+  '/api/supabase-health': typeof ApiSupabaseHealthRoute
+  '/app/business': typeof AppBusinessRouteWithChildren
+  '/app/expenses': typeof AppExpensesRoute
+  '/app/login': typeof AppLoginRoute
+  '/app/onboarding': typeof AppOnboardingRoute
+  '/app/products': typeof AppProductsRouteWithChildren
+  '/app/profile': typeof AppProfileRouteWithChildren
+  '/app/record': typeof AppRecordRoute
+  '/app/records': typeof AppRecordsRoute
+  '/app/register': typeof AppRegisterRoute
+  '/app/sales': typeof AppSalesRoute
+  '/app/suppliers': typeof AppSuppliersRoute
+  '/app/transactions': typeof AppTransactionsRoute
+  '/app/': typeof AppIndexRoute
+  '/app/business/edit': typeof AppBusinessEditRoute
+  '/app/customers/new': typeof AppCustomersNewRoute
+  '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
+  '/app/products/adjust': typeof AppProductsAdjustRoute
+  '/app/products/new': typeof AppProductsNewRoute
+  '/app/profile/edit': typeof AppProfileEditRoute
+  '/app/profile/settings': typeof AppProfileSettingsRoute
+  '/app/customers/': typeof AppCustomersIndexRoute
+  '/app/learn/': typeof AppLearnIndexRoute
+  '/app/customers/credit/new': typeof AppCustomersCreditNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/app'
     | '/about'
     | '/business-visibility'
     | '/contact'
     | '/how-it-works'
     | '/learn'
+    | '/login'
     | '/privacy'
     | '/terms'
+    | '/app/customers'
+    | '/app/learn'
+    | '/api/supabase-health'
+    | '/app/business'
+    | '/app/expenses'
+    | '/app/login'
+    | '/app/onboarding'
+    | '/app/products'
+    | '/app/profile'
+    | '/app/record'
+    | '/app/records'
+    | '/app/register'
+    | '/app/sales'
+    | '/app/suppliers'
+    | '/app/transactions'
+    | '/app/'
+    | '/app/business/edit'
+    | '/app/customers/new'
+    | '/app/learn/$lessonId'
+    | '/app/products/adjust'
+    | '/app/products/new'
+    | '/app/profile/edit'
+    | '/app/profile/settings'
+    | '/app/customers/'
+    | '/app/learn/'
+    | '/app/customers/credit/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,29 +386,85 @@ export interface FileRouteTypes {
     | '/contact'
     | '/how-it-works'
     | '/learn'
+    | '/login'
     | '/privacy'
     | '/terms'
+    | '/api/supabase-health'
+    | '/app/business'
+    | '/app/expenses'
+    | '/app/login'
+    | '/app/onboarding'
+    | '/app/products'
+    | '/app/profile'
+    | '/app/record'
+    | '/app/records'
+    | '/app/register'
+    | '/app/sales'
+    | '/app/suppliers'
+    | '/app/transactions'
+    | '/app'
+    | '/app/business/edit'
+    | '/app/customers/new'
+    | '/app/learn/$lessonId'
+    | '/app/products/adjust'
+    | '/app/products/new'
+    | '/app/profile/edit'
+    | '/app/profile/settings'
+    | '/app/customers'
+    | '/app/learn'
+    | '/app/customers/credit/new'
   id:
     | '__root__'
     | '/'
+    | '/app'
     | '/about'
     | '/business-visibility'
     | '/contact'
     | '/how-it-works'
     | '/learn'
+    | '/login'
     | '/privacy'
     | '/terms'
+    | '/app/customers'
+    | '/app/learn'
+    | '/api/supabase-health'
+    | '/app/business'
+    | '/app/expenses'
+    | '/app/login'
+    | '/app/onboarding'
+    | '/app/products'
+    | '/app/profile'
+    | '/app/record'
+    | '/app/records'
+    | '/app/register'
+    | '/app/sales'
+    | '/app/suppliers'
+    | '/app/transactions'
+    | '/app/'
+    | '/app/business/edit'
+    | '/app/customers/new'
+    | '/app/learn/$lessonId'
+    | '/app/products/adjust'
+    | '/app/products/new'
+    | '/app/profile/edit'
+    | '/app/profile/settings'
+    | '/app/customers/'
+    | '/app/learn/'
+    | '/app/customers/credit/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRouteRoute: typeof AppRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   BusinessVisibilityRoute: typeof BusinessVisibilityRoute
   ContactRoute: typeof ContactRoute
   HowItWorksRoute: typeof HowItWorksRoute
   LearnRoute: typeof LearnRoute
+  LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
+  ApiSupabaseHealthRoute: typeof ApiSupabaseHealthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -148,6 +481,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/business-visibility': {
@@ -178,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -192,18 +539,312 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/supabase-health': {
+      id: '/api/supabase-health'
+      path: '/api/supabase-health'
+      fullPath: '/api/supabase-health'
+      preLoaderRoute: typeof ApiSupabaseHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/business': {
+      id: '/app/business'
+      path: '/business'
+      fullPath: '/app/business'
+      preLoaderRoute: typeof AppBusinessRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/customers': {
+      id: '/app/customers'
+      path: '/customers'
+      fullPath: '/app/customers'
+      preLoaderRoute: typeof AppCustomersRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/expenses': {
+      id: '/app/expenses'
+      path: '/expenses'
+      fullPath: '/app/expenses'
+      preLoaderRoute: typeof AppExpensesRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/learn': {
+      id: '/app/learn'
+      path: '/learn'
+      fullPath: '/app/learn'
+      preLoaderRoute: typeof AppLearnRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/login': {
+      id: '/app/login'
+      path: '/login'
+      fullPath: '/app/login'
+      preLoaderRoute: typeof AppLoginRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/onboarding': {
+      id: '/app/onboarding'
+      path: '/onboarding'
+      fullPath: '/app/onboarding'
+      preLoaderRoute: typeof AppOnboardingRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/products': {
+      id: '/app/products'
+      path: '/products'
+      fullPath: '/app/products'
+      preLoaderRoute: typeof AppProductsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/profile': {
+      id: '/app/profile'
+      path: '/profile'
+      fullPath: '/app/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/record': {
+      id: '/app/record'
+      path: '/record'
+      fullPath: '/app/record'
+      preLoaderRoute: typeof AppRecordRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/records': {
+      id: '/app/records'
+      path: '/records'
+      fullPath: '/app/records'
+      preLoaderRoute: typeof AppRecordsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/register': {
+      id: '/app/register'
+      path: '/register'
+      fullPath: '/app/register'
+      preLoaderRoute: typeof AppRegisterRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/sales': {
+      id: '/app/sales'
+      path: '/sales'
+      fullPath: '/app/sales'
+      preLoaderRoute: typeof AppSalesRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/suppliers': {
+      id: '/app/suppliers'
+      path: '/suppliers'
+      fullPath: '/app/suppliers'
+      preLoaderRoute: typeof AppSuppliersRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/transactions': {
+      id: '/app/transactions'
+      path: '/transactions'
+      fullPath: '/app/transactions'
+      preLoaderRoute: typeof AppTransactionsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/business/edit': {
+      id: '/app/business/edit'
+      path: '/edit'
+      fullPath: '/app/business/edit'
+      preLoaderRoute: typeof AppBusinessEditRouteImport
+      parentRoute: typeof AppBusinessRoute
+    }
+    '/app/customers/': {
+      id: '/app/customers/'
+      path: '/'
+      fullPath: '/app/customers/'
+      preLoaderRoute: typeof AppCustomersIndexRouteImport
+      parentRoute: typeof AppCustomersRouteRoute
+    }
+    '/app/customers/new': {
+      id: '/app/customers/new'
+      path: '/new'
+      fullPath: '/app/customers/new'
+      preLoaderRoute: typeof AppCustomersNewRouteImport
+      parentRoute: typeof AppCustomersRouteRoute
+    }
+    '/app/learn/': {
+      id: '/app/learn/'
+      path: '/'
+      fullPath: '/app/learn/'
+      preLoaderRoute: typeof AppLearnIndexRouteImport
+      parentRoute: typeof AppLearnRouteRoute
+    }
+    '/app/learn/$lessonId': {
+      id: '/app/learn/$lessonId'
+      path: '/$lessonId'
+      fullPath: '/app/learn/$lessonId'
+      preLoaderRoute: typeof AppLearnLessonIdRouteImport
+      parentRoute: typeof AppLearnRouteRoute
+    }
+    '/app/products/adjust': {
+      id: '/app/products/adjust'
+      path: '/adjust'
+      fullPath: '/app/products/adjust'
+      preLoaderRoute: typeof AppProductsAdjustRouteImport
+      parentRoute: typeof AppProductsRoute
+    }
+    '/app/products/new': {
+      id: '/app/products/new'
+      path: '/new'
+      fullPath: '/app/products/new'
+      preLoaderRoute: typeof AppProductsNewRouteImport
+      parentRoute: typeof AppProductsRoute
+    }
+    '/app/profile/edit': {
+      id: '/app/profile/edit'
+      path: '/edit'
+      fullPath: '/app/profile/edit'
+      preLoaderRoute: typeof AppProfileEditRouteImport
+      parentRoute: typeof AppProfileRoute
+    }
+    '/app/profile/settings': {
+      id: '/app/profile/settings'
+      path: '/settings'
+      fullPath: '/app/profile/settings'
+      preLoaderRoute: typeof AppProfileSettingsRouteImport
+      parentRoute: typeof AppProfileRoute
+    }
+    '/app/customers/credit/new': {
+      id: '/app/customers/credit/new'
+      path: '/credit/new'
+      fullPath: '/app/customers/credit/new'
+      preLoaderRoute: typeof AppCustomersCreditNewRouteImport
+      parentRoute: typeof AppCustomersRouteRoute
+    }
   }
 }
 
+interface AppCustomersRouteRouteChildren {
+  AppCustomersNewRoute: typeof AppCustomersNewRoute
+  AppCustomersIndexRoute: typeof AppCustomersIndexRoute
+  AppCustomersCreditNewRoute: typeof AppCustomersCreditNewRoute
+}
+
+const AppCustomersRouteRouteChildren: AppCustomersRouteRouteChildren = {
+  AppCustomersNewRoute: AppCustomersNewRoute,
+  AppCustomersIndexRoute: AppCustomersIndexRoute,
+  AppCustomersCreditNewRoute: AppCustomersCreditNewRoute,
+}
+
+const AppCustomersRouteRouteWithChildren =
+  AppCustomersRouteRoute._addFileChildren(AppCustomersRouteRouteChildren)
+
+interface AppLearnRouteRouteChildren {
+  AppLearnLessonIdRoute: typeof AppLearnLessonIdRoute
+  AppLearnIndexRoute: typeof AppLearnIndexRoute
+}
+
+const AppLearnRouteRouteChildren: AppLearnRouteRouteChildren = {
+  AppLearnLessonIdRoute: AppLearnLessonIdRoute,
+  AppLearnIndexRoute: AppLearnIndexRoute,
+}
+
+const AppLearnRouteRouteWithChildren = AppLearnRouteRoute._addFileChildren(
+  AppLearnRouteRouteChildren,
+)
+
+interface AppBusinessRouteChildren {
+  AppBusinessEditRoute: typeof AppBusinessEditRoute
+}
+
+const AppBusinessRouteChildren: AppBusinessRouteChildren = {
+  AppBusinessEditRoute: AppBusinessEditRoute,
+}
+
+const AppBusinessRouteWithChildren = AppBusinessRoute._addFileChildren(
+  AppBusinessRouteChildren,
+)
+
+interface AppProductsRouteChildren {
+  AppProductsAdjustRoute: typeof AppProductsAdjustRoute
+  AppProductsNewRoute: typeof AppProductsNewRoute
+}
+
+const AppProductsRouteChildren: AppProductsRouteChildren = {
+  AppProductsAdjustRoute: AppProductsAdjustRoute,
+  AppProductsNewRoute: AppProductsNewRoute,
+}
+
+const AppProductsRouteWithChildren = AppProductsRoute._addFileChildren(
+  AppProductsRouteChildren,
+)
+
+interface AppProfileRouteChildren {
+  AppProfileEditRoute: typeof AppProfileEditRoute
+  AppProfileSettingsRoute: typeof AppProfileSettingsRoute
+}
+
+const AppProfileRouteChildren: AppProfileRouteChildren = {
+  AppProfileEditRoute: AppProfileEditRoute,
+  AppProfileSettingsRoute: AppProfileSettingsRoute,
+}
+
+const AppProfileRouteWithChildren = AppProfileRoute._addFileChildren(
+  AppProfileRouteChildren,
+)
+
+interface AppRouteRouteChildren {
+  AppCustomersRouteRoute: typeof AppCustomersRouteRouteWithChildren
+  AppLearnRouteRoute: typeof AppLearnRouteRouteWithChildren
+  AppBusinessRoute: typeof AppBusinessRouteWithChildren
+  AppExpensesRoute: typeof AppExpensesRoute
+  AppLoginRoute: typeof AppLoginRoute
+  AppOnboardingRoute: typeof AppOnboardingRoute
+  AppProductsRoute: typeof AppProductsRouteWithChildren
+  AppProfileRoute: typeof AppProfileRouteWithChildren
+  AppRecordRoute: typeof AppRecordRoute
+  AppRecordsRoute: typeof AppRecordsRoute
+  AppRegisterRoute: typeof AppRegisterRoute
+  AppSalesRoute: typeof AppSalesRoute
+  AppSuppliersRoute: typeof AppSuppliersRoute
+  AppTransactionsRoute: typeof AppTransactionsRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppCustomersRouteRoute: AppCustomersRouteRouteWithChildren,
+  AppLearnRouteRoute: AppLearnRouteRouteWithChildren,
+  AppBusinessRoute: AppBusinessRouteWithChildren,
+  AppExpensesRoute: AppExpensesRoute,
+  AppLoginRoute: AppLoginRoute,
+  AppOnboardingRoute: AppOnboardingRoute,
+  AppProductsRoute: AppProductsRouteWithChildren,
+  AppProfileRoute: AppProfileRouteWithChildren,
+  AppRecordRoute: AppRecordRoute,
+  AppRecordsRoute: AppRecordsRoute,
+  AppRegisterRoute: AppRegisterRoute,
+  AppSalesRoute: AppSalesRoute,
+  AppSuppliersRoute: AppSuppliersRoute,
+  AppTransactionsRoute: AppTransactionsRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
+  AppRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRouteRoute: AppRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   BusinessVisibilityRoute: BusinessVisibilityRoute,
   ContactRoute: ContactRoute,
   HowItWorksRoute: HowItWorksRoute,
   LearnRoute: LearnRoute,
+  LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  ApiSupabaseHealthRoute: ApiSupabaseHealthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

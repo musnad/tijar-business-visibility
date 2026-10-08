@@ -87,12 +87,15 @@ function Home() {
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg" className="w-full sm:w-auto">
-                <a href="#download-app">
-                  {t("home.getTheApp")} <ArrowRight />
-                </a>
+                <Link to="/login">
+                  {t("nav.signIn")} <ArrowRight />
+                </Link>
+              </Button>
+              <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
+                <Link to="/app/register">{t("common.getStarted")}</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-                <a href="#the-need">{t("home.seeTheNeed")}</a>
+                <a href="#download-app">{t("home.getTheApp")}</a>
               </Button>
             </div>
           </div>
@@ -240,6 +243,23 @@ function Home() {
                   {t(key)}
                 </span>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="account-access" className="border-t border-border bg-muted/40">
+        <div className="mx-auto max-w-6xl px-5 py-12 lg:px-6 lg:py-16">
+          <div className="mx-auto max-w-xl rounded-3xl border border-border bg-background p-8 text-center shadow-sm">
+            <h2 className="text-2xl font-extrabold tracking-tight">{t("auth.accessTitle")}</h2>
+            <p className="mt-3 text-muted-foreground">{t("auth.accessDesc")}</p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button asChild size="lg">
+                <Link to="/login">{t("nav.signIn")}</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link to="/app/register">{t("common.getStarted")}</Link>
+              </Button>
             </div>
           </div>
         </div>

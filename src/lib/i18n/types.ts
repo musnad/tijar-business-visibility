@@ -1,4 +1,4 @@
-export const LOCALES = ["en", "ha", "ar", "yo", "ig", "sw"] as const;
+export const LOCALES = ["en", "ha", "ar", "yo", "ig", "sw", "ff"] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
@@ -17,6 +17,7 @@ export const LOCALE_LABELS: LocaleLabels = {
   yo: "Yorùbá",
   ig: "Igbo",
   sw: "Kiswahili",
+  ff: "Fulfulde (Fulani)",
 };
 
 export function isLocale(value: string): value is Locale {

@@ -1,0 +1,56 @@
+"use client";
+
+import { BadgeCheck, MapPin } from "lucide-react";
+
+import { useTranslation } from "@/lib/i18n/context";
+import type { Business } from "@/types/database";
+
+function timeGreetingKey(): "morning" | "afternoon" | "evening" {
+  const h = new Date().getHours();
+  if (h < 12) return "morning";
+  if (h < 17) return "afternoon";
+  return "evening";
+}
+
+export function DashboardHero({
+  firstName,
+  business,
+}: {
+  firstName: string;
+  business: Business;
+}) {
+  const { t } = useTranslation();
+  const slot = timeGreetingKey();
+  const verified = business.verification_status === "verified";
+
+  return (
+    <section className="relative mt-4 overflow-hidden rounded-2xl">
+      <div className="relative z-10 pr-[42%]">
+        <h1 className="text-[1.65rem] font-extrabold leading-tight text-foreground">
+          {t(`app.dashboard.greeting.${slot}`)}, {firstName}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("app.dashboard.growthHint")}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {verified && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary">
+              <BadgeCheck className="size-3.5" />
+              {t("app.dashboard.verified")}
+            </span>
+          )}
+          {business.location && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+              <MapPin className="size-3.5 shrink-0 text-primary" />
+              {business.location}
+            </span>
+          )}
+        </div>
+      </div>
+      <div
+        className="dashboard-hero-blob pointer-events-none absolute -right-6 top-0 z-0 flex h-[7.5rem] w-[11rem] items-center justify-center p-4 text-center text-[11px] font-semibold leading-snug text-primary"
+        aria-hidden
+      >
+        {t("app.dashboard.heroTagline")}
+      </div>
+    </section>
+  );
+}
