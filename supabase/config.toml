@@ -1,0 +1,10 @@
+# Minimal Supabase CLI config — run `supabase init` locally to merge with your project id.
+project_id = "tijar-local"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+major_version = 15
