@@ -18,6 +18,7 @@ import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiSupabaseHealthRouteImport } from './routes/api.supabase-health'
 import { Route as AppIndexRouteImport } from './routes/app/index'
@@ -89,6 +90,11 @@ const LoginRoute = LoginRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -237,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
   '/app/customers': typeof AppCustomersRouteRouteWithChildren
   '/app/learn': typeof AppLearnRouteRouteWithChildren
@@ -274,6 +281,7 @@ export interface FileRoutesByTo {
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/app/business': typeof AppBusinessRouteWithChildren
@@ -311,6 +319,7 @@ export interface FileRoutesById {
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
   '/app/customers': typeof AppCustomersRouteRouteWithChildren
   '/app/learn': typeof AppLearnRouteRouteWithChildren
@@ -351,6 +360,7 @@ export interface FileRouteTypes {
     | '/learn'
     | '/login'
     | '/privacy'
+    | '/register'
     | '/terms'
     | '/app/customers'
     | '/app/learn'
@@ -388,6 +398,7 @@ export interface FileRouteTypes {
     | '/learn'
     | '/login'
     | '/privacy'
+    | '/register'
     | '/terms'
     | '/api/supabase-health'
     | '/app/business'
@@ -424,6 +435,7 @@ export interface FileRouteTypes {
     | '/learn'
     | '/login'
     | '/privacy'
+    | '/register'
     | '/terms'
     | '/app/customers'
     | '/app/learn'
@@ -463,6 +475,7 @@ export interface RootRouteChildren {
   LearnRoute: typeof LearnRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
+  RegisterRoute: typeof RegisterRoute
   TermsRoute: typeof TermsRoute
   ApiSupabaseHealthRoute: typeof ApiSupabaseHealthRoute
 }
@@ -530,6 +543,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -843,6 +863,7 @@ const rootRouteChildren: RootRouteChildren = {
   LearnRoute: LearnRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
+  RegisterRoute: RegisterRoute,
   TermsRoute: TermsRoute,
   ApiSupabaseHealthRoute: ApiSupabaseHealthRoute,
 }

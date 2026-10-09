@@ -138,20 +138,28 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const isAppRoute = useRouterState({
-    select: (s) => s.location.pathname.startsWith("/app"),
+  const { isAppRoute, isWebAuthRoute } = useRouterState({
+    select: (s) => {
+      const path = s.location.pathname;
+      return {
+        isAppRoute: path.startsWith("/app"),
+        isWebAuthRoute: path === "/login" || path === "/register",
+      };
+    },
   });
+
+  const showMarketingShell = !isAppRoute && !isWebAuthRoute;
 
   return (
     <QueryClientProvider client={queryClient}>
       <SitePreferencesProvider>
         <AuthProvider>
           <div className="min-h-screen bg-background text-foreground">
-            {!isAppRoute && <SiteHeader />}
+            {showMarketingShell && <SiteHeader />}
             <main id="main-content">
               <Outlet />
             </main>
-            {!isAppRoute && <SiteFooter />}
+            {showMarketingShell && <SiteFooter />}
           </div>
           <Toaster richColors position="top-center" />
         </AuthProvider>

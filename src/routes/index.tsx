@@ -92,7 +92,7 @@ function Home() {
                 </Link>
               </Button>
               <Button asChild variant="secondary" size="lg" className="w-full sm:w-auto">
-                <Link to="/app/register">{t("common.getStarted")}</Link>
+                <Link to="/register">{t("common.getStarted")}</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
                 <a href="#download-app">{t("home.getTheApp")}</a>
@@ -258,7 +258,7 @@ function Home() {
                 <Link to="/login">{t("nav.signIn")}</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
-                <Link to="/app/register">{t("common.getStarted")}</Link>
+                <Link to="/register">{t("common.getStarted")}</Link>
               </Button>
             </div>
           </div>

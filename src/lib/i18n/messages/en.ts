@@ -686,6 +686,19 @@ export const enMessages = {
     backToHome: "Back to TIJAR home",
     accessTitle: "Account access",
     accessDesc: "Use your TIJAR email and password. New here?",
+    webBrandEyebrow: "TIJAR for business",
+    webLoginHero: "Your business dashboard on the web",
+    webRegisterHero: "Start free — grow with clarity",
+    webBrandBody:
+      "Record sales, track stock, manage customers, and learn as you go. Built for market traders, shops, and small teams.",
+    webBullet1: "Real-time sales and expense insights",
+    webBullet2: "Customer credit and stock in one place",
+    webBullet3: "Learn Business Basics as you run your shop",
+    webFormLabel: "Web account",
+    webLoginTitle: "Sign in",
+    webLoginSubtitle: "Use the email you registered with. You'll go straight to your dashboard.",
+    webRegisterTitle: "Create your account",
+    webRegisterSubtitle: "Takes about a minute. Then we'll help you set up your business profile.",
   },
 
   app: {

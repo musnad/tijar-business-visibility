@@ -1,8 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { RedirectIfAuthed } from "@/features/app/require-auth";
-import { LoginForm } from "@/features/auth/login-form";
-import { useTranslation } from "@/lib/i18n/context";
+import { WebLoginForm } from "@/features/auth/web-login-form";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -12,24 +11,9 @@ export const Route = createFileRoute("/login")({
 });
 
 function PublicLoginPage() {
-  const { t } = useTranslation();
-
   return (
     <RedirectIfAuthed>
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-lg flex-col justify-center px-4 py-10">
-        <p className="mb-6 text-center text-sm text-muted-foreground">
-          {t("auth.publicLoginLead")}{" "}
-          <Link to="/app/register" className="font-semibold text-primary underline-offset-2 hover:underline">
-            {t("common.getStarted")}
-          </Link>
-        </p>
-        <LoginForm />
-        <p className="mt-8 text-center text-xs text-muted-foreground">
-          <Link to="/" className="underline-offset-2 hover:underline">
-            {t("auth.backToHome")}
-          </Link>
-        </p>
-      </div>
+      <WebLoginForm />
     </RedirectIfAuthed>
   );
 }

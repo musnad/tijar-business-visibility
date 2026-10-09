@@ -1052,3 +1052,33 @@ html.tijar-android-webview body {
 html.tijar-android-webview .app-bottom-nav {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
 }
+
+/* Web auth (distinct from native app login UI) */
+.web-auth-brand-gradient {
+  background: linear-gradient(145deg, #001b3a 0%, #003556 45%, #00a896 100%);
+}
+
+@media (max-width: 1023px) {
+  .web-auth-brand {
+    min-height: auto;
+    padding-bottom: 2rem;
+  }
+
+  .web-auth-root main {
+    margin-top: -1.5rem;
+  }
+
+  .web-auth-panel {
+    box-shadow: 0 -8px 32px rgba(0, 27, 58, 0.12);
+  }
+}
+
+.web-auth-input {
+  font-size: 16px;
+}
+
+@media (min-width: 640px) {
+  .web-auth-input {
+    font-size: 0.875rem;
+  }
+}
