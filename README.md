@@ -680,11 +680,17 @@ Do not add features or sections that are not requested above.
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Requires [Bun](https://bun.sh). Copy `.env.example` → `.env.local` and set Supabase keys (see [SUPABASE.md](./SUPABASE.md)).
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+git clone https://github.com/musnad/tijar-business-visibility.git
+cd tijar-business-visibility
+bun install
+bun run dev
 ```
+
+Health check: [http://localhost:3000/api/supabase-health](http://localhost:3000/api/supabase-health)
+
+## Deploy (same app as local)
+
+See **[DEPLOY.md](./DEPLOY.md)** — set `VITE_*` env vars at build time, configure Supabase Auth URLs, then `bun run build` && `bun run start` (or Docker).
