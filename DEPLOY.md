@@ -17,13 +17,31 @@ Copy from `.env.example` → set in hosting UI (Vercel, Railway, Render, etc.).
 
 **Never** set `SUPABASE_SERVICE_ROLE_KEY` in the browser bundle.
 
+### Vercel (production: [tijar-two.vercel.app](https://tijar-two.vercel.app))
+
+1. [Vercel Dashboard](https://vercel.com) → your **tijar** project → **Settings → Environment Variables**.
+2. Add for **Production** (and Preview if you want PR previews to work):
+
+   | Name | Value |
+   |------|--------|
+   | `VITE_SUPABASE_URL` | Same as in your local `.env.local` |
+   | `VITE_SUPABASE_ANON_KEY` | Same anon/publishable key as local |
+   | `VITE_PUBLIC_APP_URL` | `https://tijar-two.vercel.app` |
+   | `VITE_APP_ENV` | `production` |
+
+3. **Deployments** → ⋮ on latest → **Redeploy** (must rebuild so Vite picks up `VITE_*`).
+
+4. Confirm: [https://tijar-two.vercel.app/api/supabase-health](https://tijar-two.vercel.app/api/supabase-health) shows `"supabaseConfigured": true` and `"auth": { "ok": true }`.
+
+Repo includes `vercel.json` with `"framework": "tanstack-start"` per [Vercel’s TanStack Start guide](https://vercel.com/docs/frameworks/full-stack/tanstack-start).
+
 ## 2. Supabase Auth URLs
 
 In [Supabase Dashboard](https://supabase.com/dashboard) → **Authentication → URL configuration**:
 
-- **Site URL:** `https://your-domain.com`
+- **Site URL:** `https://tijar-two.vercel.app` (or your custom domain)
 - **Redirect URLs:** add  
-  `https://your-domain.com/**`  
+  `https://tijar-two.vercel.app/**`  
   `http://localhost:3000/**` (for local dev)
 
 ## 3. Database
