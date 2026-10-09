@@ -14,9 +14,12 @@ import { resolveAppEntry } from "@/features/auth/route-guards";
 import { useTranslation } from "@/lib/i18n/context";
 import { fetchCurrentProfile } from "@/services/profile-service";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/features/auth/auth-context";
+import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
 
 export function WebLoginForm() {
   const { t } = useTranslation();
+  const { configured } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,6 +61,14 @@ export function WebLoginForm() {
     const { error } = await sendPasswordReset(email);
     if (error) toast.error(error.message);
     else toast.success(t("app.login.resetSent"));
+  }
+
+  if (!configured) {
+    return (
+      <WebAuthLayout mode="login" title={t("auth.webLoginTitle")} subtitle={t("auth.webLoginSubtitle")}>
+        <SupabaseSetupNotice />
+      </WebAuthLayout>
+    );
   }
 
   return (

@@ -43,6 +43,15 @@ bun run dev
 
 Open [http://localhost:3000/api/supabase-health](http://localhost:3000/api/supabase-health) — expect `auth.ok` and `database.ok`.
 
+## Production Auth URLs
+
+Dashboard → **Authentication → URL configuration**:
+
+- **Site URL:** your live origin (same as `VITE_PUBLIC_APP_URL`)
+- **Redirect URLs:** `https://your-domain.com/**` and `http://localhost:3000/**`
+
+See [DEPLOY.md](./DEPLOY.md) for build-time env vars.
+
 ## Android
 
 Build the APK with the same web origin as production (or dev server). Set `webAppUrl` or `VITE_PUBLIC_APP_URL` — see `docs/MOBILE_WEB.md` in the monorepo. **Do not** embed the service role key in the APK.

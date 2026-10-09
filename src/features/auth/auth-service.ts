@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { absoluteAppUrl } from "@/lib/site-url";
 
 export async function signUpWithEmail(input: {
   email: string;
@@ -9,10 +10,12 @@ export async function signUpWithEmail(input: {
   location?: string;
 }) {
   const supabase = getSupabaseBrowserClient();
+  const emailRedirect = absoluteAppUrl("/app/onboarding");
   return supabase.auth.signUp({
     email: input.email.trim(),
     password: input.password,
     options: {
+      emailRedirectTo: emailRedirect.startsWith("http") ? emailRedirect : undefined,
       data: {
         full_name: input.fullName.trim(),
         phone: input.phone?.trim(),
@@ -38,9 +41,10 @@ export async function signOut() {
 
 export async function sendPasswordReset(email: string) {
   const supabase = getSupabaseBrowserClient();
-  const redirectTo =
-    typeof window !== "undefined" ? `${window.location.origin}/app/login` : undefined;
-  return supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+  const redirectTo = absoluteAppUrl("/login");
+  return supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: redirectTo.startsWith("http") ? redirectTo : undefined,
+  });
 }
 
 export async function changePasswordWithVerification(input: {

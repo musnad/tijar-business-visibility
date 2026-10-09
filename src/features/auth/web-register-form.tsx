@@ -11,6 +11,8 @@ import { WebAuthField, WebAuthSelect, WebPrimaryButton } from "@/features/auth/w
 import { registerSchema } from "@/features/onboarding/schemas";
 import { useTranslation } from "@/lib/i18n/context";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/features/auth/auth-context";
+import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
 
 const LOCATION_OPTIONS = [
   "Kano, Nigeria",
@@ -24,6 +26,7 @@ const LOCATION_OPTIONS = [
 
 export function WebRegisterForm() {
   const { t } = useTranslation();
+  const { configured } = useAuth();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -76,6 +79,18 @@ export function WebRegisterForm() {
     }
     toast.message(t("app.register.checkEmail"));
     void navigate({ to: "/login" });
+  }
+
+  if (!configured) {
+    return (
+      <WebAuthLayout
+        mode="register"
+        title={t("auth.webRegisterTitle")}
+        subtitle={t("auth.webRegisterSubtitle")}
+      >
+        <SupabaseSetupNotice />
+      </WebAuthLayout>
+    );
   }
 
   return (

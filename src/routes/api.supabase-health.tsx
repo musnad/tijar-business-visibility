@@ -1,15 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { fetchBusinessCategories, pingSupabase } from "@/lib/supabase/client";
+import {
+  fetchBusinessCategoriesServer,
+  isSupabaseEnvPresent,
+  pingSupabaseServer,
+} from "@/lib/supabase/server-health";
+import { getConfiguredSiteOrigin } from "@/lib/site-url";
 
 export const Route = createFileRoute("/api/supabase-health")({
   server: {
     handlers: {
       GET: async () => {
-        const authPing = await pingSupabase();
-        const categories = await fetchBusinessCategories();
+        const authPing = await pingSupabaseServer();
+        const categories = await fetchBusinessCategoriesServer();
 
         return Response.json({
+          env: {
+            supabaseConfigured: isSupabaseEnvPresent(),
+            publicAppUrl: getConfiguredSiteOrigin() || null,
+            appEnv: import.meta.env.VITE_APP_ENV ?? "development",
+          },
           auth: authPing,
           database: categories.error
             ? {

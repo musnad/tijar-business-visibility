@@ -699,6 +699,9 @@ export const enMessages = {
     webLoginSubtitle: "Use the email you registered with. You'll go straight to your dashboard.",
     webRegisterTitle: "Create your account",
     webRegisterSubtitle: "Takes about a minute. Then we'll help you set up your business profile.",
+    deployEnvHint:
+      "This server was built without Supabase credentials. Add the variables below in your hosting dashboard, then rebuild and redeploy.",
+    checkHealthLink: "Check /api/supabase-health",
   },
 
   app: {

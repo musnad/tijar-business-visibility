@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/auth-context";
+import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
 import { resolveAppEntry } from "@/features/auth/route-guards";
 
 export function RequireAuth({
@@ -22,7 +23,7 @@ export function RequireAuth({
 
     const authed = Boolean(session);
     if (!authed) {
-      void navigate({ to: "/app/login" });
+      void navigate({ to: "/login" });
       return;
     }
 
@@ -30,6 +31,14 @@ export function RequireAuth({
       void navigate({ to: "/app/onboarding" });
     }
   }, [loading, session, profile, configured, requireOnboardingComplete, navigate]);
+
+  if (!configured) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center px-4 py-10">
+        <SupabaseSetupNotice />
+      </div>
+    );
+  }
 
   if (loading || !session) {
     return (
