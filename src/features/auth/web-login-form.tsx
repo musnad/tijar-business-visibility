@@ -19,7 +19,7 @@ import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
 
 export function WebLoginForm() {
   const { t } = useTranslation();
-  const { configured } = useAuth();
+  const { configured, configLoading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,6 +61,14 @@ export function WebLoginForm() {
     const { error } = await sendPasswordReset(email);
     if (error) toast.error(error.message);
     else toast.success(t("app.login.resetSent"));
+  }
+
+  if (configLoading) {
+    return (
+      <WebAuthLayout mode="login" title={t("auth.webLoginTitle")} subtitle={t("auth.webLoginSubtitle")}>
+        <p className="text-center text-sm text-muted-foreground">…</p>
+      </WebAuthLayout>
+    );
   }
 
   if (!configured) {

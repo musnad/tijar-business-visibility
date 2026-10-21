@@ -11,13 +11,15 @@ import {
   type ReactNode,
 } from "react";
 
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/config/env";
+import { ensureSupabasePublicEnv } from "@/lib/supabase/bootstrap-env";
+import { getSupabaseBrowserClient, primeSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseEnvPresent } from "@/lib/supabase/runtime-env";
 import { fetchCurrentProfile } from "@/services/profile-service";
 import type { Profile } from "@/types/database";
 
 type AuthContextValue = {
   configured: boolean;
+  configLoading: boolean;
   loading: boolean;
   session: Session | null;
   user: User | null;
@@ -28,10 +30,29 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [configLoading, setConfigLoading] = useState(() => !isSupabaseEnvPresent());
+  const [configured, setConfigured] = useState(() => isSupabaseEnvPresent());
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const configured = isSupabaseConfigured();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      const env = await ensureSupabasePublicEnv();
+      if (cancelled) return;
+      if (env) {
+        primeSupabaseBrowserClient(env);
+        setConfigured(true);
+      }
+      setConfigLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     if (!configured) {
@@ -43,11 +64,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [configured]);
 
   useEffect(() => {
+    if (configLoading) return;
+
     if (!configured) {
       setLoading(false);
+      setSession(null);
       return;
     }
 
+    setLoading(true);
     const supabase = getSupabaseBrowserClient();
 
     void supabase.auth.getSession().then(({ data }) => {
@@ -62,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [configured]);
+  }, [configLoading, configured]);
 
   useEffect(() => {
     if (!session) {
@@ -75,13 +100,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       configured,
+      configLoading,
       loading,
       session,
       user: session?.user ?? null,
       profile,
       refreshProfile,
     }),
-    [configured, loading, session, profile, refreshProfile],
+    [configured, configLoading, loading, session, profile, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

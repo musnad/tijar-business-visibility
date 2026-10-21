@@ -1,8 +1,10 @@
+import { readEnvString } from "@/lib/supabase/runtime-env";
+
 /** Public origin of this TIJAR deployment (set in hosting build env). */
 export function getConfiguredSiteOrigin(): string {
-  const raw = import.meta.env.VITE_PUBLIC_APP_URL;
-  if (typeof raw === "string" && raw.trim()) {
-    return raw.trim().replace(/\/$/, "");
+  const raw = readEnvString("VITE_PUBLIC_APP_URL");
+  if (raw) {
+    return raw.replace(/\/$/, "");
   }
   return "";
 }

@@ -1,12 +1,29 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { getSupabaseEnv } from "@/config/env";
+import type { SupabasePublicEnv } from "@/lib/supabase/runtime-env";
+import { getCachedSupabasePublicEnv } from "@/lib/supabase/bootstrap-env";
 
 let browserClient: SupabaseClient | undefined;
+
+export function primeSupabaseBrowserClient(env: SupabasePublicEnv): SupabaseClient {
+  browserClient = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
+  return browserClient;
+}
 
 /** Singleton Supabase client for browser / client components. */
 export function getSupabaseBrowserClient(): SupabaseClient {
   if (!browserClient) {
+    const cached = getCachedSupabasePublicEnv();
+    if (cached) {
+      return primeSupabaseBrowserClient(cached);
+    }
     const { VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY } = getSupabaseEnv();
     browserClient = createClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, {
       auth: {

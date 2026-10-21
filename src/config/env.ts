@@ -1,28 +1,18 @@
-import { z } from "zod";
+import {
+  readSupabasePublicEnv,
+  type SupabasePublicEnv,
+} from "@/lib/supabase/runtime-env";
 
-const envSchema = z.object({
-  VITE_SUPABASE_URL: z.string().url(),
-  VITE_SUPABASE_ANON_KEY: z.string().min(1),
-  VITE_APP_ENV: z.enum(["development", "staging", "production"]).default("development"),
-});
-
-export type AppEnv = z.infer<typeof envSchema>;
+export type AppEnv = SupabasePublicEnv;
 
 function readEnv(): AppEnv {
-  const parsed = envSchema.safeParse({
-    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-    VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
-    VITE_APP_ENV: import.meta.env.VITE_APP_ENV ?? "development",
-  });
-
-  if (!parsed.success) {
-    const detail = parsed.error.flatten().fieldErrors;
+  const env = readSupabasePublicEnv();
+  if (!env) {
     throw new Error(
-      `Missing Supabase environment variables. Copy .env.example to .env.local and set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY. ${JSON.stringify(detail)}`,
+      "Missing Supabase environment variables. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local or your host.",
     );
   }
-
-  return parsed.data;
+  return env;
 }
 
 /** Browser-safe Supabase config (anon/publishable key only). */
@@ -31,9 +21,5 @@ export function getSupabaseEnv(): AppEnv {
 }
 
 export function isSupabaseConfigured(): boolean {
-  return envSchema.safeParse({
-    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-    VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
-    VITE_APP_ENV: import.meta.env.VITE_APP_ENV ?? "development",
-  }).success;
+  return readSupabasePublicEnv() !== null;
 }

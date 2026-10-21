@@ -26,7 +26,7 @@ const LOCATION_OPTIONS = [
 
 export function WebRegisterForm() {
   const { t } = useTranslation();
-  const { configured } = useAuth();
+  const { configured, configLoading } = useAuth();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -79,6 +79,18 @@ export function WebRegisterForm() {
     }
     toast.message(t("app.register.checkEmail"));
     void navigate({ to: "/login" });
+  }
+
+  if (configLoading) {
+    return (
+      <WebAuthLayout
+        mode="register"
+        title={t("auth.webRegisterTitle")}
+        subtitle={t("auth.webRegisterSubtitle")}
+      >
+        <p className="text-center text-sm text-muted-foreground">…</p>
+      </WebAuthLayout>
+    );
   }
 
   if (!configured) {

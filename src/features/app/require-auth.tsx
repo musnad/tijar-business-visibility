@@ -14,7 +14,7 @@ export function RequireAuth({
   children: ReactNode;
   requireOnboardingComplete?: boolean;
 }) {
-  const { loading, session, profile, configured } = useAuth();
+  const { loading, session, profile, configured, configLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,6 +31,12 @@ export function RequireAuth({
       void navigate({ to: "/app/onboarding" });
     }
   }, [loading, session, profile, configured, requireOnboardingComplete, navigate]);
+
+  if (configLoading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">…</div>
+    );
+  }
 
   if (!configured) {
     return (
