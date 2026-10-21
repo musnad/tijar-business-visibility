@@ -1,0 +1,69 @@
+# NKENNEAi Integration
+
+Secure, server-side text translation for Tijar marketplace content, buyer–seller enquiries and business descriptions.
+
+## Verified API facts (official quickstart, checked 2026-10-21)
+
+Source: https://nkenne.ai/nkenneai-api (page is bot-protected; facts cross-checked against the indexed official content).
+
+| Item | Value |
+|------|-------|
+| Base URL | `https://developers-api.nkenne.ai` |
+| Endpoint | `POST /api/translate/with-api-key` |
+| Auth | Header `Authorization: <YOUR_API_KEY>` (raw key), `Content-Type: application/json` |
+| Body | `{ "text": "...", "fromLanguage": "English", "toLanguage": "Yoruba" }` |
+| Success field | `translatedText` |
+| Supported languages | **English, Yoruba, Swahili, Nigerian Pidgin** (exact strings) |
+| Supported pairs | English ↔ Yoruba / Swahili / Nigerian Pidgin only. No same-language, no direct non-English pairs |
+| Speech (STT/TTS/speech translation) | Marketed on nkenne.ai but **no endpoint/format is documented** in the quickstart — not implemented against invented specs |
+
+**Hausa is not a documented API language today.** Tijar's largest audience speaks Hausa, so the UI says "not supported yet" for Hausa instead of failing. Re-check the docs periodically; adding Hausa later is a one-line change in `src/lib/nkenne/languages.ts` once documented.
+
+No live API call has been verified: **no NKENNEAi key is configured** in this environment. All tests use mocked provider responses.
+
+## Configuration
+
+Server-side only (never `VITE_`-prefixed, never in the APK):
+
+```bash
+# tijar-business-visibility/.env.local (local) / Vercel env (production)
+NKENNEAI_API_KEY=your_key_here
+NKENNEAI_BASE_URL=https://developers-api.nkenne.ai   # optional override
+```
+
+Get a key: sign up at https://nkenne.ai → Developer Tools → API Keys → Generate.
+
+Run locally: `cd tijar-business-visibility && bun run dev` → open a storefront `/b/<slug>` and press **Translate**. Without a key the endpoint returns `503 NOT_CONFIGURED` and the UI shows a clear message (no fake translations).
+
+## Tijar endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/translate` | `{ text, fromLanguage, toLanguage }` → `{ translatedText, fromLanguage, toLanguage, cached }`. Validates input (≤1000 chars), enforces documented language pairs, rate-limits (20/min per user or IP), caches results (1 h, in-memory), retries once on provider 5xx, 12 s timeout |
+| `POST /api/translate-speech` | Voice structure: validates audio size/type, returns `501 VOICE_NOT_AVAILABLE` until official speech docs exist |
+
+Errors use stable codes: `VALIDATION`, `UNSUPPORTED_LANGUAGE`, `UNSUPPORTED_PAIR`, `SAME_LANGUAGE`, `NOT_CONFIGURED`, `INVALID_CREDENTIALS`, `QUOTA_EXCEEDED`, `RATE_LIMITED`, `TIMEOUT`, `NETWORK`, `PROVIDER_ERROR`. Request text, transcripts and keys are **never logged**.
+
+## Where translation appears
+
+- **Storefront** (`/b/[slug]`): business description and each product — original always kept, translation shown alongside, target defaults to the visitor's app language
+- **Seller enquiry inbox** (`/app/business/publish`): translate a buyer's message (source language selectable); original preserved; nothing is auto-sent
+- **Business description editor** (`/app/business/edit`): owner writes in a supported language, translates, reviews, and must click **Use this translation**, then **Save** — never auto-published
+- **Voice** (storefront enquiry form): explicit record button (≤60 s), processing/error states, transcript must be reviewed and confirmed before use; currently reports voice unavailable (see above)
+
+Language preference: the existing app language selector (`SitePreferencesControls`, locales en/ha/ar/yo/ig/sw/ff) is preserved; it sets the default translation target where NKENNEAi supports it (en/yo/sw).
+
+## Token-usage controls
+
+Per-request 1000-char cap, 20 req/min per user/IP, 1-hour response cache, one retry max. For multi-instance production, move cache + rate limit to Redis/Upstash (interfaces in `src/lib/nkenne/cache.ts` / `rate-limit.ts` are shaped for that) and add per-business daily quotas before opening translation to anonymous traffic at scale.
+
+## Tests
+
+`bun run test` — `src/lib/nkenne/nkenne.test.ts` mocks the provider: both translation directions, documented request shape + auth header, unsupported Hausa/pairs, missing/invalid credentials, quota (429), timeout, retry-then-success, cache hit avoids a second API call, rate limiting, input validation, and original-text preservation.
+
+## Limitations / blockers for live verification
+
+1. **No API key available** — add `NKENNEAI_API_KEY` and re-test one real translation before claiming live status
+2. **Hausa not supported by the documented API** — product decision needed (wait for NKENNEAi Hausa, or add a second provider for Hausa)
+3. **Speech undocumented** — request official speech API docs/credentials from NKENNEAi before enabling voice
+4. In-memory cache/rate limit resets on server restart and is per-instance on Vercel

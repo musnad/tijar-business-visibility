@@ -21,6 +21,8 @@ export type BusinessCategory = {
   sort_order: number;
 };
 
+export type ListingModerationStatus = "pending" | "approved" | "flagged" | "suspended";
+
 export type Business = {
   id: string;
   owner_id: string;
@@ -32,7 +34,63 @@ export type Business = {
   logo_url: string | null;
   islamic_mode_enabled: boolean;
   verification_status: string;
+  public_slug: string | null;
+  is_published: boolean;
+  public_phone: string | null;
+  public_whatsapp: string | null;
+  opening_hours: Record<string, string>;
+  latitude: number | null;
+  longitude: number | null;
+  public_location_label: string | null;
+  location_approved: boolean;
+  moderation_status: ListingModerationStatus;
+  moderation_notes: string | null;
+  published_at: string | null;
   created_at?: string;
+};
+
+/** Row of the public_business_listings view — public fields only. */
+export type PublicBusiness = {
+  id: string;
+  slug: string;
+  business_name: string;
+  description: string | null;
+  location_text: string | null;
+  public_location_label: string | null;
+  latitude: number;
+  longitude: number;
+  logo_url: string | null;
+  category_id: string | null;
+  category_name: string | null;
+  public_phone: string | null;
+  public_whatsapp: string | null;
+  opening_hours: Record<string, string>;
+  is_verified: boolean;
+  verification_status: string;
+  distance_km?: number | null;
+  product_names?: string[];
+};
+
+export type PublicProduct = {
+  id: string;
+  business_id: string;
+  name: string;
+  kind: ProductKind;
+  description: string | null;
+  sale_price: number | null;
+  unit: string;
+  image_url: string | null;
+  is_available: boolean;
+};
+
+export type BusinessEnquiry = {
+  id: string;
+  business_id: string;
+  customer_name: string;
+  customer_phone: string | null;
+  message: string;
+  is_read: boolean;
+  created_at: string;
 };
 
 export type BusinessDna = {

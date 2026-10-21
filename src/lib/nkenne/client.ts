@@ -1,0 +1,133 @@
+/**
+ * NKENNEAi HTTP client — official text-to-text endpoint only:
+ *   POST https://developers-api.nkenne.ai/api/translate/with-api-key
+ *   Header: Authorization: <API_KEY>   (raw key, per official examples)
+ *   Body:   { text, fromLanguage, toLanguage }
+ *   OK:     { translatedText, ... }
+ *
+ * Never log request/response text. Errors are mapped to stable codes so
+ * routes can respond without leaking provider internals.
+ */
+
+export type NkenneErrorCode =
+  | "NOT_CONFIGURED"
+  | "INVALID_CREDENTIALS"
+  | "QUOTA_EXCEEDED"
+  | "RATE_LIMITED"
+  | "UNSUPPORTED_LANGUAGE"
+  | "BAD_REQUEST"
+  | "TIMEOUT"
+  | "NETWORK"
+  | "PROVIDER_ERROR";
+
+export class NkenneError extends Error {
+  code: NkenneErrorCode;
+  status: number;
+  constructor(code: NkenneErrorCode, message: string, status = 502) {
+    super(message);
+    this.code = code;
+    this.status = status;
+  }
+}
+
+export type NkenneClientConfig = {
+  apiKey?: string;
+  baseUrl?: string;
+  timeoutMs?: number;
+  fetchImpl?: typeof fetch;
+  /** Injectable for tests; defaults to 1 retry on 5xx/network. */
+  maxRetries?: number;
+  sleep?: (ms: number) => Promise<void>;
+};
+
+const DEFAULT_BASE_URL = "https://developers-api.nkenne.ai";
+
+export function readNkenneConfig(env: Record<string, string | undefined> = process.env): {
+  apiKey: string | null;
+  baseUrl: string;
+} {
+  const apiKey = env.NKENNEAI_API_KEY?.trim() ? env.NKENNEAI_API_KEY.trim() : null;
+  const baseUrl = (env.NKENNEAI_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/$/, "");
+  return { apiKey, baseUrl };
+}
+
+async function attemptOnce(
+  config: Required<Pick<NkenneClientConfig, "baseUrl" | "timeoutMs" | "fetchImpl">> & { apiKey: string },
+  input: { text: string; fromLanguage: string; toLanguage: string },
+): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), config.timeoutMs);
+  let res: Response;
+  try {
+    res = await config.fetchImpl(`${config.baseUrl}/api/translate/with-api-key`, {
+      method: "POST",
+      headers: {
+        Authorization: config.apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new NkenneError("TIMEOUT", "Translation took too long. Please try again.", 504);
+    }
+    throw new NkenneError("NETWORK", "Could not reach the translation service.", 502);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (res.ok) {
+    const data = (await res.json().catch(() => null)) as { translatedText?: unknown } | null;
+    if (typeof data?.translatedText === "string" && data.translatedText) {
+      return data.translatedText;
+    }
+    throw new NkenneError("PROVIDER_ERROR", "Translation service returned an unexpected response.", 502);
+  }
+
+  if (res.status === 401 || res.status === 403) {
+    throw new NkenneError("INVALID_CREDENTIALS", "Translation is not configured correctly. Please contact support.", 502);
+  }
+  if (res.status === 429) {
+    throw new NkenneError("QUOTA_EXCEEDED", "Translation limit reached for now. Please try again later.", 429);
+  }
+  if (res.status === 400 || res.status === 422) {
+    throw new NkenneError("UNSUPPORTED_LANGUAGE", "That language or text could not be translated.", 400);
+  }
+  throw new NkenneError("PROVIDER_ERROR", "Translation service is unavailable. Please try again.", 502);
+}
+
+export async function nkenneTranslate(
+  config: NkenneClientConfig,
+  input: { text: string; fromLanguage: string; toLanguage: string },
+): Promise<string> {
+  if (!config.apiKey) {
+    throw new NkenneError(
+      "NOT_CONFIGURED",
+      "Translation is not configured on this server (missing NKENNEAI_API_KEY).",
+      503,
+    );
+  }
+  const resolved = {
+    apiKey: config.apiKey,
+    baseUrl: (config.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, ""),
+    timeoutMs: config.timeoutMs ?? 12_000,
+    fetchImpl: config.fetchImpl ?? fetch,
+  };
+  const maxRetries = config.maxRetries ?? 1;
+  const sleep = config.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await attemptOnce(resolved, input);
+    } catch (err) {
+      lastError = err;
+      const retryable =
+        err instanceof NkenneError && (err.code === "NETWORK" || err.code === "PROVIDER_ERROR");
+      if (!retryable || attempt === maxRetries) break;
+      await sleep(300 * (attempt + 1));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new NkenneError("PROVIDER_ERROR", "Translation failed.", 502);
+}

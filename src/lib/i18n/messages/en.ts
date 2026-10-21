@@ -66,6 +66,7 @@ export const enMessages = {
 
   nav: {
     skipToContent: "Skip to content",
+    discover: "Discover",
     howItWorks: "How It Works",
     learn: "Learn",
     businessVisibility: "Business Visibility",

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { FormSection } from "@/features/app-layout/form-section";
 import { BusinessLogoField } from "@/features/business/business-logo-field";
+import { TranslateText } from "@/features/translate/translate-text";
 import { businessProfileFormSchema } from "@/features/business/schemas";
 import { categoryDisplayName } from "@/features/onboarding/category-label";
 import { useTranslation } from "@/lib/i18n/context";
@@ -132,6 +133,19 @@ export function EditBusinessForm({ business }: { business: Business }) {
           onChange={(e) => setDescription(e.target.value)}
           placeholder={t("app.business.descriptionPlaceholder")}
         />
+        {description.trim() && (
+          <>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Write in English, Yoruba, Swahili or Nigerian Pidgin, then translate. Review the translation before using it — nothing changes until you press Save.
+            </p>
+            <TranslateText
+              text={description}
+              label="Translate description"
+              allowSourceSelect
+              onUseTranslation={(translated) => setDescription(translated)}
+            />
+          </>
+        )}
       </FormSection>
 
       <FormSection title={t("app.business.categorySection")} hint={t("app.business.categoryHint")}>

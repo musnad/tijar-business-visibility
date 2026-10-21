@@ -142,6 +142,21 @@ export function BusinessScreen({
 
           <BusinessQuickActions />
 
+          <Link
+            to="/app/business/publish"
+            className="mt-3 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4"
+          >
+            <Store className="size-6 shrink-0 text-primary" />
+            <span>
+              <span className="block font-bold">Shop visibility on Discover</span>
+              <span className="block text-sm text-muted-foreground">
+                {business.is_published
+                  ? `Published as /b/${business.public_slug ?? "…"} (${business.moderation_status})`
+                  : "Publish your shop so customers near you can find and contact you."}
+              </span>
+            </span>
+          </Link>
+
           <section className="mt-8">
             <h2 className="font-bold">{t("app.home.dnaTitle")}</h2>
             {!dna ? (
