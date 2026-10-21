@@ -31,7 +31,16 @@ Copy from `.env.example` → set in hosting UI (Vercel, Railway, Render, etc.).
 
 3. **Deployments** → ⋮ on latest → **Redeploy** (must rebuild so Vite picks up `VITE_*`).
 
-4. Confirm: [https://tijar-two.vercel.app/api/supabase-health](https://tijar-two.vercel.app/api/supabase-health) shows `"supabaseConfigured": true` and `"auth": { "ok": true }`.
+4. Confirm: [https://tijar-two.vercel.app/api/supabase-health](https://tijar-two.vercel.app/api/supabase-health) shows `"supabaseConfigured": true` and `"auth": { "ok": true }`. If still false, check `"keysPresent"` in the JSON — each `VITE_*` name should be `true` after redeploy.
+
+**Exact values for this project:**
+
+| Variable | Value |
+|----------|--------|
+| `VITE_SUPABASE_URL` | `https://ongsfahnfknqelyhuxrt.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | Your anon JWT or `sb_publishable_…` key from Supabase → Settings → API |
+| `VITE_PUBLIC_APP_URL` | `https://tijar-two.vercel.app` |
+| `VITE_APP_ENV` | `production` |
 
 Repo includes `vercel.json` with `"framework": "tanstack-start"` per [Vercel’s TanStack Start guide](https://vercel.com/docs/frameworks/full-stack/tanstack-start).
 

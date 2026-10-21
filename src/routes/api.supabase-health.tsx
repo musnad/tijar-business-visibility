@@ -5,6 +5,7 @@ import {
   isSupabaseEnvPresent,
   pingSupabaseServer,
 } from "@/lib/supabase/server-health";
+import { supabaseEnvDiagnostics } from "@/lib/supabase/runtime-env";
 import { getConfiguredSiteOrigin } from "@/lib/site-url";
 
 export const Route = createFileRoute("/api/supabase-health")({
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/api/supabase-health")({
             supabaseConfigured: isSupabaseEnvPresent(),
             publicAppUrl: getConfiguredSiteOrigin() || null,
             appEnv: import.meta.env.VITE_APP_ENV ?? "development",
+            keysPresent: supabaseEnvDiagnostics(),
           },
           auth: authPing,
           database: categories.error
