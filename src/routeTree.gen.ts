@@ -52,6 +52,7 @@ import { Route as AppCustomersIndexRouteImport } from './routes/app/customers/in
 import { Route as AppCustomersNewRouteImport } from './routes/app/customers/new'
 import { Route as AppLearnIndexRouteImport } from './routes/app/learn/index'
 import { Route as AppLearnLessonIdRouteImport } from './routes/app/learn/$lessonId'
+import { Route as AppOnboardingVoiceRouteImport } from './routes/app/onboarding/voice'
 import { Route as AppProductsAdjustRouteImport } from './routes/app/products/adjust'
 import { Route as AppProductsNewRouteImport } from './routes/app/products/new'
 import { Route as AppProfileEditRouteImport } from './routes/app/profile/edit'
@@ -273,6 +274,11 @@ const AppLearnLessonIdRoute = AppLearnLessonIdRouteImport.update({
   path: '/$lessonId',
   getParentRoute: () => AppLearnRouteRoute,
 } as any)
+const AppOnboardingVoiceRoute = AppOnboardingVoiceRouteImport.update({
+  id: '/voice',
+  path: '/voice',
+  getParentRoute: () => AppOnboardingRoute,
+} as any)
 const AppProductsAdjustRoute = AppProductsAdjustRouteImport.update({
   id: '/adjust',
   path: '/adjust',
@@ -324,7 +330,7 @@ export interface FileRoutesByFullPath {
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
   '/app/login': typeof AppLoginRoute
-  '/app/onboarding': typeof AppOnboardingRoute
+  '/app/onboarding': typeof AppOnboardingRouteWithChildren
   '/app/products': typeof AppProductsRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/record': typeof AppRecordRoute
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/app/business/publish': typeof AppBusinessPublishRoute
   '/app/customers/new': typeof AppCustomersNewRoute
   '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
+  '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
   '/app/products/adjust': typeof AppProductsAdjustRoute
   '/app/products/new': typeof AppProductsNewRoute
   '/app/profile/edit': typeof AppProfileEditRoute
@@ -371,7 +378,7 @@ export interface FileRoutesByTo {
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
   '/app/login': typeof AppLoginRoute
-  '/app/onboarding': typeof AppOnboardingRoute
+  '/app/onboarding': typeof AppOnboardingRouteWithChildren
   '/app/products': typeof AppProductsRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/record': typeof AppRecordRoute
@@ -388,6 +395,7 @@ export interface FileRoutesByTo {
   '/app/business/publish': typeof AppBusinessPublishRoute
   '/app/customers/new': typeof AppCustomersNewRoute
   '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
+  '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
   '/app/products/adjust': typeof AppProductsAdjustRoute
   '/app/products/new': typeof AppProductsNewRoute
   '/app/profile/edit': typeof AppProfileEditRoute
@@ -422,7 +430,7 @@ export interface FileRoutesById {
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
   '/app/login': typeof AppLoginRoute
-  '/app/onboarding': typeof AppOnboardingRoute
+  '/app/onboarding': typeof AppOnboardingRouteWithChildren
   '/app/products': typeof AppProductsRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/record': typeof AppRecordRoute
@@ -439,6 +447,7 @@ export interface FileRoutesById {
   '/app/business/publish': typeof AppBusinessPublishRoute
   '/app/customers/new': typeof AppCustomersNewRoute
   '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
+  '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
   '/app/products/adjust': typeof AppProductsAdjustRoute
   '/app/products/new': typeof AppProductsNewRoute
   '/app/profile/edit': typeof AppProfileEditRoute
@@ -491,6 +500,7 @@ export interface FileRouteTypes {
     | '/app/business/publish'
     | '/app/customers/new'
     | '/app/learn/$lessonId'
+    | '/app/onboarding/voice'
     | '/app/products/adjust'
     | '/app/products/new'
     | '/app/profile/edit'
@@ -538,6 +548,7 @@ export interface FileRouteTypes {
     | '/app/business/publish'
     | '/app/customers/new'
     | '/app/learn/$lessonId'
+    | '/app/onboarding/voice'
     | '/app/products/adjust'
     | '/app/products/new'
     | '/app/profile/edit'
@@ -588,6 +599,7 @@ export interface FileRouteTypes {
     | '/app/business/publish'
     | '/app/customers/new'
     | '/app/learn/$lessonId'
+    | '/app/onboarding/voice'
     | '/app/products/adjust'
     | '/app/products/new'
     | '/app/profile/edit'
@@ -922,6 +934,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLearnLessonIdRouteImport
       parentRoute: typeof AppLearnRouteRoute
     }
+    '/app/onboarding/voice': {
+      id: '/app/onboarding/voice'
+      path: '/voice'
+      fullPath: '/app/onboarding/voice'
+      preLoaderRoute: typeof AppOnboardingVoiceRouteImport
+      parentRoute: typeof AppOnboardingRoute
+    }
     '/app/products/adjust': {
       id: '/app/products/adjust'
       path: '/adjust'
@@ -1003,6 +1022,18 @@ const AppBusinessRouteWithChildren = AppBusinessRoute._addFileChildren(
   AppBusinessRouteChildren,
 )
 
+interface AppOnboardingRouteChildren {
+  AppOnboardingVoiceRoute: typeof AppOnboardingVoiceRoute
+}
+
+const AppOnboardingRouteChildren: AppOnboardingRouteChildren = {
+  AppOnboardingVoiceRoute: AppOnboardingVoiceRoute,
+}
+
+const AppOnboardingRouteWithChildren = AppOnboardingRoute._addFileChildren(
+  AppOnboardingRouteChildren,
+)
+
 interface AppProductsRouteChildren {
   AppProductsAdjustRoute: typeof AppProductsAdjustRoute
   AppProductsNewRoute: typeof AppProductsNewRoute
@@ -1038,7 +1069,7 @@ interface AppRouteRouteChildren {
   AppBusinessRoute: typeof AppBusinessRouteWithChildren
   AppExpensesRoute: typeof AppExpensesRoute
   AppLoginRoute: typeof AppLoginRoute
-  AppOnboardingRoute: typeof AppOnboardingRoute
+  AppOnboardingRoute: typeof AppOnboardingRouteWithChildren
   AppProductsRoute: typeof AppProductsRouteWithChildren
   AppProfileRoute: typeof AppProfileRouteWithChildren
   AppRecordRoute: typeof AppRecordRoute
@@ -1059,7 +1090,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppBusinessRoute: AppBusinessRouteWithChildren,
   AppExpensesRoute: AppExpensesRoute,
   AppLoginRoute: AppLoginRoute,
-  AppOnboardingRoute: AppOnboardingRoute,
+  AppOnboardingRoute: AppOnboardingRouteWithChildren,
   AppProductsRoute: AppProductsRouteWithChildren,
   AppProfileRoute: AppProfileRouteWithChildren,
   AppRecordRoute: AppRecordRoute,

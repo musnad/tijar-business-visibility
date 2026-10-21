@@ -1,6 +1,6 @@
 "use client";
 
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -189,6 +189,12 @@ export function OnboardingWizard() {
           <>
             <h1 className="text-2xl font-extrabold">{t("app.onboarding.welcomeTitle")}</h1>
             <p className="mt-3 text-muted-foreground">{t("app.onboarding.welcomeBody")}</p>
+            <Button asChild className="mt-6 min-h-12 w-full rounded-2xl font-bold">
+              <Link to="/app/onboarding/voice">🎙 Use your voice instead</Link>
+            </Button>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              Speak in English, Hausa, Swahili or Yoruba — TIJAR asks, you answer.
+            </p>
           </>
         )}
 

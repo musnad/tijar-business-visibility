@@ -74,3 +74,7 @@ Per-request 1000-char cap, 20 req/min per user/IP, 1-hour response cache, one re
 2. **Hausa not supported by the documented API** — product decision needed (wait for NKENNEAi Hausa, or add a second provider for Hausa)
 3. **Speech undocumented** — request official speech API docs/credentials from NKENNEAi before enabling voice
 4. In-memory cache/rate limit resets on server restart and is per-instance on Vercel
+
+## Voice profile creation
+
+`/app/onboarding/voice` (linked from the typed wizard): TIJAR asks each question aloud in English, Hausa, Swahili or Yoruba (`src/utils/voice-onboarding.ts` prompts), the owner answers by voice or tap — business name, category (spoken by name or number, incl. Hausa/Swahili number words), location, business type, payments, credit/stock/staff yes-no (ee/a'a, ndiyo/hapana, bẹẹni/bẹẹkọ), discovery channels, goals, Islamic mode — then reviews a summary and confirms. Only then is the business created via the existing onboarding service; the chosen language is saved as the profile's preferred language. Speech uses the device speech engine; account credentials remain typed for security.
