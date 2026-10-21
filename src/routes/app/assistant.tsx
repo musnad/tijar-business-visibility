@@ -13,7 +13,7 @@ function AssistantPage() {
   return (
     <RequireAuth>
       <AppShell>
-        <AppPageHeader title="Talk to TIJAR" />
+        <AppPageHeader title="Talk to TIJAR" subtitle="Record sales and expenses with your voice" />
         <AssistantScreen />
       </AppShell>
     </RequireAuth>
