@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Package, ShoppingBag, User } from "lucide-react";
+import { Home, Mic, Package, ShoppingBag, User } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { AppFab, AppLinkFab } from "@/features/app-layout/app-fab";
@@ -18,6 +18,7 @@ const navItems = [
     matchPrefixes: ["/app/sales"],
   },
   { to: "/app/products" as const, labelKey: "app.home.navProducts", icon: Package },
+  { to: "/app/assistant" as const, labelKey: "app.home.navAssistant", icon: Mic },
   { to: "/app/profile" as const, labelKey: "app.home.navProfile", icon: User },
 ] as const;
 
@@ -71,7 +72,7 @@ export function AppShell({
       )}
 
       <nav className="app-bottom-nav sticky bottom-0 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-sm">
-        <div className="mx-auto grid max-w-lg grid-cols-4 gap-0 px-2">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0 px-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isNavActive(pathname, item);

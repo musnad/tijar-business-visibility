@@ -57,6 +57,13 @@ Language preference: the existing app language selector (`SitePreferencesControl
 
 Per-request 1000-char cap, 20 req/min per user/IP, 1-hour response cache, one retry max. For multi-instance production, move cache + rate limit to Redis/Upstash (interfaces in `src/lib/nkenne/cache.ts` / `rate-limit.ts` are shaped for that) and add per-business daily quotas before opening translation to anonymous traffic at scale.
 
+## Language expansion (pivot, voice assistant, translator mode)
+
+- **Pivot translation:** non-English pairs (e.g. Yoruba → Swahili) now translate via English using only documented pairs (two cached calls). Hausa remains unsupported by the API.
+- **Whole-system languages:** the app UI already ships static messages for English, Hausa and Swahili (`src/lib/i18n/messages/`). `/app/admin/translate` translates system strings with NKENNEAi (batch endpoint `POST /api/translate-batch`, max 20) for human review before they are committed to message files — runtime UI is never silently machine-translated.
+- **Talk to TIJAR** (`/app/assistant`, "Talk" tab): push-to-talk (browser speech engine; Hausa/Swahili/Yoruba/English voices) or typing → rule-based intent parser (`src/utils/voice-intent.ts`: sale, expense, purchase, customer/supplier payment; amounts incl. "5k", "45,000", "for ₦…") → draft card → **explicit Confirm** saves via the normal transaction service → spoken confirmation. No silent writes.
+- **Conversation translator** (`/translate`): two-person mode — speak/type in your language, the other person hears it spoken in theirs; originals preserved; swap button; history kept.
+
 ## Tests
 
 `bun run test` — `src/lib/nkenne/nkenne.test.ts` mocks the provider: both translation directions, documented request shape + auth header, unsupported Hausa/pairs, missing/invalid credentials, quota (429), timeout, retry-then-success, cache hit avoids a second API call, rate limiting, input validation, and original-text preservation.

@@ -38,6 +38,17 @@ export type PairCheck =
   | { ok: true }
   | { ok: false; code: "UNSUPPORTED_LANGUAGE" | "UNSUPPORTED_PAIR" | "SAME_LANGUAGE"; message: string };
 
+/**
+ * Translation path using only documented pairs. Direct when possible;
+ * otherwise pivot via English (e.g. Yoruba -> English -> Swahili).
+ * Returns null when either language is unsupported (e.g. Hausa today).
+ */
+export function resolveTranslationPath(from: string, to: string): string[] | null {
+  if (!isNkenneLanguage(from) || !isNkenneLanguage(to) || from === to) return null;
+  if (from === "English" || to === "English") return [from, to];
+  return [from, "English", to];
+}
+
 export function checkLanguagePair(from: string, to: string): PairCheck {
   if (!isNkenneLanguage(from) || !isNkenneLanguage(to)) {
     const bad = !isNkenneLanguage(from) ? from : to;

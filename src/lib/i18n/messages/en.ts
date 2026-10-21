@@ -67,6 +67,7 @@ export const enMessages = {
   nav: {
     skipToContent: "Skip to content",
     discover: "Discover",
+    translator: "Translator",
     howItWorks: "How It Works",
     learn: "Learn",
     businessVisibility: "Business Visibility",
@@ -785,6 +786,7 @@ export const enMessages = {
       islamicOn: "Islamic Business Mode is on",
       islamicOff: "Islamic Business Mode is off",
       navHome: "Home",
+      navAssistant: "Talk",
       navRecord: "Record",
       navSales: "Sales",
       navProducts: "Products",

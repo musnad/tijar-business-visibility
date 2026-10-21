@@ -30,6 +30,7 @@ export function SiteHeader() {
     () =>
       [
         { labelKey: "nav.discover", to: "/discover" as const },
+        { labelKey: "nav.translator", to: "/translate" as const },
         { labelKey: "nav.howItWorks", to: "/how-it-works" as const },
         { labelKey: "nav.learn", to: "/learn" as const },
         { labelKey: "nav.about", to: "/about" as const },

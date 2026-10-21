@@ -126,6 +126,25 @@ describe("service: validation, cache, rate limit, originals preserved", () => {
     expect(third).toMatchObject({ ok: false, code: "RATE_LIMITED", status: 429 });
   });
 
+  it("pivots non-English pairs via English using documented pairs only", async () => {
+    const seen: string[] = [];
+    const fetchImpl = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const body = JSON.parse((init?.body as string) ?? "{}") as { fromLanguage: string; toLanguage: string };
+      seen.push(`${body.fromLanguage}->${body.toLanguage}`);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ translatedText: body.toLanguage === "English" ? "Rice" : "Mchele" }),
+      } as Response;
+    }) as unknown as typeof fetch;
+    const res = await translateText(
+      { text: "Arroz", fromLanguage: "Yoruba", toLanguage: "Swahili" },
+      { clientConfig: { apiKey: "k", fetchImpl, sleep: async () => {} } },
+    );
+    expect(res).toMatchObject({ ok: true, translatedText: "Mchele" });
+    expect(seen).toEqual(["Yoruba->English", "English->Swahili"]);
+  });
+
   it("reports missing credentials as 503, not a fake translation", async () => {
     const res = await translateText(
       { text: "Rice", fromLanguage: "English", toLanguage: "Yoruba" },

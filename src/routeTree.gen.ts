@@ -21,11 +21,14 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TranslateRouteImport } from './routes/translate'
 import { Route as ApiPublicConfigRouteImport } from './routes/api.public-config'
 import { Route as ApiSupabaseHealthRouteImport } from './routes/api.supabase-health'
 import { Route as ApiTranslateRouteImport } from './routes/api.translate'
+import { Route as ApiTranslateBatchRouteImport } from './routes/api.translate-batch'
 import { Route as ApiTranslateSpeechRouteImport } from './routes/api.translate-speech'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AppAssistantRouteImport } from './routes/app/assistant'
 import { Route as AppBusinessRouteImport } from './routes/app/business'
 import { Route as AppCustomersRouteRouteImport } from './routes/app/customers/route'
 import { Route as AppExpensesRouteImport } from './routes/app/expenses'
@@ -42,6 +45,7 @@ import { Route as AppSuppliersRouteImport } from './routes/app/suppliers'
 import { Route as AppTransactionsRouteImport } from './routes/app/transactions'
 import { Route as BSlugRouteImport } from './routes/b/$slug'
 import { Route as AppAdminModerationRouteImport } from './routes/app/admin/moderation'
+import { Route as AppAdminTranslateRouteImport } from './routes/app/admin/translate'
 import { Route as AppBusinessEditRouteImport } from './routes/app/business/edit'
 import { Route as AppBusinessPublishRouteImport } from './routes/app/business/publish'
 import { Route as AppCustomersIndexRouteImport } from './routes/app/customers/index'
@@ -114,6 +118,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TranslateRoute = TranslateRouteImport.update({
+  id: '/translate',
+  path: '/translate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicConfigRoute = ApiPublicConfigRouteImport.update({
   id: '/api/public-config',
   path: '/api/public-config',
@@ -129,6 +138,11 @@ const ApiTranslateRoute = ApiTranslateRouteImport.update({
   path: '/api/translate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTranslateBatchRoute = ApiTranslateBatchRouteImport.update({
+  id: '/api/translate-batch',
+  path: '/api/translate-batch',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTranslateSpeechRoute = ApiTranslateSpeechRouteImport.update({
   id: '/api/translate-speech',
   path: '/api/translate-speech',
@@ -137,6 +151,11 @@ const ApiTranslateSpeechRoute = ApiTranslateSpeechRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppAssistantRoute = AppAssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppBusinessRoute = AppBusinessRouteImport.update({
@@ -219,6 +238,11 @@ const AppAdminModerationRoute = AppAdminModerationRouteImport.update({
   path: '/admin/moderation',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppAdminTranslateRoute = AppAdminTranslateRouteImport.update({
+  id: '/admin/translate',
+  path: '/admin/translate',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppBusinessEditRoute = AppBusinessEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -288,12 +312,15 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
+  '/translate': typeof TranslateRoute
   '/app/customers': typeof AppCustomersRouteRouteWithChildren
   '/app/learn': typeof AppLearnRouteRouteWithChildren
   '/api/public-config': typeof ApiPublicConfigRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
+  '/api/translate-batch': typeof ApiTranslateBatchRoute
   '/api/translate-speech': typeof ApiTranslateSpeechRoute
+  '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
   '/app/login': typeof AppLoginRoute
@@ -309,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/b/$slug': typeof BSlugRoute
   '/app/': typeof AppIndexRoute
   '/app/admin/moderation': typeof AppAdminModerationRoute
+  '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
   '/app/business/publish': typeof AppBusinessPublishRoute
   '/app/customers/new': typeof AppCustomersNewRoute
@@ -333,10 +361,13 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
+  '/translate': typeof TranslateRoute
   '/api/public-config': typeof ApiPublicConfigRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
+  '/api/translate-batch': typeof ApiTranslateBatchRoute
   '/api/translate-speech': typeof ApiTranslateSpeechRoute
+  '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
   '/app/login': typeof AppLoginRoute
@@ -352,6 +383,7 @@ export interface FileRoutesByTo {
   '/b/$slug': typeof BSlugRoute
   '/app': typeof AppIndexRoute
   '/app/admin/moderation': typeof AppAdminModerationRoute
+  '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
   '/app/business/publish': typeof AppBusinessPublishRoute
   '/app/customers/new': typeof AppCustomersNewRoute
@@ -378,12 +410,15 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
+  '/translate': typeof TranslateRoute
   '/app/customers': typeof AppCustomersRouteRouteWithChildren
   '/app/learn': typeof AppLearnRouteRouteWithChildren
   '/api/public-config': typeof ApiPublicConfigRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
+  '/api/translate-batch': typeof ApiTranslateBatchRoute
   '/api/translate-speech': typeof ApiTranslateSpeechRoute
+  '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
   '/app/login': typeof AppLoginRoute
@@ -399,6 +434,7 @@ export interface FileRoutesById {
   '/b/$slug': typeof BSlugRoute
   '/app/': typeof AppIndexRoute
   '/app/admin/moderation': typeof AppAdminModerationRoute
+  '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
   '/app/business/publish': typeof AppBusinessPublishRoute
   '/app/customers/new': typeof AppCustomersNewRoute
@@ -426,12 +462,15 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/register'
     | '/terms'
+    | '/translate'
     | '/app/customers'
     | '/app/learn'
     | '/api/public-config'
     | '/api/supabase-health'
     | '/api/translate'
+    | '/api/translate-batch'
     | '/api/translate-speech'
+    | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
     | '/app/login'
@@ -447,6 +486,7 @@ export interface FileRouteTypes {
     | '/b/$slug'
     | '/app/'
     | '/app/admin/moderation'
+    | '/app/admin/translate'
     | '/app/business/edit'
     | '/app/business/publish'
     | '/app/customers/new'
@@ -471,10 +511,13 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/register'
     | '/terms'
+    | '/translate'
     | '/api/public-config'
     | '/api/supabase-health'
     | '/api/translate'
+    | '/api/translate-batch'
     | '/api/translate-speech'
+    | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
     | '/app/login'
@@ -490,6 +533,7 @@ export interface FileRouteTypes {
     | '/b/$slug'
     | '/app'
     | '/app/admin/moderation'
+    | '/app/admin/translate'
     | '/app/business/edit'
     | '/app/business/publish'
     | '/app/customers/new'
@@ -515,12 +559,15 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/register'
     | '/terms'
+    | '/translate'
     | '/app/customers'
     | '/app/learn'
     | '/api/public-config'
     | '/api/supabase-health'
     | '/api/translate'
+    | '/api/translate-batch'
     | '/api/translate-speech'
+    | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
     | '/app/login'
@@ -536,6 +583,7 @@ export interface FileRouteTypes {
     | '/b/$slug'
     | '/app/'
     | '/app/admin/moderation'
+    | '/app/admin/translate'
     | '/app/business/edit'
     | '/app/business/publish'
     | '/app/customers/new'
@@ -562,9 +610,11 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
   TermsRoute: typeof TermsRoute
+  TranslateRoute: typeof TranslateRoute
   ApiPublicConfigRoute: typeof ApiPublicConfigRoute
   ApiSupabaseHealthRoute: typeof ApiSupabaseHealthRoute
   ApiTranslateRoute: typeof ApiTranslateRoute
+  ApiTranslateBatchRoute: typeof ApiTranslateBatchRoute
   ApiTranslateSpeechRoute: typeof ApiTranslateSpeechRoute
   BSlugRoute: typeof BSlugRoute
 }
@@ -655,6 +705,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/translate': {
+      id: '/translate'
+      path: '/translate'
+      fullPath: '/translate'
+      preLoaderRoute: typeof TranslateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public-config': {
       id: '/api/public-config'
       path: '/api/public-config'
@@ -676,6 +733,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTranslateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/translate-batch': {
+      id: '/api/translate-batch'
+      path: '/api/translate-batch'
+      fullPath: '/api/translate-batch'
+      preLoaderRoute: typeof ApiTranslateBatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/translate-speech': {
       id: '/api/translate-speech'
       path: '/api/translate-speech'
@@ -688,6 +752,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/assistant': {
+      id: '/app/assistant'
+      path: '/assistant'
+      fullPath: '/app/assistant'
+      preLoaderRoute: typeof AppAssistantRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/app/business': {
@@ -800,6 +871,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/moderation'
       fullPath: '/app/admin/moderation'
       preLoaderRoute: typeof AppAdminModerationRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/admin/translate': {
+      id: '/app/admin/translate'
+      path: '/admin/translate'
+      fullPath: '/app/admin/translate'
+      preLoaderRoute: typeof AppAdminTranslateRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/app/business/edit': {
@@ -956,6 +1034,7 @@ const AppProfileRouteWithChildren = AppProfileRoute._addFileChildren(
 interface AppRouteRouteChildren {
   AppCustomersRouteRoute: typeof AppCustomersRouteRouteWithChildren
   AppLearnRouteRoute: typeof AppLearnRouteRouteWithChildren
+  AppAssistantRoute: typeof AppAssistantRoute
   AppBusinessRoute: typeof AppBusinessRouteWithChildren
   AppExpensesRoute: typeof AppExpensesRoute
   AppLoginRoute: typeof AppLoginRoute
@@ -970,11 +1049,13 @@ interface AppRouteRouteChildren {
   AppTransactionsRoute: typeof AppTransactionsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAdminModerationRoute: typeof AppAdminModerationRoute
+  AppAdminTranslateRoute: typeof AppAdminTranslateRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppCustomersRouteRoute: AppCustomersRouteRouteWithChildren,
   AppLearnRouteRoute: AppLearnRouteRouteWithChildren,
+  AppAssistantRoute: AppAssistantRoute,
   AppBusinessRoute: AppBusinessRouteWithChildren,
   AppExpensesRoute: AppExpensesRoute,
   AppLoginRoute: AppLoginRoute,
@@ -989,6 +1070,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppTransactionsRoute: AppTransactionsRoute,
   AppIndexRoute: AppIndexRoute,
   AppAdminModerationRoute: AppAdminModerationRoute,
+  AppAdminTranslateRoute: AppAdminTranslateRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
@@ -1008,9 +1090,11 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
   TermsRoute: TermsRoute,
+  TranslateRoute: TranslateRoute,
   ApiPublicConfigRoute: ApiPublicConfigRoute,
   ApiSupabaseHealthRoute: ApiSupabaseHealthRoute,
   ApiTranslateRoute: ApiTranslateRoute,
+  ApiTranslateBatchRoute: ApiTranslateBatchRoute,
   ApiTranslateSpeechRoute: ApiTranslateSpeechRoute,
   BSlugRoute: BSlugRoute,
 }
