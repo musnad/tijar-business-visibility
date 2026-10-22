@@ -99,17 +99,32 @@ export function parseVoiceCommand(rawInput: string): ParsedVoiceCommand {
   };
 }
 
-/** Spoken-style confirmation summary (also shown as text). */
-export function summarizeDraft(cmd: ParsedVoiceCommand): string {
-  if (cmd.intent === "unknown" || cmd.amount === null) {
-    return "I could not understand the amount or type. Try: 'Record sale 5000 for rice'.";
-  }
-  const labels: Record<VoiceIntentType, string> = {
+export type DraftSummaryStrings = {
+  unknown: string;
+  /** Template with {label}, {amount}, {description} placeholders. */
+  text: string;
+  labels: Record<VoiceIntentType, string>;
+};
+
+const DEFAULT_SUMMARY_STRINGS: DraftSummaryStrings = {
+  unknown: "I could not understand the amount or type. Try: 'Record sale 5000 for rice'.",
+  text: "{label} of {amount}{description}. Press Confirm to save.",
+  labels: {
     sale: "Sale",
     expense: "Expense",
     purchase: "Purchase (stock)",
     customer_payment: "Customer payment",
     supplier_payment: "Supplier payment",
-  };
-  return `${labels[cmd.intent]} of ₦${cmd.amount.toLocaleString("en-NG")}${cmd.description ? ` — ${cmd.description}` : ""}. Press Confirm to save.`;
+  },
+};
+
+/** Spoken-style confirmation summary (also shown as text). */
+export function summarizeDraft(cmd: ParsedVoiceCommand, strings: DraftSummaryStrings = DEFAULT_SUMMARY_STRINGS): string {
+  if (cmd.intent === "unknown" || cmd.amount === null) {
+    return strings.unknown;
+  }
+  return strings.text
+    .replace("{label}", strings.labels[cmd.intent])
+    .replace("{amount}", `₦${cmd.amount.toLocaleString("en-NG")}`)
+    .replace("{description}", cmd.description ? ` — ${cmd.description}` : "");
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n/context";
 import { NKENNE_LANGUAGES, type NkenneLanguage } from "@/lib/nkenne/languages";
 
 /**
@@ -14,6 +15,7 @@ import { NKENNE_LANGUAGES, type NkenneLanguage } from "@/lib/nkenne/languages";
  * the documented NKENNEAi API does not include Hausa yet.
  */
 export function SystemTranslateScreen() {
+  const { t } = useTranslation();
   const [source, setSource] = useState("Fresh rice\nHow much is this?\nThank you, come again");
   const [from, setFrom] = useState<NkenneLanguage>("English");
   const [to, setTo] = useState<NkenneLanguage>("Swahili");
@@ -32,13 +34,13 @@ export function SystemTranslateScreen() {
       });
       const body = (await res.json().catch(() => null)) as { translations?: string[]; error?: { message: string } } | null;
       if (!res.ok || !body?.translations) {
-        toast.error(body?.error?.message ?? "Translation failed");
+        toast.error(body?.error?.message ?? t("app.translator.translationFailed"));
         return;
       }
       setOutput(JSON.stringify(Object.fromEntries(texts.map((t, i) => [t, body.translations![i]])), null, 2));
-      toast.success("Translated. Review before saving into message files.");
+      toast.success(t("app.translator.translatedReview"));
     } catch {
-      toast.error("Could not reach translation service.");
+      toast.error(t("app.translator.translationServiceUnreachable"));
     } finally {
       setBusy(false);
     }
@@ -47,20 +49,20 @@ export function SystemTranslateScreen() {
   return (
     <div className="mt-5 space-y-4">
       <p className="text-sm text-muted-foreground">
-        Translate system strings (max 20 lines). Review the result, then paste approved strings into
+        {t("app.translator.systemIntroStart")}
         <code className="mx-1 rounded bg-muted px-1">src/lib/i18n/messages/</code>
-        (e.g. <code className="rounded bg-muted px-1">sw.ts</code>). Hausa system strings live in <code className="rounded bg-muted px-1">ha.ts</code> — NKENNEAi does not document Hausa yet.
+        {t("app.translator.systemIntroExample")} <code className="rounded bg-muted px-1">sw.ts</code>{t("app.translator.systemIntroHausa")} <code className="rounded bg-muted px-1">ha.ts</code> {t("app.translator.systemIntroEnd")}
       </p>
       <div className="flex flex-wrap gap-2">
-        <select value={from} onChange={(e) => setFrom(e.target.value as NkenneLanguage)} className="min-h-11 rounded-xl border border-input bg-background px-2" aria-label="From">
+        <select value={from} onChange={(e) => setFrom(e.target.value as NkenneLanguage)} className="min-h-11 rounded-xl border border-input bg-background px-2" aria-label={t("app.translator.fromLabel")}>
           {NKENNE_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
         </select>
-        <select value={to} onChange={(e) => setTo(e.target.value as NkenneLanguage)} className="min-h-11 rounded-xl border border-input bg-background px-2" aria-label="To">
+        <select value={to} onChange={(e) => setTo(e.target.value as NkenneLanguage)} className="min-h-11 rounded-xl border border-input bg-background px-2" aria-label={t("app.translator.toLabel")}>
           {NKENNE_LANGUAGES.filter((l) => l !== from).map((l) => <option key={l} value={l}>{l}</option>)}
         </select>
-        <Button type="button" className="min-h-11 rounded-xl font-bold" disabled={busy} onClick={run}>{busy ? "Translating…" : "Translate strings"}</Button>
+        <Button type="button" className="min-h-11 rounded-xl font-bold" disabled={busy} onClick={run}>{busy ? t("app.translator.translating") : t("app.translator.translateStrings")}</Button>
       </div>
-      <textarea value={source} onChange={(e) => setSource(e.target.value)} rows={6} className="w-full rounded-xl border border-input bg-background px-3 py-2 text-base" aria-label="Strings to translate, one per line" />
+      <textarea value={source} onChange={(e) => setSource(e.target.value)} rows={6} className="w-full rounded-xl border border-input bg-background px-3 py-2 text-base" aria-label={t("app.translator.stringsInputLabel")} />
       {output && <pre className="overflow-x-auto rounded-xl bg-muted p-3 text-xs">{output}</pre>}
     </div>
   );

@@ -38,6 +38,7 @@ import {
   VOICE_ONBOARDING_LANGS,
   type VoiceOnboardingLang,
 } from "@/utils/voice-onboarding";
+import { useTranslation } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 
 const TOTAL_STEPS = 12;
@@ -53,6 +54,7 @@ const LABELS: Record<string, Record<string, string>> = {
 };
 
 export function VoiceOnboardingScreen() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile, refreshProfile } = useAuth();
   const [lang, setLang] = useState<VoiceOnboardingLang>("English");
@@ -176,7 +178,7 @@ export function VoiceOnboardingScreen() {
       const transcript = await listen(lang);
       if (transcript) handleTranscript(transcript);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Voice failed");
+      toast.error(err instanceof Error ? err.message : t("app.voiceOnboarding.voiceFailed"));
     }
   }
 
@@ -188,7 +190,7 @@ export function VoiceOnboardingScreen() {
       islamicMode: answers.islamicMode ?? "not_now",
     });
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? "Please complete all steps.");
+      toast.error(parsed.error.errors[0]?.message ?? t("app.voiceOnboarding.completeAllSteps"));
       return;
     }
     setCreating(true);
@@ -235,18 +237,18 @@ export function VoiceOnboardingScreen() {
     <div className="mx-auto max-w-xl pb-8">
       <section className="dashboard-summary-card mt-2 rounded-3xl p-5 text-primary-foreground shadow-xl">
         <div className="flex items-center justify-between gap-3">
-          <p className="flex items-center gap-2 font-extrabold"><Sparkles className="size-5" /> Voice profile setup</p>
+          <p className="flex items-center gap-2 font-extrabold"><Sparkles className="size-5" /> {t("app.voiceOnboarding.title")}</p>
           <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-bold ring-1 ring-white/25">
-            {step === 0 ? "Start" : `Step ${step} of ${TOTAL_STEPS}`}
+            {step === 0 ? t("app.voiceOnboarding.start") : t("app.voiceOnboarding.stepOf").replace("{step}", String(step)).replace("{total}", String(TOTAL_STEPS))}
           </span>
         </div>
         <Progress value={step === 0 ? 4 : progress} className="mt-3 bg-white/20" />
-        <p className="mt-3 text-sm text-white/85">Create your business profile by speaking — in your own language.</p>
+        <p className="mt-3 text-sm text-white/85">{t("app.voiceOnboarding.subtitle")}</p>
       </section>
 
       {step === 0 && (
         <section className="mt-4 rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <h2 className="font-extrabold">Choose your language</h2>
+          <h2 className="font-extrabold">{t("app.voiceOnboarding.chooseLanguage")}</h2>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {VOICE_ONBOARDING_LANGS.map((l) => (
               <button
@@ -267,9 +269,9 @@ export function VoiceOnboardingScreen() {
             className="mt-4 min-h-12 w-full rounded-2xl font-bold"
             onClick={() => { setWelcomed(true); speakText(prompts.welcome, lang); next(); }}
           >
-            <Volume2 className="mr-1.5 size-5" /> Start with voice
+            <Volume2 className="mr-1.5 size-5" /> {t("app.voiceOnboarding.startWithVoice")}
           </Button>
-          <p className="mt-2 text-center text-xs text-muted-foreground">You can tap answers on every step — voice is optional.</p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">{t("app.voiceOnboarding.tapAnswersHint")}</p>
         </section>
       )}
 
@@ -278,7 +280,7 @@ export function VoiceOnboardingScreen() {
           <div className="flex gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Sparkles className="size-4" /></span>
             <div>
-              <p className="text-[11px] font-extrabold uppercase tracking-wider text-primary">TIJAR asks</p>
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-primary">{t("app.voiceOnboarding.tijarAsks")}</p>
               <p className="mt-0.5 text-lg font-bold leading-snug">{question}</p>
             </div>
           </div>
@@ -290,7 +292,7 @@ export function VoiceOnboardingScreen() {
                 type="button"
                 onClick={listening ? stop : onMic}
                 disabled={!supported}
-                aria-label={listening ? "Stop" : "Speak your answer"}
+                aria-label={listening ? t("app.voiceOnboarding.stop") : t("app.voiceOnboarding.speakYourAnswer")}
                 className={cn(
                   "relative flex size-20 items-center justify-center rounded-full text-primary-foreground shadow-lg transition-all active:scale-95 disabled:opacity-50",
                   listening ? "bg-destructive" : "bg-primary",
@@ -299,8 +301,8 @@ export function VoiceOnboardingScreen() {
                 {listening ? <Square className="size-7" /> : <Mic className="size-8" />}
               </button>
             </div>
-            <p className="mt-3 text-sm font-semibold">{listening ? "Listening… speak now" : supported ? "Tap and speak your answer" : "Voice not supported — type or tap below"}</p>
-            {heard && <p className="mt-2 w-full rounded-xl bg-muted/70 px-3 py-2 text-center text-sm"><span className="text-muted-foreground">You said: </span>“{heard}”</p>}
+            <p className="mt-3 text-sm font-semibold">{listening ? t("app.voiceOnboarding.listening") : supported ? t("app.voiceOnboarding.tapAndSpeak") : t("app.voiceOnboarding.voiceNotSupported")}</p>
+            {heard && <p className="mt-2 w-full rounded-xl bg-muted/70 px-3 py-2 text-center text-sm"><span className="text-muted-foreground">{t("app.voiceOnboarding.youSaid")} </span>“{heard}”</p>}
           </div>
 
           <div className="mt-5 space-y-4 border-t border-border pt-4">
@@ -309,11 +311,11 @@ export function VoiceOnboardingScreen() {
                 <Input
                   value={textValue}
                   onChange={(e) => setTextValue(e.target.value)}
-                  placeholder={step === 1 ? "Business name" : "Town or area"}
+                  placeholder={step === 1 ? t("app.voiceOnboarding.businessNamePlaceholder") : t("app.voiceOnboarding.townOrAreaPlaceholder")}
                   className="min-h-12 flex-1 rounded-xl text-base"
                 />
                 <Button type="button" className="min-h-12 rounded-xl font-bold" disabled={textValue.trim().length < 2} onClick={() => handleTranscript(textValue)}>
-                  Next
+                  {t("app.voiceOnboarding.next")}
                 </Button>
               </div>
             )}
@@ -330,14 +332,14 @@ export function VoiceOnboardingScreen() {
                   const cur = answers.paymentMethods ?? [];
                   setAnswers((a) => ({ ...a, paymentMethods: cur.includes(o.id) ? cur.filter((x) => x !== o.id) : [...cur, o.id] }));
                 }, answers.paymentMethods ?? [])}
-                <Button type="button" className="min-h-11 rounded-xl font-bold" disabled={(answers.paymentMethods ?? []).length === 0} onClick={next}>Done</Button>
+                <Button type="button" className="min-h-11 rounded-xl font-bold" disabled={(answers.paymentMethods ?? []).length === 0} onClick={next}>{t("app.voiceOnboarding.done")}</Button>
               </>
             )}
 
             {(step === 6 || step === 7 || step === 8 || step === 11) && (
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" className="min-h-12 rounded-2xl font-bold" onClick={() => handleTranscript("yes")}>Yes</Button>
-                <Button type="button" variant="outline" className="min-h-12 rounded-2xl font-bold" onClick={() => handleTranscript("no")}>No</Button>
+                <Button type="button" className="min-h-12 rounded-2xl font-bold" onClick={() => handleTranscript("yes")}>{t("app.voiceOnboarding.yes")}</Button>
+                <Button type="button" variant="outline" className="min-h-12 rounded-2xl font-bold" onClick={() => handleTranscript("no")}>{t("app.voiceOnboarding.no")}</Button>
               </div>
             )}
 
@@ -347,7 +349,7 @@ export function VoiceOnboardingScreen() {
                   const cur = answers.discoveryChannels ?? [];
                   setAnswers((a) => ({ ...a, discoveryChannels: cur.includes(o.id) ? cur.filter((x) => x !== o.id) : [...cur, o.id] }));
                 }, answers.discoveryChannels ?? [])}
-                <Button type="button" className="min-h-11 rounded-xl font-bold" disabled={(answers.discoveryChannels ?? []).length === 0} onClick={next}>Done</Button>
+                <Button type="button" className="min-h-11 rounded-xl font-bold" disabled={(answers.discoveryChannels ?? []).length === 0} onClick={next}>{t("app.voiceOnboarding.done")}</Button>
               </>
             )}
 
@@ -357,13 +359,13 @@ export function VoiceOnboardingScreen() {
                   const cur = answers.goals ?? [];
                   setAnswers((a) => ({ ...a, goals: cur.includes(o.id) ? cur.filter((x) => x !== o.id) : [...cur, o.id].slice(0, MAX_GOALS) }));
                 }, answers.goals ?? [])}
-                <Button type="button" className="min-h-11 rounded-xl font-bold" disabled={(answers.goals ?? []).length === 0} onClick={next}>Done</Button>
+                <Button type="button" className="min-h-11 rounded-xl font-bold" disabled={(answers.goals ?? []).length === 0} onClick={next}>{t("app.voiceOnboarding.done")}</Button>
               </>
             )}
           </div>
 
           <button type="button" className="mt-4 text-sm font-semibold text-muted-foreground underline-offset-2 hover:underline" onClick={() => setStep((s) => Math.max(1, s - 1))}>
-            ← Back
+            ← {t("app.voiceOnboarding.back")}
           </button>
         </section>
       )}
@@ -371,18 +373,18 @@ export function VoiceOnboardingScreen() {
       {step >= TOTAL_STEPS && (
         <section className="mt-4 overflow-hidden rounded-3xl border-2 border-primary/50 bg-card shadow-lg">
           <div className="bg-primary/5 px-5 py-4">
-            <p className="flex items-center gap-2 font-extrabold"><BadgeCheck className="size-5 text-primary" /> Review your business profile</p>
+            <p className="flex items-center gap-2 font-extrabold"><BadgeCheck className="size-5 text-primary" /> {t("app.voiceOnboarding.reviewTitle")}</p>
             <p className="mt-1 text-sm text-muted-foreground">{prompts.review}</p>
           </div>
           <dl className="divide-y divide-border px-5 text-sm">
             {[
-              ["Business", answers.businessName ?? "—"],
-              ["Category", categoryName ?? "—"],
-              ["Location", answers.location ?? "—"],
-              ["Type", (answers.revenueModels ?? []).join(", ") || "—"],
-              ["Payments", (answers.paymentMethods ?? []).join(", ") || "—"],
-              ["Goals", (answers.goals ?? []).join(", ") || "—"],
-              ["Language", lang],
+              [t("app.voiceOnboarding.reviewBusiness"), answers.businessName ?? "—"],
+              [t("app.voiceOnboarding.reviewCategory"), categoryName ?? "—"],
+              [t("app.voiceOnboarding.reviewLocation"), answers.location ?? "—"],
+              [t("app.voiceOnboarding.reviewType"), (answers.revenueModels ?? []).join(", ") || "—"],
+              [t("app.voiceOnboarding.reviewPayments"), (answers.paymentMethods ?? []).join(", ") || "—"],
+              [t("app.voiceOnboarding.reviewGoals"), (answers.goals ?? []).join(", ") || "—"],
+              [t("app.voiceOnboarding.reviewLanguage"), lang],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between gap-3 py-2.5">
                 <dt className="text-muted-foreground">{k}</dt>
@@ -392,10 +394,10 @@ export function VoiceOnboardingScreen() {
           </dl>
           <div className="px-5 pb-5">
             <Button type="button" className="min-h-12 w-full rounded-2xl text-base font-bold" disabled={creating} onClick={createBusiness}>
-              <Check className="mr-1.5 size-5" /> {creating ? "Creating…" : "Create my business"}
+              <Check className="mr-1.5 size-5" /> {creating ? t("app.voiceOnboarding.creating") : t("app.voiceOnboarding.createMyBusiness")}
             </Button>
             <button type="button" className="mt-3 w-full text-center text-sm font-semibold text-muted-foreground" onClick={() => setStep(1)}>
-              Start again
+              {t("app.voiceOnboarding.startAgain")}
             </button>
           </div>
         </section>

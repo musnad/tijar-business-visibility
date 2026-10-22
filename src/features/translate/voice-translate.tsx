@@ -4,6 +4,7 @@ import { Mic, Square } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n/context";
 
 const MAX_SECONDS = 60;
 
@@ -15,6 +16,7 @@ const MAX_SECONDS = 60;
  * review before the user chooses to use it.
  */
 export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: string) => void }) {
+  const { t } = useTranslation();
   const [state, setState] = useState<
     | { kind: "idle" }
     | { kind: "recording"; seconds: number }
@@ -28,7 +30,7 @@ export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: st
 
   async function start() {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      setState({ kind: "error", message: "Voice recording is not supported on this device." });
+      setState({ kind: "error", message: t("app.translator.voiceNotSupported") });
       return;
     }
     try {
@@ -51,7 +53,7 @@ export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: st
         if (seconds >= MAX_SECONDS) stop();
       }, 1000);
     } catch {
-      setState({ kind: "error", message: "Microphone permission was denied. You can type your message instead." });
+      setState({ kind: "error", message: t("app.translator.micDenied") });
     }
   }
 
@@ -61,7 +63,7 @@ export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: st
 
   async function upload(blob: Blob) {
     if (blob.size > 5 * 1024 * 1024) {
-      setState({ kind: "error", message: "Recording is too large. Keep it under 60 seconds." });
+      setState({ kind: "error", message: t("app.translator.recordingTooLarge") });
       return;
     }
     setState({ kind: "processing" });
@@ -77,11 +79,11 @@ export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: st
       } else {
         setState({
           kind: "error",
-          message: body?.error?.message ?? "Voice processing failed. Please type your message.",
+          message: body?.error?.message ?? t("app.translator.voiceProcessingFailed"),
         });
       }
     } catch {
-      setState({ kind: "error", message: "Could not reach the voice service. Please type your message." });
+      setState({ kind: "error", message: t("app.translator.voiceServiceUnreachable") });
     }
   }
 
@@ -90,21 +92,21 @@ export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: st
       <div className="flex items-center gap-2">
         {state.kind === "recording" ? (
           <Button type="button" size="sm" variant="destructive" className="min-h-10 rounded-xl" onClick={stop}>
-            <Square className="mr-1 size-4" /> Stop ({state.seconds}s)
+            <Square className="mr-1 size-4" /> {t("app.translator.stopWithSeconds").replace("{seconds}", String(state.seconds))}
           </Button>
         ) : (
           <Button type="button" size="sm" variant="outline" className="min-h-10 rounded-xl" onClick={start} disabled={state.kind === "processing"}>
-            <Mic className="mr-1 size-4" /> {state.kind === "processing" ? "Processing…" : "Record voice message"}
+            <Mic className="mr-1 size-4" /> {state.kind === "processing" ? t("app.translator.processing") : t("app.translator.recordVoice")}
           </Button>
         )}
-        <span className="text-xs text-muted-foreground">Max 60 seconds. You review the text before sending.</span>
+        <span className="text-xs text-muted-foreground">{t("app.translator.maxSixtyHint")}</span>
       </div>
       {state.kind === "done" && (
         <div className="mt-2 text-sm">
-          <p className="font-semibold">Transcript:</p>
+          <p className="font-semibold">{t("app.translator.transcriptLabel")}</p>
           <p className="mt-0.5">{state.transcript}</p>
           <Button type="button" size="sm" className="mt-2 min-h-9 rounded-lg text-xs" onClick={() => onUseTranscript(state.transcript)}>
-            Use this text
+            {t("app.translator.useThisText")}
           </Button>
         </div>
       )}

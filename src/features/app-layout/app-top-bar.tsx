@@ -11,6 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { AppLanguageButton } from "@/features/app-layout/app-language-button";
 import { useAuth } from "@/features/auth/auth-context";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -73,6 +74,7 @@ export function AppTopBar() {
       </div>
 
       <div className="flex items-center justify-end gap-1.5">
+        <AppLanguageButton />
         <button
           type="button"
           className="relative flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"

@@ -8,15 +8,15 @@ Discovery, storefronts and contact/enquiry actions. No payments, delivery or esc
 |-------|----------|
 | DB migration | `supabase/migrations/20260307000010_discover_marketplace.sql` (apply in Supabase SQL Editor, in order after 000009) |
 | Pure logic + tests | `src/utils/discover.ts`, `src/utils/discover.test.ts` (visibility, slug, haversine, search/filter, completeness, duplicates) |
-| Maps adapter | `src/lib/maps/provider.ts` — OpenStreetMap/Leaflet default, Nominatim geocoding |
+| Maps adapter | `src/lib/maps/provider.ts` — OpenStreetMap geocoding (Nominatim) + external directions links; no embedded map view |
 | Data layer | `src/services/discover-service.ts` (public listings view, `nearby_businesses` RPC, storefront, enquiries, owner publish, admin moderation) |
-| Customer pages | `/discover` (list + Leaflet map, search, category/distance/verified filters, manual area presets), `/b/[slug]` storefront |
+| Customer pages | `/discover` (list view, search, category/distance/verified filters, manual area presets), `/b/[slug]` storefront |
 | Owner page | `/app/business/publish` (publish toggle, slug, public contacts, opening hours, location capture + approval, completeness, enquiry inbox) |
 | Admin page | `/app/admin/moderation` (approve/flag/suspend, duplicate + incomplete flags; platform `admin` role only, RLS-enforced) |
 
 ## Provider configuration
 
-**Default (no key required):** OpenStreetMap tiles + Leaflet + Nominatim geocoding, restricted to Nigeria (`countrycodes=ng`) in the adapter. Tiles are browser-cached images; the Leaflet bundle loads lazily only when Map view opens — list view works on slow networks without it.
+**Default (no key required):** Nominatim geocoding restricted to Nigeria (`countrycodes=ng`) plus external OpenStreetMap directions links. The embedded map view was removed by product decision (Oct 2026); distance/area filtering still uses coordinates and PostGIS.
 
 **Switching provider:** implement `MapsProvider` in `src/lib/maps/provider.ts`. A future Google provider needs `VITE_GOOGLE_MAPS_API_KEY` as a **browser key restricted by HTTP referrer** in Google Cloud; any server geocoding key must be non-`VITE_` and used only from a server route. No keys are committed.
 
