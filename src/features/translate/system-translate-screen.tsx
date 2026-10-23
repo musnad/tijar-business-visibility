@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/context";
 import { NKENNE_LANGUAGES, type NkenneLanguage } from "@/lib/nkenne/languages";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isSupabaseEnvPresent } from "@/lib/supabase/runtime-env";
 
 /**
  * Admin tool to translate Tijar system/UI strings with NKENNEAi.
@@ -27,9 +29,21 @@ export function SystemTranslateScreen() {
     if (texts.length === 0) return;
     setBusy(true);
     try {
+      let token: string | null = null;
+      if (isSupabaseEnvPresent()) {
+        try {
+          const { data } = await getSupabaseBrowserClient().auth.getSession();
+          token = data.session?.access_token ?? null;
+        } catch {
+          token = null;
+        }
+      }
       const res = await fetch("/api/translate-batch", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ texts, fromLanguage: from, toLanguage: to }),
       });
       const body = (await res.json().catch(() => null)) as { translations?: string[]; error?: { message: string } } | null;

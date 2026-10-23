@@ -1,37 +1,57 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import {
+  TRANSLATE_MAX_BODY_BYTES,
+  assertJsonContentType,
+  assertTranslateOrigin,
+  jsonSecure,
+  readJsonBody,
+  resolveTranslateRateKey,
+} from "@/lib/nkenne/api-security";
 import { translateText } from "@/lib/nkenne/service";
 
 /**
  * POST /api/translate  { text, fromLanguage, toLanguage }
- * Server-only NKENNEAi proxy. The API key never reaches the client.
- * Rate-limited per user (Supabase JWT sub) or per IP for anonymous
- * marketplace visitors. Request/response text is never logged.
+ *
+ * Security:
+ * - NKENNEAI_API_KEY stays server-only (never sent to the browser)
+ * - Same-site / allowlisted Origin only
+ * - JSON + size capped
+ * - Rate limit bound to real client IP (JWT alone cannot bypass)
+ * - Request/response text is never logged; provider errors are mapped
  */
 export const Route = createFileRoute("/api/translate")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        let body: unknown;
-        try {
-          body = await request.json();
-        } catch {
-          return Response.json(
-            { error: { code: "VALIDATION", message: "Invalid JSON body." } },
-            { status: 400 },
-          );
+        const origin = assertTranslateOrigin(request);
+        if (!origin.ok) {
+          return jsonSecure({ error: { code: origin.code, message: origin.message } }, { status: origin.status });
+        }
+        const media = assertJsonContentType(request);
+        if (!media.ok) {
+          return jsonSecure({ error: { code: media.code, message: media.message } }, { status: media.status });
         }
 
-        const rateLimitKey = await resolveRateLimitKey(request);
-        const result = await translateText(body, { rateLimitKey });
+        const parsed = await readJsonBody(request, TRANSLATE_MAX_BODY_BYTES);
+        if (!parsed.ok) {
+          return jsonSecure({ error: { code: parsed.code, message: parsed.message } }, { status: parsed.status });
+        }
+
+        const { rateLimitKey, authenticated } = await resolveTranslateRateKey(request);
+        // Signed-in users get a slightly higher ceiling; IP is always in the key.
+        const result = await translateText(parsed.body, {
+          rateLimitKey,
+          rateLimit: authenticated ? 40 : 20,
+        });
 
         if (!result.ok) {
-          return Response.json(
+          return jsonSecure(
             { error: { code: result.code, message: result.message } },
             { status: result.status },
           );
         }
-        return Response.json({
+        return jsonSecure({
           translatedText: result.translatedText,
           fromLanguage: result.fromLanguage,
           toLanguage: result.toLanguage,
@@ -41,26 +61,3 @@ export const Route = createFileRoute("/api/translate")({
     },
   },
 });
-
-/** Prefer the Supabase user id when a session token is sent; else IP. */
-async function resolveRateLimitKey(request: Request): Promise<string> {
-  const auth = request.headers.get("authorization");
-  if (auth?.startsWith("Bearer ")) {
-    try {
-      const payloadPart = auth.slice(7).split(".")[1];
-      if (payloadPart) {
-        const payload = JSON.parse(
-          Buffer.from(payloadPart.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
-        ) as { sub?: string };
-        if (payload.sub) return `user:${payload.sub}`;
-      }
-    } catch {
-      // fall through to IP key
-    }
-  }
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown";
-  return `ip:${ip}`;
-}

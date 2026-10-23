@@ -39,10 +39,23 @@ Run locally: `cd tijar-business-visibility && bun run dev` → open a storefront
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/translate` | `{ text, fromLanguage, toLanguage }` → `{ translatedText, fromLanguage, toLanguage, cached }`. Validates input (≤1000 chars), enforces documented language pairs, rate-limits (20/min per user or IP), caches results (1 h, in-memory), retries once on provider 5xx, 12 s timeout |
-| `POST /api/translate-speech` | Voice structure: validates audio size/type, returns `501 VOICE_NOT_AVAILABLE` until official speech docs exist |
+| `POST /api/translate` | `{ text, fromLanguage, toLanguage }` → `{ translatedText, fromLanguage, toLanguage, cached }`. Validates input (≤1000 chars), enforces documented language pairs, rate-limits (20/min anonymous IP, 40/min signed-in), caches results (1 h, in-memory), retries once on provider 5xx, 12 s timeout |
+| `POST /api/translate-batch` | Auth required (verified Supabase JWT). Max 20 short strings. Admin system-string tool only. |
+| `POST /api/translate-speech` | Origin + IP rate limit; validates audio size/type; returns `501 VOICE_NOT_AVAILABLE` until official speech docs exist |
 
-Errors use stable codes: `VALIDATION`, `UNSUPPORTED_LANGUAGE`, `UNSUPPORTED_PAIR`, `SAME_LANGUAGE`, `NOT_CONFIGURED`, `INVALID_CREDENTIALS`, `QUOTA_EXCEEDED`, `RATE_LIMITED`, `TIMEOUT`, `NETWORK`, `PROVIDER_ERROR`. Request text, transcripts and keys are **never logged**.
+Errors use stable codes: `VALIDATION`, `UNSUPPORTED_LANGUAGE`, `UNSUPPORTED_PAIR`, `SAME_LANGUAGE`, `NOT_CONFIGURED`, `INVALID_CREDENTIALS`, `QUOTA_EXCEEDED`, `RATE_LIMITED`, `TIMEOUT`, `NETWORK`, `PROVIDER_ERROR`, `FORBIDDEN_ORIGIN`, `UNAUTHORIZED`, `PAYLOAD_TOO_LARGE`. Request text, transcripts and keys are **never logged**.
+
+## API security
+
+| Control | Detail |
+|---------|--------|
+| Key isolation | `NKENNEAI_API_KEY` is server-only (no `VITE_` prefix). Never returned in responses or client bundles. |
+| Origin allowlist | Browser calls must come from the request host, `VITE_PUBLIC_APP_URL`, localhost, or `TRANSLATE_ALLOWED_ORIGINS`. |
+| Body limits | JSON ≤ ~8 KB (single) / ~16 KB (batch); content-type must be `application/json`. |
+| Rate limits | Always bound to real client IP. Unverified Bearer JWTs cannot mint new buckets. Signed-in users verified via `supabase.auth.getUser(token)`. |
+| Batch auth | `/api/translate-batch` requires a verified session. |
+| Response headers | `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, no indexing. |
+| Provider errors | Mapped to stable codes; raw NKENNE bodies are never forwarded. |
 
 ## Where translation appears
 
@@ -68,12 +81,12 @@ Per-request 1000-char cap, 20 req/min per user/IP, 1-hour response cache, one re
 
 `bun run test` — `src/lib/nkenne/nkenne.test.ts` mocks the provider: both translation directions, documented request shape + auth header, unsupported Hausa/pairs, missing/invalid credentials, quota (429), timeout, retry-then-success, cache hit avoids a second API call, rate limiting, input validation, and original-text preservation.
 
-## Limitations / blockers for live verification
+## Limitations
 
-1. **No API key available** — add `NKENNEAI_API_KEY` and re-test one real translation before claiming live status
+1. **Live text translation verified** (2026-10-23) with a configured `NKENNEAI_API_KEY` on Vercel + local
 2. **Hausa not supported by the documented API** — product decision needed (wait for NKENNEAi Hausa, or add a second provider for Hausa)
 3. **Speech undocumented** — request official speech API docs/credentials from NKENNEAi before enabling voice
-4. In-memory cache/rate limit resets on server restart and is per-instance on Vercel
+4. In-memory cache/rate limit resets on server restart and is per-instance on Vercel — move to Redis/Upstash before high traffic
 
 ## Voice profile creation
 
