@@ -2,10 +2,11 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowLeftRight,
   BadgeCheck,
   Banknote,
   Check,
-  ChevronRight,
+  MessagesSquare,
   Mic,
   PackagePlus,
   ReceiptText,
@@ -18,26 +19,31 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/auth-context";
 import { speakText, useSpeechRecognition } from "@/features/translate/use-speech";
+import { usePrimaryBusiness } from "@/hooks/use-primary-business";
 import { invalidateBusinessQueries } from "@/lib/invalidate-business-queries";
 import { useTranslation } from "@/lib/i18n/context";
 import type { Locale } from "@/lib/i18n/types";
-import { usePrimaryBusiness } from "@/hooks/use-primary-business";
+import { NKENNE_LANGUAGES, type NkenneLanguage } from "@/lib/nkenne/languages";
+import { cn } from "@/lib/utils";
 import { createTransaction, fetchPeriodAnalytics, fetchTodayTotals } from "@/services/transaction-service";
 import { translateTextClient } from "@/services/translate-service";
 import { buildExplanation, parseExplainRequest } from "@/utils/explain";
-import { parseVoiceCommand, summarizeDraft, type ParsedVoiceCommand, type VoiceIntentType } from "@/utils/voice-intent";
 import { formatNgn } from "@/utils/money";
-import { cn } from "@/lib/utils";
+import {
+  parseVoiceCommand,
+  summarizeDraft,
+  type ParsedVoiceCommand,
+  type VoiceIntentType,
+} from "@/utils/voice-intent";
 
-const SPEAK_LANGS = ["English", "Hausa", "Swahili", "Yoruba"] as const;
+const SPEAK_LANGS = ["English", "Hausa", "Swahili", "Yoruba", "Nigerian Pidgin"] as const;
 
-/** Speech engines / NKENNE language names for each app locale (where supported). */
 const LOCALE_TO_SPEAK_LANG: Partial<Record<Locale, string>> = {
   en: "English",
   ha: "Hausa",
@@ -53,7 +59,39 @@ const INTENT_META: Record<VoiceIntentType, { labelKey: string; icon: typeof Shop
   supplier_payment: { labelKey: "app.assistant.intentSupplierPayment", icon: ReceiptText, className: "bg-violet-100 text-violet-800" },
 };
 
+type Mode = "books" | "chat";
+
+type ChatTurn = {
+  id: number;
+  kind: "chat";
+  speaker: "A" | "B";
+  original: string;
+  originalLang: string;
+  translated: string;
+  translatedLang: string;
+  at: string;
+};
+
+type BooksTurn = {
+  id: number;
+  kind: "books";
+  role: "you" | "tijar";
+  text: string;
+  lang: string;
+  at: string;
+};
+
 type ActivityItem = { id: number; label: string; amount: number; at: string };
+
+function nowTime(): string {
+  return new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function canTranslatePair(from: string, to: string): boolean {
+  if (from === to) return false;
+  const supported = NKENNE_LANGUAGES as readonly string[];
+  return supported.includes(from) && supported.includes(to);
+}
 
 export function AssistantScreen() {
   const { profile } = useAuth();
@@ -61,42 +99,58 @@ export function AssistantScreen() {
   const { data } = usePrimaryBusiness(profile?.id);
   const business = data?.business ?? null;
   const queryClient = useQueryClient();
+  const threadRef = useRef<HTMLDivElement>(null);
 
-  const [input, setInput] = useState("");
-  const [speakLang, setSpeakLang] = useState<string>("English");
+  const [mode, setMode] = useState<Mode>("books");
+  const [speakLang, setSpeakLang] = useState("English");
   const [speakReplies, setSpeakReplies] = useState(true);
+  const [langA, setLangA] = useState("English");
+  const [langB, setLangB] = useState("Yoruba");
+  const [draftA, setDraftA] = useState("");
+  const [draftB, setDraftB] = useState("");
+  const [input, setInput] = useState("");
+  const [activeSpeaker, setActiveSpeaker] = useState<"A" | "B" | "books" | null>(null);
   const [draft, setDraft] = useState<ParsedVoiceCommand | null>(null);
-  const [reply, setReply] = useState<string>("");
-  const [heard, setHeard] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
+  const [booksTurns, setBooksTurns] = useState<BooksTurn[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const { listen, stop, listening, supported } = useSpeechRecognition();
 
-  // Voice follows the app language whenever the device supports it.
   useEffect(() => {
     const mapped = LOCALE_TO_SPEAK_LANG[locale];
-    if (mapped) setSpeakLang(mapped);
+    if (mapped) {
+      setSpeakLang(mapped);
+      setLangA(mapped);
+    }
   }, [locale]);
 
-  const examples: { textKey: string; intent: VoiceIntentType; icon: typeof ShoppingBag }[] = [
-    { textKey: "app.assistant.exampleSale", intent: "sale", icon: ShoppingBag },
-    { textKey: "app.assistant.exampleExpense", intent: "expense", icon: Wallet },
-    { textKey: "app.assistant.exampleProfit", intent: "sale", icon: Sparkles },
-    { textKey: "app.assistant.exampleToday", intent: "sale", icon: Banknote },
-  ];
+  useEffect(() => {
+    threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
+  }, [chatTurns, booksTurns, draft]);
 
-  function say(text: string) {
-    setReply(text);
-    if (speakReplies) speakText(text, speakLang);
+  function sayBooks(text: string, lang = speakLang) {
+    setBooksTurns((prev) => [
+      ...prev,
+      { id: Date.now() + Math.random(), kind: "books", role: "tijar", text, lang, at: nowTime() },
+    ]);
+    if (speakReplies) speakText(text, lang);
   }
 
-  async function explain(metric: NonNullable<ReturnType<typeof parseExplainRequest>>, original: string) {
-    void original;
+  function recordYouSaid(text: string, lang = speakLang) {
+    setBooksTurns((prev) => [
+      ...prev,
+      { id: Date.now() + Math.random(), kind: "books", role: "you", text, lang, at: nowTime() },
+    ]);
+  }
+
+  async function explain(metric: NonNullable<ReturnType<typeof parseExplainRequest>>) {
     if (!business) {
-      say(t("app.assistant.needBusinessReply"));
+      sayBooks(t("app.assistant.needBusinessReply"));
       return;
     }
-    say(t("app.assistant.checkingReply"));
+    sayBooks(t("app.assistant.checkingReply"));
     const [period, today] = await Promise.all([
       fetchPeriodAnalytics(business.id, 30),
       fetchTodayTotals(business.id),
@@ -110,18 +164,16 @@ export function AssistantScreen() {
       customerCreditTotal: null,
       healthScore: null,
     });
-    if (speakLang === "English") {
-      say(english);
+    if (speakLang === "Yoruba" || speakLang === "Swahili" || speakLang === "Nigerian Pidgin") {
+      const translated = await translateTextClient({
+        text: english,
+        fromLanguage: "English",
+        toLanguage: speakLang as NkenneLanguage,
+      });
+      sayBooks(translated.ok ? translated.translatedText : english);
       return;
     }
-    // Translate the grounded explanation; Hausa is not in the documented
-    // NKENNEAi API, so fall back to English honestly.
-    if (speakLang === "Yoruba" || speakLang === "Swahili") {
-      const translated = await translateTextClient({ text: english, fromLanguage: "English", toLanguage: speakLang });
-      say(translated.ok ? translated.translatedText : english);
-      return;
-    }
-    say(english);
+    sayBooks(english);
   }
 
   function summaryStrings() {
@@ -139,28 +191,105 @@ export function AssistantScreen() {
   }
 
   function understand(text: string) {
-    const metric = parseExplainRequest(text);
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    recordYouSaid(trimmed);
+    const metric = parseExplainRequest(trimmed);
     if (metric) {
       setDraft(null);
-      void explain(metric, text);
+      void explain(metric);
       return;
     }
-    const cmd = parseVoiceCommand(text);
+    const cmd = parseVoiceCommand(trimmed);
     setDraft(cmd);
-    say(summarizeDraft(cmd, summaryStrings()));
+    sayBooks(summarizeDraft(cmd, summaryStrings()));
   }
 
-  async function onMic() {
+  async function onBooksMic() {
+    setActiveSpeaker("books");
     try {
       const transcript = await listen(speakLang);
       if (transcript) {
-        setHeard(transcript);
         setInput(transcript);
         understand(transcript);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("app.assistant.voiceFailed"));
+    } finally {
+      setActiveSpeaker(null);
     }
+  }
+
+  async function onChatMic(speaker: "A" | "B") {
+    setActiveSpeaker(speaker);
+    const lang = speaker === "A" ? langA : langB;
+    try {
+      const transcript = await listen(lang);
+      if (speaker === "A") setDraftA(transcript);
+      else setDraftB(transcript);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("app.assistant.voiceFailed"));
+    } finally {
+      setActiveSpeaker(null);
+    }
+  }
+
+  async function sendChat(speaker: "A" | "B") {
+    const text = (speaker === "A" ? draftA : draftB).trim();
+    if (!text) return;
+    const from = speaker === "A" ? langA : langB;
+    const to = speaker === "A" ? langB : langA;
+
+    if (!canTranslatePair(from, to)) {
+      // Still show + speak original in the other person's listen language if same,
+      // or speak original when text translate isn't available (e.g. Hausa).
+      const turn: ChatTurn = {
+        id: Date.now(),
+        kind: "chat",
+        speaker,
+        original: text,
+        originalLang: from,
+        translated: text,
+        translatedLang: to,
+        at: nowTime(),
+      };
+      setChatTurns((prev) => [...prev, turn]);
+      speakText(text, to);
+      if (from !== to && (from === "Hausa" || to === "Hausa")) {
+        toast.message(t("app.assistant.hausaVoiceOnly"));
+      } else if (from === to) {
+        toast.message(t("app.assistant.sameLanguageHint"));
+      }
+      if (speaker === "A") setDraftA("");
+      else setDraftB("");
+      return;
+    }
+
+    setBusy(true);
+    const result = await translateTextClient({
+      text,
+      fromLanguage: from as NkenneLanguage,
+      toLanguage: to as NkenneLanguage,
+    });
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
+    }
+    const turn: ChatTurn = {
+      id: Date.now(),
+      kind: "chat",
+      speaker,
+      original: text,
+      originalLang: from,
+      translated: result.translatedText,
+      translatedLang: to,
+      at: nowTime(),
+    };
+    setChatTurns((prev) => [...prev, turn]);
+    speakText(turn.translated, to);
+    if (speaker === "A") setDraftA("");
+    else setDraftB("");
   }
 
   async function confirmSave() {
@@ -175,32 +304,38 @@ export function AssistantScreen() {
     setSaving(false);
     if (error) {
       toast.error(error);
-      say(t("app.assistant.saveFailedReply"));
+      sayBooks(t("app.assistant.saveFailedReply"));
       return;
     }
     const meta = INTENT_META[draft.intent];
     const label = t(meta.labelKey);
     setActivity((prev) => [
-      { id: Date.now(), label: `${label}${draft.description ? ` · ${draft.description}` : ""}`, amount: draft.amount!, at: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) },
+      {
+        id: Date.now(),
+        label: `${label}${draft.description ? ` · ${draft.description}` : ""}`,
+        amount: draft.amount!,
+        at: nowTime(),
+      },
       ...prev,
     ]);
     toast.success(t("app.assistant.recordSaved"));
-    say(t("app.assistant.savedReply").replace("{label}", label).replace("{amount}", formatNgn(draft.amount)));
+    sayBooks(
+      t("app.assistant.savedReply").replace("{label}", label).replace("{amount}", formatNgn(draft.amount)),
+    );
     setDraft(null);
     setInput("");
-    setHeard("");
     invalidateBusinessQueries(queryClient, business.id);
   }
 
   const draftMeta = draft && draft.intent !== "unknown" ? INTENT_META[draft.intent] : null;
   const DraftIcon = draftMeta?.icon ?? Sparkles;
+  const showHausaNote = mode === "chat" && (langA === "Hausa" || langB === "Hausa");
 
   return (
-    <div className="mx-auto max-w-xl pb-6">
+    <div className="mx-auto flex max-w-xl flex-col pb-6">
       {/* Hero */}
       <section className="dashboard-summary-card relative mt-2 overflow-hidden rounded-3xl p-5 text-primary-foreground shadow-xl sm:p-6">
         <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-white/10 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-12 -left-6 size-36 rounded-full bg-black/10 blur-2xl" />
         <div className="relative flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex size-12 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
@@ -222,7 +357,7 @@ export function AssistantScreen() {
             {listening ? t("app.assistant.listening") : t("app.assistant.ready")}
           </span>
         </div>
-        <p className="relative mt-4 text-sm leading-relaxed text-white/85">{t("app.assistant.heroBody")}</p>
+        <p className="relative mt-3 text-sm leading-relaxed text-white/85">{t("app.assistant.heroBodyFull")}</p>
         {business && (
           <p className="relative mt-3 inline-flex max-w-full items-center gap-1.5 rounded-full bg-black/15 px-2.5 py-1 text-xs font-semibold text-white/90">
             <BadgeCheck className="size-3.5 shrink-0" />
@@ -231,165 +366,107 @@ export function AssistantScreen() {
         )}
       </section>
 
-      {/* Voice orb + composer */}
-      <section className="mt-4 rounded-3xl border border-border bg-card p-5 shadow-sm">
-        <div className="flex flex-col items-center">
-          <div className="relative flex items-center justify-center">
-            {listening && (
-              <>
-                <span className="absolute size-24 animate-ping rounded-full bg-primary/15" />
-                <span className="absolute size-32 rounded-full bg-primary/5" />
-              </>
-            )}
-            <button
-              type="button"
-              onClick={listening ? stop : onMic}
-              disabled={!supported}
-              aria-label={listening ? t("app.assistant.stopListening") : t("app.assistant.startListening")}
-              className={cn(
-                "relative flex size-20 items-center justify-center rounded-full text-primary-foreground shadow-lg transition-all active:scale-95 disabled:opacity-50",
-                listening ? "bg-destructive shadow-destructive/30" : "bg-primary shadow-primary/30 hover:shadow-primary/40",
-              )}
-            >
-              {listening ? <Square className="size-7" /> : <Mic className="size-8" />}
-            </button>
-          </div>
-
-          {listening ? (
-            <div className="mt-4 flex h-6 items-end gap-1" aria-hidden="true">
-              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                <span
-                  key={i}
-                  className="w-1.5 animate-pulse rounded-full bg-primary"
-                  style={{ height: `${10 + ((i * 7) % 14)}px`, animationDelay: `${i * 120}ms` }}
-                />
-              ))}
-            </div>
-          ) : null}
-
-          <p className="mt-3 text-center text-sm font-semibold">
-            {listening ? t("app.assistant.listeningNow") : supported ? t("app.assistant.tapMic") : t("app.assistant.unsupported")}
-          </p>
-          <p className="text-center text-xs text-muted-foreground">
-            {supported ? t("app.assistant.micHint") : t("app.assistant.typingWorks")}
-          </p>
-
-          {heard && !listening && (
-            <p className="mt-3 w-full rounded-xl bg-muted/70 px-3 py-2 text-center text-sm">
-              <span className="text-muted-foreground">{t("app.assistant.youSaid")} </span>“{heard}”
-            </p>
+      {/* Mode tabs */}
+      <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-muted/40 p-1">
+        <button
+          type="button"
+          onClick={() => setMode("books")}
+          className={cn(
+            "flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-bold transition-colors",
+            mode === "books" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
           )}
-        </div>
+        >
+          <ReceiptText className="size-4" /> {t("app.assistant.modeBooks")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("chat")}
+          className={cn(
+            "flex min-h-11 items-center justify-center gap-2 rounded-xl text-sm font-bold transition-colors",
+            mode === "chat" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          <MessagesSquare className="size-4" /> {t("app.assistant.modeChat")}
+        </button>
+      </div>
 
-        <div className="mt-5 flex items-end gap-2 border-t border-border pt-4">
-          <label htmlFor="assistant-input" className="sr-only">{t("app.assistant.inputLabel")}</label>
-          <textarea
-            id="assistant-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={t("app.assistant.inputPlaceholder")}
-            rows={2}
-            className="min-h-12 flex-1 resize-none rounded-2xl border border-input bg-background px-3.5 py-3 text-base outline-none focus:ring-2 focus:ring-primary/40"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && input.trim()) {
-                e.preventDefault();
-                understand(input);
-              }
-            }}
-          />
-          <Button
-            type="button"
-            className="size-12 shrink-0 rounded-2xl shadow-md"
-            disabled={!input.trim()}
-            onClick={() => understand(input)}
-            aria-label={t("app.assistant.understand")}
-          >
-            <Send className="size-5" />
-          </Button>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("app.assistant.speakLanguage")}</span>
-            <select
-              value={speakLang}
-              onChange={(e) => setSpeakLang(e.target.value)}
-              className="min-h-11 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium"
-            >
-              {SPEAK_LANGS.map((l) => (
-                <option key={l} value={l}>{l}</option>
-              ))}
-            </select>
-          </label>
-          <div>
-            <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("app.assistant.voiceReplies")}</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={speakReplies}
-              onClick={() => setSpeakReplies((v) => !v)}
-              className={cn(
-                "flex min-h-11 w-full items-center justify-between rounded-xl border px-3 text-sm font-semibold transition-colors",
-                speakReplies ? "border-primary/40 bg-primary/5 text-primary" : "border-input text-muted-foreground",
-              )}
-            >
-              <span className="flex items-center gap-2"><Volume2 className="size-4" /> {t("app.assistant.speakReplies")}</span>
-              <span className={cn("relative h-6 w-11 rounded-full transition-colors", speakReplies ? "bg-primary" : "bg-muted-foreground/30")}>
-                <span className={cn("absolute top-0.5 size-5 rounded-full bg-white shadow transition-all", speakReplies ? "left-[1.375rem]" : "left-0.5")} />
-              </span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Examples */}
-      <section className="mt-5">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("app.assistant.trySaying")}</h3>
-        <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {examples.map((ex) => {
-            const Icon = ex.icon;
-            const text = t(ex.textKey);
-            return (
-              <button
-                key={ex.textKey}
-                type="button"
-                onClick={() => { setInput(text); setHeard(""); understand(text); }}
-                className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-primary/5"
-              >
-                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", INTENT_META[ex.intent].className)}>
-                  <Icon className="size-5" />
-                </span>
-                <span className="min-w-0 flex-1 text-sm font-semibold leading-snug">“{text}”</span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* TIJAR reply */}
-      {reply && (
-        <section className="mt-5 flex gap-3" aria-live="polite">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
-            <Sparkles className="size-4" />
-          </span>
-          <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-primary/20 bg-primary/5 p-4">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-primary">TIJAR</p>
-            <p className="mt-1 text-[15px] leading-relaxed">{reply}</p>
-            <button
-              type="button"
-              onClick={() => speakText(reply, speakLang)}
-              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1.5 text-xs font-bold text-primary ring-1 ring-primary/25"
-            >
-              <Volume2 className="size-3.5" /> {t("app.assistant.hearIt")}
-            </button>
-          </div>
-        </section>
+      {showHausaNote && (
+        <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          {t("app.assistant.hausaVoiceOnly")}
+        </p>
       )}
 
-      {/* Draft confirmation */}
-      {draft && draftMeta && draft.amount !== null && (
-        <section className="mt-5 overflow-hidden rounded-3xl border-2 border-primary/50 bg-card shadow-lg">
+      {/* Conversation thread */}
+      <section
+        ref={threadRef}
+        className="mt-4 max-h-[42vh] min-h-[180px] space-y-3 overflow-y-auto rounded-3xl border border-border bg-card p-4 shadow-sm"
+        aria-live="polite"
+        aria-label={t("app.assistant.conversation")}
+      >
+        {mode === "books" && booksTurns.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted-foreground">{t("app.assistant.emptyBooks")}</p>
+        )}
+        {mode === "chat" && chatTurns.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted-foreground">{t("app.assistant.emptyChat")}</p>
+        )}
+
+        {mode === "books" &&
+          booksTurns.map((turn) => (
+            <article
+              key={turn.id}
+              className={cn(
+                "max-w-[90%] rounded-2xl p-3",
+                turn.role === "you" ? "ms-auto bg-primary/10" : "bg-muted/70",
+              )}
+            >
+              <p className="text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground">
+                {turn.role === "you" ? t("app.assistant.youSaid") : "TIJAR"} · {turn.at}
+              </p>
+              <p className="mt-1 text-[15px] leading-relaxed">{turn.text}</p>
+              <button
+                type="button"
+                onClick={() => speakText(turn.text, turn.lang)}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-bold text-primary ring-1 ring-primary/20"
+              >
+                <Volume2 className="size-3.5" /> {t("app.assistant.hearIt")}
+              </button>
+            </article>
+          ))}
+
+        {mode === "chat" &&
+          chatTurns.map((turn) => (
+            <article
+              key={turn.id}
+              className={cn(
+                "max-w-[90%] rounded-2xl p-3",
+                turn.speaker === "A" ? "bg-primary/10" : "ms-auto bg-muted/70",
+              )}
+            >
+              <p className="text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground">
+                {t("app.assistant.personSaid")
+                  .replace("{speaker}", turn.speaker)
+                  .replace("{language}", turn.originalLang)}{" "}
+                · {turn.at}
+              </p>
+              <p className="mt-1 text-[15px] leading-relaxed">{turn.original}</p>
+              <p className="mt-2 text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground">
+                {t("app.assistant.heardIn").replace("{language}", turn.translatedLang)}
+              </p>
+              <p className="mt-0.5 text-[15px] font-semibold leading-relaxed">{turn.translated}</p>
+              <button
+                type="button"
+                onClick={() => speakText(turn.translated, turn.translatedLang)}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-bold text-primary ring-1 ring-primary/20"
+              >
+                <Volume2 className="size-3.5" /> {t("app.assistant.hearIt")}
+              </button>
+            </article>
+          ))}
+      </section>
+
+      {/* Draft confirmation (books) */}
+      {mode === "books" && draft && draftMeta && draft.amount !== null && (
+        <section className="mt-4 overflow-hidden rounded-3xl border-2 border-primary/50 bg-card shadow-lg">
           <div className="flex items-center justify-between gap-2 bg-primary/5 px-5 py-3.5">
             <p className="flex items-center gap-2 font-extrabold">
               <ReceiptText className="size-5 text-primary" /> {t("app.assistant.checkRecord")}
@@ -422,20 +499,20 @@ export function AssistantScreen() {
                 <dt className="text-muted-foreground">{t("app.assistant.payment")}</dt>
                 <dd className="font-semibold">{t("app.assistant.cash")}</dd>
               </div>
-              <div className="flex justify-between gap-3 px-3.5 py-2.5">
-                <dt className="text-muted-foreground">{t("app.assistant.business")}</dt>
-                <dd className="text-right font-semibold">{business?.business_name ?? "—"}</dd>
-              </div>
             </dl>
             <div className="mt-4 flex gap-2">
-              <Button type="button" className="min-h-12 flex-1 rounded-2xl text-base font-bold shadow-md" disabled={saving || !business} onClick={confirmSave}>
+              <Button
+                type="button"
+                className="min-h-12 flex-1 rounded-2xl text-base font-bold shadow-md"
+                disabled={saving || !business}
+                onClick={confirmSave}
+              >
                 <Check className="mr-1.5 size-5" /> {saving ? t("app.assistant.saving") : t("app.assistant.confirmSave")}
               </Button>
               <Button type="button" variant="outline" className="min-h-12 rounded-2xl px-4" onClick={() => setDraft(null)}>
                 <X className="mr-1 size-4" /> {t("app.assistant.cancel")}
               </Button>
             </div>
-            {!business && <p className="mt-2 text-xs font-semibold text-destructive">{t("app.assistant.finishBusinessFirst")}</p>}
             <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
               <ShieldCheck className="size-3.5" /> {t("app.assistant.nothingSaved")}
             </p>
@@ -443,10 +520,208 @@ export function AssistantScreen() {
         </section>
       )}
 
-      {/* Session activity */}
+      {/* Composer: Books */}
+      {mode === "books" && (
+        <section className="mt-4 rounded-3xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex flex-col items-center">
+            <button
+              type="button"
+              onClick={listening && activeSpeaker === "books" ? stop : onBooksMic}
+              disabled={!supported}
+              aria-label={listening ? t("app.assistant.stopListening") : t("app.assistant.startListening")}
+              className={cn(
+                "relative flex size-20 items-center justify-center rounded-full text-primary-foreground shadow-lg transition-all active:scale-95 disabled:opacity-50",
+                listening && activeSpeaker === "books"
+                  ? "bg-destructive shadow-destructive/30"
+                  : "bg-primary shadow-primary/30",
+              )}
+            >
+              {listening && activeSpeaker === "books" ? <Square className="size-7" /> : <Mic className="size-8" />}
+            </button>
+            <p className="mt-3 text-center text-sm font-semibold">
+              {listening && activeSpeaker === "books"
+                ? t("app.assistant.listeningNow")
+                : supported
+                  ? t("app.assistant.tapMicBooks")
+                  : t("app.assistant.unsupported")}
+            </p>
+          </div>
+
+          <div className="mt-4 flex items-end gap-2 border-t border-border pt-4">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={t("app.assistant.inputPlaceholder")}
+              rows={2}
+              className="min-h-12 flex-1 resize-none rounded-2xl border border-input bg-background px-3.5 py-3 text-base outline-none focus:ring-2 focus:ring-primary/40"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && input.trim()) {
+                  e.preventDefault();
+                  understand(input);
+                  setInput("");
+                }
+              }}
+            />
+            <Button
+              type="button"
+              className="size-12 shrink-0 rounded-2xl shadow-md"
+              disabled={!input.trim()}
+              onClick={() => {
+                understand(input);
+                setInput("");
+              }}
+              aria-label={t("app.assistant.understand")}
+            >
+              <Send className="size-5" />
+            </Button>
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {t("app.assistant.speakLanguage")}
+              </span>
+              <select
+                value={speakLang}
+                onChange={(e) => setSpeakLang(e.target.value)}
+                className="min-h-11 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium"
+              >
+                {SPEAK_LANGS.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div>
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {t("app.assistant.voiceReplies")}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={speakReplies}
+                onClick={() => setSpeakReplies((v) => !v)}
+                className={cn(
+                  "flex min-h-11 w-full items-center justify-between rounded-xl border px-3 text-sm font-semibold",
+                  speakReplies ? "border-primary/40 bg-primary/5 text-primary" : "border-input text-muted-foreground",
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <Volume2 className="size-4" /> {t("app.assistant.speakReplies")}
+                </span>
+                <span className={cn("relative h-6 w-11 rounded-full", speakReplies ? "bg-primary" : "bg-muted-foreground/30")}>
+                  <span
+                    className={cn(
+                      "absolute top-0.5 size-5 rounded-full bg-white shadow transition-all",
+                      speakReplies ? "left-[1.375rem]" : "left-0.5",
+                    )}
+                  />
+                </span>
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Composer: Two-person chat */}
+      {mode === "chat" && (
+        <section className="mt-4 space-y-3">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{langA}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              aria-label={t("app.assistant.swapLanguages")}
+              onClick={() => {
+                setLangA(langB);
+                setLangB(langA);
+              }}
+            >
+              <ArrowLeftRight className="size-4" />
+            </Button>
+            <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{langB}</span>
+          </div>
+
+          {(["A", "B"] as const).map((speaker) => {
+            const lang = speaker === "A" ? langA : langB;
+            const setLang = speaker === "A" ? setLangA : setLangB;
+            const draftText = speaker === "A" ? draftA : draftB;
+            const setDraftText = speaker === "A" ? setDraftA : setDraftB;
+            const isActive = listening && activeSpeaker === speaker;
+            return (
+              <div key={speaker} className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-extrabold">
+                    {t("app.assistant.person").replace("{speaker}", speaker)}
+                  </p>
+                  <select
+                    value={lang}
+                    onChange={(e) => setLang(e.target.value)}
+                    className="min-h-10 rounded-xl border border-input bg-background px-2 text-sm font-medium"
+                    aria-label={t("app.assistant.personLanguage").replace("{speaker}", speaker)}
+                  >
+                    {SPEAK_LANGS.map((l) => (
+                      <option key={l} value={l}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <textarea
+                  value={draftText}
+                  onChange={(e) => setDraftText(e.target.value)}
+                  rows={2}
+                  placeholder={t("app.assistant.typeOrSpeak")}
+                  className="mt-3 w-full resize-none rounded-2xl border border-input bg-background px-3.5 py-3 text-base outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                <div className="mt-3 flex gap-2">
+                  {supported && (
+                    <Button
+                      type="button"
+                      variant={isActive ? "destructive" : "outline"}
+                      className="min-h-11 flex-1 rounded-2xl font-semibold"
+                      onClick={() => (isActive ? stop() : void onChatMic(speaker))}
+                    >
+                      {isActive ? (
+                        <>
+                          <Square className="mr-1.5 size-4" /> {t("app.assistant.stop")}
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="mr-1.5 size-4" /> {t("app.assistant.speak")}
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    className="min-h-11 flex-1 rounded-2xl font-bold"
+                    disabled={busy || !draftText.trim()}
+                    onClick={() => void sendChat(speaker)}
+                  >
+                    <Volume2 className="mr-1.5 size-4" /> {t("app.assistant.translateSpeak")}
+                  </Button>
+                </div>
+                <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                  {t("app.assistant.chatHint")
+                    .replace("{from}", lang)
+                    .replace("{to}", speaker === "A" ? langB : langA)}
+                </p>
+              </div>
+            );
+          })}
+        </section>
+      )}
+
+      {/* Session saved transactions */}
       {activity.length > 0 && (
         <section className="mt-5">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("app.assistant.savedThisSession")}</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            {t("app.assistant.savedThisSession")}
+          </h3>
           <ul className="mt-2.5 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             {activity.map((item) => (
               <li key={item.id} className="flex items-center gap-3 px-4 py-3">
