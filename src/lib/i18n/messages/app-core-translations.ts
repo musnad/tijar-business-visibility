@@ -85,7 +85,7 @@ const ha = {
       learnCta: "Bincika →",
       recentTitle: "Ma'amalolin kwanan nan",
       viewAll: "Duba duka >",
-      scanSoon: "Zanen takarda yana zuwa nan ba da jimawa ba — duba kafin ajiyewa.",
+      scanSoon: "Buɗe Zana takarda don ɗaukar hoton rasiti, sa'an nan ka duba kafin ajiyewa.",
       actions: {
         recordSale: "Rubuta sayarwa",
         recordExpense: "Rubuta kashe kuɗi",
@@ -249,7 +249,7 @@ const yo = {
       learnCta: "Ṣàwárí →",
       recentTitle: "Ìṣòwò owó àìpẹ́",
       viewAll: "Wo gbogbo rẹ̀ >",
-      scanSoon: "Ṣíṣe àwòrán ìwé ń bọ̀ láìpẹ́ — ṣàyẹ̀wò kí o tó fi pamọ́.",
+      scanSoon: "Ṣí Scan Document láti ya àwòrán ìwé ìgbàwọlé, lẹ́yìn náà ṣàyẹ̀wò kí o tó fi pamọ́.",
       actions: {
         recordSale: "Ṣe àkọsílẹ̀ títà",
         recordExpense: "Ṣe àkọsílẹ̀ ìnáwó",
@@ -413,7 +413,7 @@ const ig = {
       learnCta: "Nyochaa →",
       recentTitle: "Azụmahịa ego n'oge na-adịghị anya",
       viewAll: "Lee ha niile >",
-      scanSoon: "Nnyocha akwụkwọ na-abịa n'oge adịghị anya — lelee tupu ichekwa.",
+      scanSoon: "Meghee Nyochaa akwụkwọ iji see foto akwụkwọ nnata, wee lelee tupu ichekwa.",
       actions: {
         recordSale: "Dekọọ ire ere",
         recordExpense: "Dekọọ mmefu",
@@ -577,7 +577,7 @@ const sw = {
       learnCta: "Chunguza →",
       recentTitle: "Miamala ya hivi karibuni",
       viewAll: "Tazama yote >",
-      scanSoon: "Kuchanganua hati kunakuja hivi karibuni — kagua kabla ya kuhifadhi.",
+      scanSoon: "Fungua Changanua Hati kupiga picha ya risiti, kisha kagua kabla ya kuhifadhi.",
       actions: {
         recordSale: "Andika Mauzo",
         recordExpense: "Andika Gharama",
@@ -741,7 +741,7 @@ const ar = {
       learnCta: "استكشف ←",
       recentTitle: "المعاملات الأخيرة",
       viewAll: "عرض الكل <",
-      scanSoon: "مسح المستندات قادم قريبا — راجع قبل الحفظ.",
+      scanSoon: "افتح مسح مستند لتصوير إيصال، ثم راجع قبل الحفظ.",
       actions: {
         recordSale: "تسجيل بيع",
         recordExpense: "تسجيل مصروف",
@@ -905,7 +905,7 @@ const ff = {
       learnCta: "Yiytu →",
       recentTitle: "Golle kaalis cakkitiiɗe",
       viewAll: "Yiy fof >",
-      scanSoon: "Skan dokimaa ena aara law — ƴeewu hade danndude.",
+      scanSoon: "Uddit Skan dokimaa ngam ñamndude foto risuu, caggal ɗum ƴeewu hade danndude.",
       actions: {
         recordSale: "Winndit yeeyirde",
         recordExpense: "Winndit njulaagu",

@@ -42,6 +42,7 @@ import { Route as AppRecordRouteImport } from './routes/app/record'
 import { Route as AppRecordsRouteImport } from './routes/app/records'
 import { Route as AppRegisterRouteImport } from './routes/app/register'
 import { Route as AppSalesRouteImport } from './routes/app/sales'
+import { Route as AppScanRouteImport } from './routes/app/scan'
 import { Route as AppSuppliersRouteImport } from './routes/app/suppliers'
 import { Route as AppTransactionsRouteImport } from './routes/app/transactions'
 import { Route as BSlugRouteImport } from './routes/b/$slug'
@@ -225,6 +226,11 @@ const AppSalesRoute = AppSalesRouteImport.update({
   path: '/sales',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppScanRoute = AppScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
   id: '/suppliers',
   path: '/suppliers',
@@ -344,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/app/records': typeof AppRecordsRoute
   '/app/register': typeof AppRegisterRoute
   '/app/sales': typeof AppSalesRoute
+  '/app/scan': typeof AppScanRoute
   '/app/suppliers': typeof AppSuppliersRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/b/$slug': typeof BSlugRoute
@@ -393,6 +400,7 @@ export interface FileRoutesByTo {
   '/app/records': typeof AppRecordsRoute
   '/app/register': typeof AppRegisterRoute
   '/app/sales': typeof AppSalesRoute
+  '/app/scan': typeof AppScanRoute
   '/app/suppliers': typeof AppSuppliersRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/b/$slug': typeof BSlugRoute
@@ -446,6 +454,7 @@ export interface FileRoutesById {
   '/app/records': typeof AppRecordsRoute
   '/app/register': typeof AppRegisterRoute
   '/app/sales': typeof AppSalesRoute
+  '/app/scan': typeof AppScanRoute
   '/app/suppliers': typeof AppSuppliersRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/b/$slug': typeof BSlugRoute
@@ -877,6 +886,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSalesRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/app/scan': {
+      id: '/app/scan'
+      path: '/scan'
+      fullPath: '/app/scan'
+      preLoaderRoute: typeof AppScanRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/app/suppliers': {
       id: '/app/suppliers'
       path: '/suppliers'
@@ -1096,6 +1112,7 @@ interface AppRouteRouteChildren {
   AppRecordsRoute: typeof AppRecordsRoute
   AppRegisterRoute: typeof AppRegisterRoute
   AppSalesRoute: typeof AppSalesRoute
+  AppScanRoute: typeof AppScanRoute
   AppSuppliersRoute: typeof AppSuppliersRoute
   AppTransactionsRoute: typeof AppTransactionsRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -1117,6 +1134,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppRecordsRoute: AppRecordsRoute,
   AppRegisterRoute: AppRegisterRoute,
   AppSalesRoute: AppSalesRoute,
+  AppScanRoute: AppScanRoute,
   AppSuppliersRoute: AppSuppliersRoute,
   AppTransactionsRoute: AppTransactionsRoute,
   AppIndexRoute: AppIndexRoute,
