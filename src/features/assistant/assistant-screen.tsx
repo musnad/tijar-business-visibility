@@ -24,7 +24,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/auth-context";
-import { speakText, useSpeechRecognition } from "@/features/translate/use-speech";
+import { HearItButton } from "@/features/translate/hear-it-button";
+import { speakText, useSpeechPlayback, useSpeechRecognition } from "@/features/translate/use-speech";
 import { usePrimaryBusiness } from "@/hooks/use-primary-business";
 import { invalidateBusinessQueries } from "@/lib/invalidate-business-queries";
 import { useTranslation } from "@/lib/i18n/context";
@@ -106,6 +107,7 @@ export function AssistantScreen() {
   const [booksTurns, setBooksTurns] = useState<BooksTurn[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const { listen, stop, listening, supported } = useSpeechRecognition();
+  const { speaking: ttsSpeaking, stop: stopTts } = useSpeechPlayback();
 
   useEffect(() => {
     const mapped = LOCALE_TO_SPEAK_LANG[locale];
@@ -124,7 +126,7 @@ export function AssistantScreen() {
       ...prev,
       { id: Date.now() + Math.random(), kind: "books", role: "tijar", text, lang, at: nowTime() },
     ]);
-    if (speakReplies) speakText(text, lang);
+    if (speakReplies) void speakText(text, lang);
   }
 
   function recordYouSaid(text: string, lang = speakLang) {
@@ -248,10 +250,10 @@ export function AssistantScreen() {
       toast.message(t("app.assistant.hausaVoiceOnly"));
     }
     setBusy(false);
-    speakText(spoken, to);
+    await speakText(spoken, to);
     if (speaker === "A") setDraftA("");
     else setDraftB("");
-    window.setTimeout(() => setSpeakingStatus(null), 2500);
+    setSpeakingStatus(null);
   }
 
   async function confirmSave() {
@@ -370,13 +372,27 @@ export function AssistantScreen() {
         )}
         {mode === "chat" && (
           <div className="flex min-h-[140px] flex-col items-center justify-center gap-3 py-6 text-center">
-            <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Volume2 className={cn("size-7", (busy || speakingStatus) && "animate-pulse")} />
+            <span
+              className={cn(
+                "flex size-14 items-center justify-center rounded-full text-primary",
+                ttsSpeaking || busy || listening ? "bg-primary/15" : "bg-primary/10",
+              )}
+            >
+              <Volume2 className={cn("size-7", (ttsSpeaking || busy || listening) && "animate-pulse")} />
             </span>
             <p className="text-sm font-semibold">
-              {speakingStatus ?? (listening ? t("app.assistant.listeningNow") : t("app.assistant.emptyChatSpeakOnly"))}
+              {ttsSpeaking
+                ? speakingStatus ?? t("app.assistant.speakingNow").replace("{language}", "")
+                : listening
+                  ? t("app.assistant.listeningNow")
+                  : t("app.assistant.emptyChatSpeakOnly")}
             </p>
             <p className="max-w-xs text-xs text-muted-foreground">{t("app.assistant.chatHintSpeakOnly")}</p>
+            {ttsSpeaking && (
+              <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={stopTts}>
+                <Square className="mr-1 size-3.5" /> {t("app.assistant.stop")}
+              </Button>
+            )}
           </div>
         )}
 
@@ -393,13 +409,13 @@ export function AssistantScreen() {
                 {turn.role === "you" ? t("app.assistant.youSaid") : "TIJAR"} · {turn.at}
               </p>
               <p className="mt-1 text-[15px] leading-relaxed">{turn.text}</p>
-              <button
-                type="button"
-                onClick={() => speakText(turn.text, turn.lang)}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-bold text-primary ring-1 ring-primary/20"
-              >
-                <Volume2 className="size-3.5" /> {t("app.assistant.hearIt")}
-              </button>
+              <HearItButton
+                text={turn.text}
+                language={turn.lang}
+                label={t("app.assistant.hearIt")}
+                stopLabel={t("app.assistant.stop")}
+                className="mt-2 bg-card"
+              />
             </article>
           ))}
       </section>

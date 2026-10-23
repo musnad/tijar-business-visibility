@@ -95,7 +95,7 @@ export function VoiceOnboardingScreen() {
     if (spokenStepRef.current === step) return;
     spokenStepRef.current = step;
     if (step === 0 && !welcomed) return;
-    speakText(question, lang);
+    void speakText(question, lang);
   }, [step, question, lang, welcomed]);
 
   function next() {
@@ -121,7 +121,7 @@ export function VoiceOnboardingScreen() {
         const opts = categories.map((c) => ({ id: c.id, keywords: [c.name, c.slug.replace(/-/g, " ")] }));
         const m = matchSpokenOption(text, opts);
         if (m) accept({ categoryId: m.id });
-        else speakText(prompts.tapFallback, lang);
+        else void speakText(prompts.tapFallback, lang);
         break;
       }
       case 3:
@@ -130,7 +130,7 @@ export function VoiceOnboardingScreen() {
       case 4: {
         const m = matchSpokenOption(text, MODEL_KEYWORDS);
         if (m) accept({ revenueModels: [m.id] });
-        else speakText(prompts.tapFallback, lang);
+        else void speakText(prompts.tapFallback, lang);
         break;
       }
       case 5: {
@@ -142,7 +142,7 @@ export function VoiceOnboardingScreen() {
       }
       case 6: case 7: case 8: {
         const yn = parseYesNo(text);
-        if (yn === null) { speakText(prompts.tapFallback, lang); break; }
+        if (yn === null) { void speakText(prompts.tapFallback, lang); break; }
         if (step === 6) accept({ customerCredit: yn });
         if (step === 7) accept({ managesInventory: yn });
         if (step === 8) accept({ hasStaff: yn });
@@ -164,7 +164,7 @@ export function VoiceOnboardingScreen() {
       }
       case 11: {
         const yn = parseYesNo(text);
-        if (yn === null) { speakText(prompts.tapFallback, lang); break; }
+        if (yn === null) { void speakText(prompts.tapFallback, lang); break; }
         accept({ islamicMode: yn ? "yes" : "not_now" });
         break;
       }
@@ -204,7 +204,7 @@ export function VoiceOnboardingScreen() {
       toast.error(error);
       return;
     }
-    speakText(prompts.saved, lang);
+    void speakText(prompts.saved, lang);
     toast.success(prompts.saved);
     await refreshProfile();
     void navigate({ to: "/app" });
@@ -267,7 +267,7 @@ export function VoiceOnboardingScreen() {
           <Button
             type="button"
             className="mt-4 min-h-12 w-full rounded-2xl font-bold"
-            onClick={() => { setWelcomed(true); speakText(prompts.welcome, lang); next(); }}
+            onClick={() => { setWelcomed(true); void speakText(prompts.welcome, lang); next(); }}
           >
             <Volume2 className="mr-1.5 size-5" /> {t("app.voiceOnboarding.startWithVoice")}
           </Button>

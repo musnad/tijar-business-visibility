@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/context";
 import { NKENNE_LANGUAGES, type NkenneLanguage } from "@/lib/nkenne/languages";
 import { translateTextClient } from "@/services/translate-service";
+import { HearItButton } from "./hear-it-button";
 import { speakText, useSpeechRecognition } from "./use-speech";
 
 type Turn = {
@@ -71,7 +72,7 @@ export function TranslatorScreen() {
       translatedLang: to,
     };
     setTurns((prev) => [...prev, turn]);
-    speakText(turn.translated, to);
+    void speakText(turn.translated, to);
     if (speaker === "A") setDraftA("");
     else setDraftB("");
   }
@@ -108,7 +109,7 @@ export function TranslatorScreen() {
             )
           )}
           <Button type="button" className="min-h-11 flex-1 rounded-xl font-bold" disabled={busy || !draft.trim()} onClick={() => send(speaker)}>
-            <Send className="mr-1 size-4" /> {t("app.translator.translateSpeak")}
+            <Volume2 className="mr-1 size-4" /> {t("app.translator.translateSpeak")}
           </Button>
         </div>
       </div>
@@ -147,9 +148,12 @@ export function TranslatorScreen() {
               {t("app.translator.translationLabel").replace("{language}", turn.translatedLang)}
             </p>
             <p className="mt-0.5 font-semibold">{turn.translated}</p>
-            <Button type="button" size="sm" variant="ghost" className="mt-1 min-h-8 rounded-lg text-xs" onClick={() => speakText(turn.translated, turn.translatedLang)}>
-              <Volume2 className="mr-1 size-3.5" /> {t("app.translator.hearIt")}
-            </Button>
+            <HearItButton
+              text={turn.translated}
+              language={turn.translatedLang}
+              label={t("app.translator.hearIt")}
+              stopLabel={t("app.translator.stop")}
+            />
           </article>
         ))}
         {turns.length === 0 && <p className="text-center text-sm text-muted-foreground">{t("app.translator.emptyConversation")}</p>}
