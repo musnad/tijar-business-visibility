@@ -1,29 +1,58 @@
 import { z } from "zod";
 
+/** Accept ₦15,000 / 15 000 / 15k / plain digits from shopkeepers. */
+export function normalizeMoneyRaw(raw: string | undefined): string | undefined {
+  if (raw == null) return undefined;
+  let s = raw.trim();
+  if (!s) return undefined;
+  s = s
+    .replace(/₦/g, "")
+    .replace(/\bngn\b/gi, "")
+    .replace(/\bnaira\b/gi, "")
+    .replace(/,/g, "")
+    .replace(/\s+/g, "");
+  const kMatch = /^(\d+(?:\.\d+)?)k$/i.exec(s);
+  if (kMatch) {
+    const n = Number.parseFloat(kMatch[1]!) * 1_000;
+    return Number.isFinite(n) ? String(Math.round(n * 100) / 100) : undefined;
+  }
+  return s || undefined;
+}
+
+export function normalizeQtyRaw(raw: string | undefined): string | undefined {
+  if (raw == null) return undefined;
+  let s = raw.trim();
+  if (!s) return undefined;
+  s = s.replace(/,/g, "").replace(/\s+/g, "");
+  return s || undefined;
+}
+
 const moneyOptional = z
   .string()
   .optional()
-  .transform((raw) => (raw?.trim() ? raw.replace(/,/g, "").trim() : undefined))
+  .transform((raw) => normalizeMoneyRaw(raw))
   .refine((v) => v === undefined || /^\d+(\.\d{1,2})?$/.test(v), "Enter a valid amount")
-  .transform((v) => (v === undefined ? undefined : Number.parseFloat(v)));
+  .transform((v) => (v === undefined ? undefined : Number.parseFloat(v)))
+  .refine((n) => n === undefined || (Number.isFinite(n) && n >= 0), "Enter a valid amount");
 
 const qtySchema = z
   .string()
   .min(1, "Enter quantity")
-  .transform((raw) => raw.replace(/,/g, "").trim())
+  .transform((raw) => normalizeQtyRaw(raw) ?? "")
   .refine((v) => /^\d+(\.\d{1,3})?$/.test(v), "Enter a valid quantity")
   .transform((v) => Number.parseFloat(v))
-  .refine((n) => n > 0, "Quantity must be greater than zero");
+  .refine((n) => Number.isFinite(n) && n > 0, "Quantity must be greater than zero");
 
 const optionalQtyFromString = z
   .string()
   .optional()
-  .transform((raw) => (raw?.trim() ? raw.replace(/,/g, "").trim() : undefined))
+  .transform((raw) => normalizeQtyRaw(raw))
   .refine((v) => v === undefined || /^\d+(\.\d{1,3})?$/.test(v), "Enter a valid quantity")
-  .transform((v) => (v === undefined ? undefined : Number.parseFloat(v)));
+  .transform((v) => (v === undefined ? undefined : Number.parseFloat(v)))
+  .refine((n) => n === undefined || (Number.isFinite(n) && n >= 0), "Enter a valid quantity");
 
 export const productFormSchema = z.object({
-  name: z.string().trim().min(1, "Product name is required"),
+  name: z.string().trim().min(1, "Product name is required").max(120),
   kind: z.enum(["goods", "service"]).default("goods"),
   unit: z.string().min(1).max(30).default("piece"),
   salePrice: moneyOptional,

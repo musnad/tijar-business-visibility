@@ -2,7 +2,7 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Mic, Square } from "lucide-react";
+import { CheckCircle2, Mic, Square } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -24,6 +24,8 @@ import { parseVoiceProduct } from "@/utils/voice-product";
 
 const goodsUnits = ["piece", "bag", "carton", "kg", "litre"] as const;
 
+type FieldErrors = Partial<Record<"name" | "salePrice" | "costPrice" | "initialStock" | "lowStockThreshold", string>>;
+
 export function NewProductForm({
   businessId,
   profileId,
@@ -44,14 +46,15 @@ export function NewProductForm({
   const [notes, setNotes] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [voiceHint, setVoiceHint] = useState<string | null>(null);
   const { listen, stop, listening, supported } = useSpeechRecognition();
 
   const speakLang =
     locale === "yo" ? "Yoruba" : locale === "sw" ? "Swahili" : locale === "ha" ? "Hausa" : "English";
 
-  const cost = costPrice ? Number.parseFloat(costPrice.replace(/,/g, "")) : 0;
-  const sale = salePrice ? Number.parseFloat(salePrice.replace(/,/g, "")) : 0;
+  const cost = costPrice ? Number.parseFloat(costPrice.replace(/[₦,\s]/g, "").replace(/k$/i, "000")) : 0;
+  const sale = salePrice ? Number.parseFloat(salePrice.replace(/[₦,\s]/g, "").replace(/k$/i, "000")) : 0;
   const previewProfit =
     sale > 0 ? saleLineTotals(sale, Number.isFinite(cost) ? cost : 0, 1).profit : null;
 
@@ -74,6 +77,7 @@ export function NewProductForm({
       if (draft.salePrice) setSalePrice(draft.salePrice);
       if (draft.costPrice) setCostPrice(draft.costPrice);
       if (draft.initialStock) setInitialStock(draft.initialStock);
+      setFieldErrors({});
       setVoiceHint(transcript);
       toast.success(t("app.products.voiceFilled"));
       void speakText(t("app.products.voiceFilledSpeak"), speakLang);
@@ -83,6 +87,7 @@ export function NewProductForm({
   }
 
   async function submit() {
+    setFieldErrors({});
     const parsed = productFormSchema.safeParse({
       name,
       kind,
@@ -94,42 +99,64 @@ export function NewProductForm({
       notes: notes || undefined,
     });
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? t("app.errors.validation"));
-      return;
-    }
-    setSaving(true);
-    const { product, error } = await createProduct(businessId, profileId, parsed.data);
-    if (error && !product) {
-      setSaving(false);
-      toast.error(error);
-      return;
-    }
-    if (error && product) {
-      // Saved with a stock warning
-      toast.message(error);
-    }
-
-    if (product && imageFile) {
-      const uploaded = await uploadProductImage(businessId, product.id, imageFile);
-      if (uploaded.publicUrl) {
-        await updateProductImageUrl(product.id, uploaded.publicUrl);
-      } else if (uploaded.error) {
-        toast.message(uploaded.error);
+      const next: FieldErrors = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0];
+        if (
+          key === "name" ||
+          key === "salePrice" ||
+          key === "costPrice" ||
+          key === "initialStock" ||
+          key === "lowStockThreshold"
+        ) {
+          if (!next[key]) next[key] = issue.message;
+        }
       }
-    }
-
-    setSaving(false);
-    if (!product) {
-      toast.error(t("app.errors.saveFailed"));
+      setFieldErrors(next);
+      toast.error(parsed.error.issues[0]?.message ?? t("app.errors.validation"));
       return;
     }
-    toast.success(t("app.products.saved"));
-    await invalidateBusinessQueries(queryClient, businessId);
-    void navigate({ to: "/app/products" });
+
+    setSaving(true);
+    try {
+      const { product, error } = await createProduct(businessId, profileId, parsed.data);
+      if (error && !product) {
+        toast.error(error);
+        return;
+      }
+      if (error && product) {
+        toast.message(error);
+      }
+
+      if (product && imageFile) {
+        const uploaded = await uploadProductImage(businessId, product.id, imageFile);
+        if (uploaded.publicUrl) {
+          await updateProductImageUrl(product.id, uploaded.publicUrl);
+        } else if (uploaded.error) {
+          toast.message(uploaded.error);
+        }
+      }
+
+      if (!product) {
+        toast.error(t("app.errors.saveFailed"));
+        return;
+      }
+
+      toast.success(t("app.products.saved"), {
+        description: product.name,
+        icon: <CheckCircle2 className="size-4" />,
+      });
+      await invalidateBusinessQueries(queryClient, businessId);
+      void navigate({ to: "/app/products" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("app.errors.saveFailed"));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="mt-5 space-y-4 pb-4">
+    <div className="mt-5 space-y-4 pb-28">
       {/* Voice add */}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <p className="text-sm font-bold">{t("app.products.voiceTitle")}</p>
@@ -163,7 +190,7 @@ export function NewProductForm({
             type="button"
             onClick={() => setKind("goods")}
             className={cn(
-              "flex-1 rounded-xl py-2 text-xs font-bold",
+              "flex-1 rounded-xl py-2.5 text-xs font-bold",
               kind === "goods" ? "bg-white/20 ring-2 ring-white/50" : "bg-white/10",
             )}
           >
@@ -173,24 +200,35 @@ export function NewProductForm({
             type="button"
             onClick={() => setKind("service")}
             className={cn(
-              "flex-1 rounded-xl py-2 text-xs font-bold",
+              "flex-1 rounded-xl py-2.5 text-xs font-bold",
               kind === "service" ? "bg-white/20 ring-2 ring-white/50" : "bg-white/10",
             )}
           >
             {t("app.products.kindService")}
           </button>
         </div>
-        <ProductPhotoField
-          previewUrl={null}
-          onFile={setImageFile}
-          onClear={() => setImageFile(null)}
-        />
-        <Input
-          className="mt-4 min-h-12 border-0 bg-white/10 text-lg font-bold text-primary-foreground placeholder:text-white/40"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("app.products.namePlaceholder")}
-        />
+
+        <label className="mt-4 block">
+          <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-white/75">
+            {t("app.products.nameSection")} *
+          </span>
+          <Input
+            className={cn(
+              "min-h-12 border-0 bg-white/10 text-lg font-bold text-primary-foreground placeholder:text-white/40",
+              fieldErrors.name && "ring-2 ring-red-300",
+            )}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (fieldErrors.name) setFieldErrors((f) => ({ ...f, name: undefined }));
+            }}
+            placeholder={t("app.products.namePlaceholder")}
+            autoComplete="off"
+            autoFocus
+          />
+          {fieldErrors.name && <p className="mt-1 text-xs font-semibold text-red-100">{fieldErrors.name}</p>}
+          <p className="mt-1 text-xs text-white/65">{t("app.products.nameHint")}</p>
+        </label>
       </div>
 
       <FormSection
@@ -202,24 +240,37 @@ export function NewProductForm({
         }
       >
         <Input
-          className="min-h-12 rounded-xl"
+          className={cn("min-h-12 rounded-xl", fieldErrors.costPrice && "ring-2 ring-destructive")}
           inputMode="decimal"
           value={costPrice}
-          onChange={(e) => setCostPrice(e.target.value)}
+          onChange={(e) => {
+            setCostPrice(e.target.value);
+            if (fieldErrors.costPrice) setFieldErrors((f) => ({ ...f, costPrice: undefined }));
+          }}
           placeholder={
             kind === "service"
               ? t("app.products.serviceCostPlaceholder")
               : t("app.products.costPricePlaceholder")
           }
         />
+        {fieldErrors.costPrice && (
+          <p className="mt-1 text-xs font-semibold text-destructive">{fieldErrors.costPrice}</p>
+        )}
         <Input
-          className="mt-3 min-h-12 rounded-xl"
+          className={cn("mt-3 min-h-12 rounded-xl", fieldErrors.salePrice && "ring-2 ring-destructive")}
           inputMode="decimal"
           value={salePrice}
-          onChange={(e) => setSalePrice(e.target.value)}
+          onChange={(e) => {
+            setSalePrice(e.target.value);
+            if (fieldErrors.salePrice) setFieldErrors((f) => ({ ...f, salePrice: undefined }));
+          }}
           placeholder={t("app.products.salePricePlaceholder")}
         />
-        {previewProfit !== null && (
+        {fieldErrors.salePrice && (
+          <p className="mt-1 text-xs font-semibold text-destructive">{fieldErrors.salePrice}</p>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">{t("app.products.priceFormatHint")}</p>
+        {previewProfit !== null && Number.isFinite(previewProfit) && (
           <p
             className={cn(
               "mt-2 text-xs font-semibold",
@@ -237,17 +288,31 @@ export function NewProductForm({
       {kind === "goods" && (
         <FormSection title={t("app.products.stockSection")} hint={t("app.products.stockHint")}>
           <Input
-            className="min-h-12 rounded-xl"
+            className={cn("min-h-12 rounded-xl", fieldErrors.initialStock && "ring-2 ring-destructive")}
             inputMode="decimal"
             value={initialStock}
-            onChange={(e) => setInitialStock(e.target.value)}
+            onChange={(e) => {
+              setInitialStock(e.target.value);
+              if (fieldErrors.initialStock) setFieldErrors((f) => ({ ...f, initialStock: undefined }));
+            }}
             placeholder={t("app.products.initialStockPlaceholder")}
           />
+          {fieldErrors.initialStock && (
+            <p className="mt-1 text-xs font-semibold text-destructive">{fieldErrors.initialStock}</p>
+          )}
           <Input
-            className="mt-3 min-h-12 rounded-xl"
+            className={cn(
+              "mt-3 min-h-12 rounded-xl",
+              fieldErrors.lowStockThreshold && "ring-2 ring-destructive",
+            )}
             inputMode="decimal"
             value={lowThreshold}
-            onChange={(e) => setLowThreshold(e.target.value)}
+            onChange={(e) => {
+              setLowThreshold(e.target.value);
+              if (fieldErrors.lowStockThreshold) {
+                setFieldErrors((f) => ({ ...f, lowStockThreshold: undefined }));
+              }
+            }}
             placeholder={t("app.products.lowStockPlaceholder")}
           />
         </FormSection>
@@ -273,6 +338,16 @@ export function NewProductForm({
         </FormSection>
       )}
 
+      <FormSection title={t("app.products.photoSection")} hint={t("app.products.photoHint")}>
+        <div className="flex justify-center rounded-2xl bg-muted/40 p-4">
+          <ProductPhotoField
+            previewUrl={null}
+            onFile={setImageFile}
+            onClear={() => setImageFile(null)}
+          />
+        </div>
+      </FormSection>
+
       <FormSection title={t("app.products.notesSection")} hint={t("app.products.notesHint")}>
         <Input
           className="min-h-12 rounded-xl"
@@ -282,14 +357,19 @@ export function NewProductForm({
         />
       </FormSection>
 
-      <Button
-        type="button"
-        className="min-h-12 w-full rounded-xl bg-teal-700 text-base font-bold shadow-md hover:bg-teal-800"
-        disabled={saving || !name.trim()}
-        onClick={() => void submit()}
-      >
-        {saving ? t("app.products.saving") : t("app.products.add")}
-      </Button>
+      <div className="fixed inset-x-0 bottom-[4.25rem] z-30 border-t border-border bg-background/95 p-3 backdrop-blur-sm sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <Button
+          type="button"
+          className="min-h-12 w-full rounded-xl bg-teal-700 text-base font-bold shadow-md hover:bg-teal-800"
+          disabled={saving || !name.trim()}
+          onClick={() => void submit()}
+        >
+          {saving ? t("app.products.saving") : t("app.products.add")}
+        </Button>
+        <p className="mt-2 text-center text-[11px] text-muted-foreground sm:mt-3">
+          {t("app.products.saveHint")}
+        </p>
+      </div>
     </div>
   );
 }

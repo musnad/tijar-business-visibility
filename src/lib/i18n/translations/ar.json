@@ -789,5 +789,8 @@
  "app.scan.confirmSave": "تأكيد وحفظ",
  "app.scan.scanAnother": "مسح آخر",
  "app.scan.saved": "تم حفظ السجل من المسح.",
- "app.dashboard.scanSoon": "افتح مسح مستند لتصوير إيصال، ثم راجع قبل الحفظ."
+ "app.dashboard.scanSoon": "افتح مسح مستند لتصوير إيصال، ثم راجع قبل الحفظ.",
+ "app.products.priceFormatHint": "يمكنك كتابة 15000 أو 15,000 أو ₦15000 أو 15k.",
+ "app.products.photoSection": "صورة (اختياري)",
+ "app.products.saveHint": "الاسم يكفي للحفظ. أضف الأسعار والمخزون عندما تتوفر."
 }

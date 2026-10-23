@@ -789,5 +789,8 @@
  "app.scan.confirmSave": "Thibitisha & hifadhi",
  "app.scan.scanAnother": "Changanua nyingine",
  "app.scan.saved": "Rekodi imehifadhiwa kutoka kwenye skani yako.",
- "app.dashboard.scanSoon": "Fungua Changanua Hati kupiga picha ya risiti, kisha kagua kabla ya kuhifadhi."
+ "app.dashboard.scanSoon": "Fungua Changanua Hati kupiga picha ya risiti, kisha kagua kabla ya kuhifadhi.",
+ "app.products.priceFormatHint": "Unaweza kuandika 15000, 15,000, ₦15000, au 15k.",
+ "app.products.photoSection": "Picha (si lazima)",
+ "app.products.saveHint": "Jina linatosha kuhifadhi. Ongeza bei na stock unapokuwa nazo."
 }

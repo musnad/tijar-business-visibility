@@ -789,5 +789,8 @@
  "app.scan.confirmSave": "Kwenye & chekwaa",
  "app.scan.scanAnother": "Nyochaa ọzọ",
  "app.scan.saved": "Echekwara ndekọ site na nyocha gị.",
- "app.dashboard.scanSoon": "Meghee Nyochaa akwụkwọ iji see foto akwụkwọ nnata, wee lelee tupu ichekwa."
+ "app.dashboard.scanSoon": "Meghee Nyochaa akwụkwọ iji see foto akwụkwọ nnata, wee lelee tupu ichekwa.",
+ "app.products.priceFormatHint": "Ị nwere ike dee 15000, 15,000, ₦15000, ma ọ bụ 15k.",
+ "app.products.photoSection": "Foto (nhọrọ)",
+ "app.products.saveHint": "Aha zuru ezu ịchekwa. Tinye ọnụahịa na ngwaahịa mgbe ị nwere ha."
 }

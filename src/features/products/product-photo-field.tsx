@@ -37,20 +37,20 @@ export function ProductPhotoField({
       <button
         type="button"
         onClick={pick}
-        className="relative flex size-28 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-white/40 bg-white/10"
+        className="relative flex size-28 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-border bg-background"
       >
         {shown ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={shown} alt="" className="size-full object-cover" />
         ) : (
-          <Camera className="size-10 text-white/70" strokeWidth={1.75} />
+          <Camera className="size-10 text-muted-foreground" strokeWidth={1.75} />
         )}
       </button>
-      <p className="text-center text-xs text-white/75">{t("app.products.photoHint")}</p>
+      <p className="text-center text-xs text-muted-foreground">{t("app.products.photoHint")}</p>
       {shown && (
         <button
           type="button"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-white/90"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground"
           onClick={() => {
             setLocalPreview(null);
             onClear();
@@ -61,7 +61,14 @@ export function ProductPhotoField({
           {t("app.products.photoRemove")}
         </button>
       )}
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onChange} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={onChange}
+      />
     </div>
   );
 }

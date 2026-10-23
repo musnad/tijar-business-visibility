@@ -39,10 +39,10 @@ export async function updateProductImageUrl(
 
 function mapProductError(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes("row-level security") || m.includes("rls")) {
+  if (m.includes("row-level security") || m.includes("rls") || m.includes("permission")) {
     return "You do not have permission to add products for this business. Sign in again.";
   }
-  if (m.includes("products_name_not_empty") || m.includes("name")) {
+  if (m.includes("products_name_not_empty") || (m.includes("null value") && m.includes("name"))) {
     return "Enter a product name.";
   }
   if (m.includes("insufficient stock")) {
@@ -51,8 +51,23 @@ function mapProductError(message: string): string {
   if (m.includes("column") && m.includes("kind")) {
     return "Database needs the products update. Ask your admin to run the latest Supabase migrations.";
   }
+  if (m.includes("failed to fetch") || m.includes("network")) {
+    return "Network error — check your connection and try again.";
+  }
   return message;
 }
+
+type ProductInsert = {
+  business_id: string;
+  name: string;
+  kind?: ProductKind;
+  unit: string;
+  sale_price: number | null;
+  cost_price: number | null;
+  stock_quantity: number;
+  low_stock_threshold: number;
+  notes: string | null;
+};
 
 export async function createProduct(
   businessId: string,
@@ -64,7 +79,7 @@ export async function createProduct(
   const name = input.name.trim();
   if (name.length < 1) return { product: null, error: "Enter a product name." };
 
-  const payload = {
+  const fullPayload: ProductInsert = {
     business_id: businessId,
     name,
     kind,
@@ -76,14 +91,48 @@ export async function createProduct(
     notes: input.notes?.trim() || null,
   };
 
-  let { data, error } = await supabase.from("products").insert(payload).select("*").single();
+  let data: unknown = null;
+  let error: { message: string } | null = null;
+
+  const first = await supabase.from("products").insert(fullPayload).select("*").single();
+  data = first.data;
+  error = first.error;
 
   // Older DBs without `kind` — retry without that column so add still works.
-  if (error && /kind/i.test(error.message)) {
-    const { kind: _kind, ...withoutKind } = payload;
+  if (error && /kind|product_kind/i.test(error.message)) {
+    const { kind: _kind, ...withoutKind } = fullPayload;
     const retry = await supabase.from("products").insert(withoutKind).select("*").single();
     data = retry.data;
     error = retry.error;
+  }
+
+  // Last resort: minimal row (name + unit) so the shopkeeper still gets a product.
+  if (error) {
+    const minimal = {
+      business_id: businessId,
+      name,
+      unit: kind === "service" ? "job" : input.unit?.trim() || "piece",
+      stock_quantity: 0,
+      low_stock_threshold: kind === "service" ? 0 : (input.lowStockThreshold ?? 5),
+    };
+    const retry = await supabase.from("products").insert(minimal).select("*").single();
+    if (!retry.error && retry.data) {
+      data = retry.data;
+      error = null;
+      // Best-effort price update if the insert worked without prices.
+      if (input.salePrice != null || input.costPrice != null || input.notes) {
+        await supabase
+          .from("products")
+          .update({
+            sale_price: input.salePrice ?? null,
+            cost_price: input.costPrice ?? null,
+            notes: input.notes?.trim() || null,
+          })
+          .eq("id", (retry.data as Product).id);
+      }
+    } else {
+      error = retry.error ?? error;
+    }
   }
 
   if (error) return { product: null, error: mapProductError(error.message) };

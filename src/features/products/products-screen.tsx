@@ -98,7 +98,7 @@ export function ProductsScreen({ businessId }: { businessId: string }) {
             <div className="mt-6 rounded-2xl border border-dashed border-border p-6 text-center">
               <p className="text-sm text-muted-foreground">{t("app.products.empty")}</p>
               <Button className="mt-4 min-h-11 rounded-xl font-bold" asChild>
-                <Link to="/app/products/new">{t("app.products.add")}</Link>
+                <Link to="/app/products/new">{t("app.products.newFab")}</Link>
               </Button>
             </div>
           ) : (

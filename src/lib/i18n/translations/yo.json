@@ -789,5 +789,8 @@
  "app.scan.confirmSave": "Jẹ́rìí & fi pamọ́",
  "app.scan.scanAnother": "Ya òmíràn",
  "app.scan.saved": "A ti fi àkọsílẹ̀ pamọ́ láti àwòrán rẹ.",
- "app.dashboard.scanSoon": "Ṣí Scan Document láti ya àwòrán ìwé ìgbàwọlé, lẹ́yìn náà ṣàyẹ̀wò kí o tó fi pamọ́."
+ "app.dashboard.scanSoon": "Ṣí Scan Document láti ya àwòrán ìwé ìgbàwọlé, lẹ́yìn náà ṣàyẹ̀wò kí o tó fi pamọ́.",
+ "app.products.priceFormatHint": "O le tẹ 15000, 15,000, ₦15000, tàbí 15k.",
+ "app.products.photoSection": "Àwòrán (kò pọn dandan)",
+ "app.products.saveHint": "Orúkọ tó láti fi pamọ́. Fi owó àti ọjà kún un nígbà tí o bá ní."
 }
