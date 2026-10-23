@@ -7,7 +7,12 @@
  *
  * Never log request/response text. Errors are mapped to stable codes so
  * routes can respond without leaking provider internals.
+ *
+ * Env access MUST be dynamic (`process.env[name]` / readEnvString) so Vite
+ * does not inline secrets to `undefined` at build time on Vercel.
  */
+
+import { readEnvString } from "@/lib/supabase/runtime-env";
 
 export type NkenneErrorCode =
   | "NOT_CONFIGURED"
@@ -55,12 +60,22 @@ export function sanitizeSecret(value: string | undefined | null): string | null 
   return v.length > 0 ? v : null;
 }
 
-export function readNkenneConfig(env: Record<string, string | undefined> = process.env): {
+export function readNkenneConfig(env?: Record<string, string | undefined>): {
   apiKey: string | null;
   baseUrl: string;
 } {
-  const apiKey = sanitizeSecret(env.NKENNEAI_API_KEY);
-  const baseUrl = (sanitizeSecret(env.NKENNEAI_BASE_URL) || DEFAULT_BASE_URL).replace(/\/$/, "");
+  // Prefer explicit env (tests); otherwise dynamic host env — never static
+  // process.env.NKENNEAI_API_KEY (Vite can replace that with undefined at build).
+  const rawKey = env
+    ? env["NKENNEAI_API_KEY"]
+    : (readEnvString("NKENNEAI_API_KEY") ??
+      (typeof process !== "undefined" ? process.env["NKENNEAI_API_KEY"] : undefined));
+  const rawBase = env
+    ? env["NKENNEAI_BASE_URL"]
+    : (readEnvString("NKENNEAI_BASE_URL") ??
+      (typeof process !== "undefined" ? process.env["NKENNEAI_BASE_URL"] : undefined));
+  const apiKey = sanitizeSecret(rawKey);
+  const baseUrl = (sanitizeSecret(rawBase) || DEFAULT_BASE_URL).replace(/\/$/, "");
   return { apiKey, baseUrl };
 }
 

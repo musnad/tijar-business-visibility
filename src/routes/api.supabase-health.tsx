@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { readNkenneConfig } from "@/lib/nkenne/client";
 import {
   fetchBusinessCategoriesServer,
   isSupabaseEnvPresent,
@@ -14,13 +15,22 @@ export const Route = createFileRoute("/api/supabase-health")({
       GET: async () => {
         const authPing = await pingSupabaseServer();
         const categories = await fetchBusinessCategoriesServer();
+        // Presence/format only — never the secret value.
+        const nkenne = readNkenneConfig();
+        const nkenneKeyOk = Boolean(
+          nkenne.apiKey && nkenne.apiKey.startsWith("nk_") && nkenne.apiKey.length >= 20,
+        );
 
         return Response.json({
           env: {
             supabaseConfigured: isSupabaseEnvPresent(),
             publicAppUrl: getConfiguredSiteOrigin() || null,
             appEnv: import.meta.env.VITE_APP_ENV ?? "development",
-            keysPresent: supabaseEnvDiagnostics(),
+            keysPresent: {
+              ...supabaseEnvDiagnostics(),
+              NKENNEAI_API_KEY: Boolean(nkenne.apiKey),
+              NKENNEAI_API_KEY_FORMAT_OK: nkenneKeyOk,
+            },
           },
           auth: authPing,
           database: categories.error
