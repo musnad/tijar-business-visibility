@@ -37,6 +37,23 @@ export async function updateProductImageUrl(
   return { error: error?.message ?? null };
 }
 
+function mapProductError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("row-level security") || m.includes("rls")) {
+    return "You do not have permission to add products for this business. Sign in again.";
+  }
+  if (m.includes("products_name_not_empty") || m.includes("name")) {
+    return "Enter a product name.";
+  }
+  if (m.includes("insufficient stock")) {
+    return "Stock change is not allowed (would go below zero).";
+  }
+  if (m.includes("column") && m.includes("kind")) {
+    return "Database needs the products update. Ask your admin to run the latest Supabase migrations.";
+  }
+  return message;
+}
+
 export async function createProduct(
   businessId: string,
   profileId: string,
@@ -44,23 +61,32 @@ export async function createProduct(
 ): Promise<{ product: Product | null; error: string | null }> {
   const supabase = getSupabaseBrowserClient();
   const kind = (input.kind ?? "goods") as ProductKind;
-  const { data, error } = await supabase
-    .from("products")
-    .insert({
-      business_id: businessId,
-      name: input.name.trim(),
-      kind,
-      unit: kind === "service" ? "job" : input.unit?.trim() || "piece",
-      sale_price: input.salePrice ?? null,
-      cost_price: input.costPrice ?? null,
-      stock_quantity: 0,
-      low_stock_threshold: kind === "service" ? 0 : (input.lowStockThreshold ?? 5),
-      notes: input.notes?.trim() || null,
-    })
-    .select("*")
-    .single();
+  const name = input.name.trim();
+  if (name.length < 1) return { product: null, error: "Enter a product name." };
 
-  if (error) return { product: null, error: error.message };
+  const payload = {
+    business_id: businessId,
+    name,
+    kind,
+    unit: kind === "service" ? "job" : input.unit?.trim() || "piece",
+    sale_price: input.salePrice ?? null,
+    cost_price: input.costPrice ?? null,
+    stock_quantity: 0,
+    low_stock_threshold: kind === "service" ? 0 : (input.lowStockThreshold ?? 5),
+    notes: input.notes?.trim() || null,
+  };
+
+  let { data, error } = await supabase.from("products").insert(payload).select("*").single();
+
+  // Older DBs without `kind` — retry without that column so add still works.
+  if (error && /kind/i.test(error.message)) {
+    const { kind: _kind, ...withoutKind } = payload;
+    const retry = await supabase.from("products").insert(withoutKind).select("*").single();
+    data = retry.data;
+    error = retry.error;
+  }
+
+  if (error) return { product: null, error: mapProductError(error.message) };
   const product = data as Product;
 
   if (kind === "goods" && input.initialStock && input.initialStock > 0) {
@@ -72,9 +98,15 @@ export async function createProduct(
       "initial",
       "Opening stock",
     );
-    if (moveErr) return { product: null, error: moveErr };
+    if (moveErr) {
+      // Product exists; stock can be fixed later — don't lose the product.
+      return {
+        product,
+        error: `Product saved, but opening stock failed: ${mapProductError(moveErr)}`,
+      };
+    }
     const refreshed = await getProduct(product.id);
-    return { product: refreshed.product, error: null };
+    return { product: refreshed.product ?? product, error: null };
   }
 
   return { product, error: null };

@@ -15,7 +15,7 @@ import { formatNgn } from "@/utils/money";
 export function ProductsScreen({ businessId }: { businessId: string }) {
   const { t } = useTranslation();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["products-dashboard", businessId],
     queryFn: async () => {
       const result = await fetchProductsDashboard(businessId);
@@ -38,9 +38,32 @@ export function ProductsScreen({ businessId }: { businessId: string }) {
 
   return (
     <>
-      <AppPageHeader title={t("app.products.title")} subtitle={t("app.products.subtitle")} />
+      <AppPageHeader
+        title={t("app.products.title")}
+        subtitle={t("app.products.subtitle")}
+        action={
+          <Button className="min-h-10 rounded-xl font-bold" asChild>
+            <Link to="/app/products/new">{t("app.products.newFab")}</Link>
+          </Button>
+        }
+      />
 
       {isLoading && <p className="mt-8 text-muted-foreground">…</p>}
+
+      {isError && (
+        <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+          <p className="font-semibold text-destructive">{t("app.products.loadFailed")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{error instanceof Error ? error.message : ""}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" className="min-h-10 rounded-xl" onClick={() => void refetch()}>
+              {t("app.common.retry")}
+            </Button>
+            <Button className="min-h-10 rounded-xl font-bold" asChild>
+              <Link to="/app/products/new">{t("app.products.newFab")}</Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {data && (
         <>

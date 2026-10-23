@@ -23,7 +23,7 @@ export async function fetchProductsDashboard(businessId: string): Promise<{
   ]);
   const { data: rows, error } = productsRes;
   if (error) return { data: null, error };
-  if (statsRes.error) return { data: null, error: statsRes.error };
+  // Stats are optional — never block the product list if sales columns are missing.
 
   const lowStock = rows.filter(
     (p) =>
@@ -49,7 +49,7 @@ export async function fetchProductsDashboard(businessId: string): Promise<{
       lowStock,
       inStock,
       allProducts: rows,
-      salesStats: statsRes.byProductId,
+      salesStats: statsRes.error ? {} : statsRes.byProductId,
     },
     error: null,
   };

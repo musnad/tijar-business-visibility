@@ -23,7 +23,7 @@ const optionalQtyFromString = z
   .transform((v) => (v === undefined ? undefined : Number.parseFloat(v)));
 
 export const productFormSchema = z.object({
-  name: z.string().min(2, "Product name is required"),
+  name: z.string().trim().min(1, "Product name is required"),
   kind: z.enum(["goods", "service"]).default("goods"),
   unit: z.string().min(1).max(30).default("piece"),
   salePrice: moneyOptional,

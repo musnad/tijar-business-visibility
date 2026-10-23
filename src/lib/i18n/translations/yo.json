@@ -744,5 +744,16 @@
  "app.assistant.emptyChatSpeakOnly": "Ó ṣetán — tẹ Sọ̀rọ̀, lẹ́yìn náà Túmọ̀ & sọ. Iwọ yóò gbọ́ èdè kejì nìkan.",
  "app.assistant.chatHintSpeakOnly": "Kò sí ọ̀rọ̀ lórí iboju. Ìtúmọ̀ ohùn nìkan ni.",
  "app.assistant.speakingNow": "Ń sọ̀rọ̀ ní {language}…",
- "app.assistant.speakOriginalFallback": "Kò le túmọ̀ — a ń sọ ọ̀rọ̀ rẹ ní ohùn."
+ "app.assistant.speakOriginalFallback": "Kò le túmọ̀ — a ń sọ ọ̀rọ̀ rẹ ní ohùn.",
+ "app.common.retry": "Gbìyànjú síi",
+ "app.products.saving": "Ń fi pamọ́…",
+ "app.products.loadFailed": "Kò le gba ọjà.",
+ "app.products.voiceTitle": "Fi ohùn kun",
+ "app.products.voiceHint": "Say something like: \"Rice sell 15000 cost 12000 stock 20 bag\" — then check the form and Save.",
+ "app.products.voiceAdd": "Sọ ọjà",
+ "app.products.voiceStop": "Dáwọ́ dúró",
+ "app.products.voiceFilled": "Fọ́ọ̀mù ti kún — ṣàyẹ̀wò kí o sì fi pamọ́.",
+ "app.products.voiceFilledSpeak": "Ṣàyẹ̀wò fọ́ọ̀mù, lẹ́yìn náà fi pamọ́.",
+ "app.products.voiceNeedName": "Mo gbọ́ ọ, ṣùgbọ́n mo nílò orúkọ ọjà.",
+ "app.products.voiceFailed": "Ohùn kùnà. Tẹ̀ẹ́ dípò rẹ̀."
 }

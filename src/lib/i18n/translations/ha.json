@@ -744,5 +744,16 @@
  "app.assistant.emptyChatSpeakOnly": "A shirye — taɓa Yi magana, sai Fassara & faɗa. Za ka ji harshen ɗaya kawai.",
  "app.assistant.chatHintSpeakOnly": "Babu rubutu a allo. Fassara da murya kawai.",
  "app.assistant.speakingNow": "Ana magana da {language}…",
- "app.assistant.speakOriginalFallback": "An kasa fassara — ana faɗa maganarka a murya."
+ "app.assistant.speakOriginalFallback": "An kasa fassara — ana faɗa maganarka a murya.",
+ "app.common.retry": "Sake gwadawa",
+ "app.products.saving": "Ana ajiyewa…",
+ "app.products.loadFailed": "An kasa ɗaukar kayayyaki.",
+ "app.products.voiceTitle": "Ƙara da murya",
+ "app.products.voiceHint": "Say something like: \"Rice sell 15000 cost 12000 stock 20 bag\" — then check the form and Save.",
+ "app.products.voiceAdd": "Faɗi kaya",
+ "app.products.voiceStop": "Tsaya",
+ "app.products.voiceFilled": "An cika fom — duba kuma ajiye.",
+ "app.products.voiceFilledSpeak": "Duba fom, sannan ajiye.",
+ "app.products.voiceNeedName": "Na ji ka, amma ina bukatar sunan kaya.",
+ "app.products.voiceFailed": "Murya ta gaza. Rubuta maimakon."
 }

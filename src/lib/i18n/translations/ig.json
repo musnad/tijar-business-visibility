@@ -744,5 +744,16 @@
  "app.assistant.emptyChatSpeakOnly": "Dị njikere — pịa Kwuo, wee Tụgharịa & kwuo. Ị ga-anụ naanị asụsụ nke ọzọ.",
  "app.assistant.chatHintSpeakOnly": "Enweghị ederede. Naanị ntụgharị olu na-egwu.",
  "app.assistant.speakingNow": "Na-ekwu n'asụsụ {language}…",
- "app.assistant.speakOriginalFallback": "Enweghị ike ịtụgharịa — na-ekwu okwu gị n'olu."
+ "app.assistant.speakOriginalFallback": "Enweghị ike ịtụgharịa — na-ekwu okwu gị n'olu.",
+ "app.common.retry": "Try again",
+ "app.products.saving": "Saving…",
+ "app.products.loadFailed": "Could not load products.",
+ "app.products.voiceTitle": "Add with your voice",
+ "app.products.voiceHint": "Say something like: \"Rice sell 15000 cost 12000 stock 20 bag\" — then check the form and Save.",
+ "app.products.voiceAdd": "Speak product",
+ "app.products.voiceStop": "Stop",
+ "app.products.voiceFilled": "Form filled from your voice — check and Save.",
+ "app.products.voiceFilledSpeak": "Check the form, then save.",
+ "app.products.voiceNeedName": "I heard you, but need a product name. Try again.",
+ "app.products.voiceFailed": "Voice failed. Type the product instead."
 }

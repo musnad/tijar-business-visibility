@@ -744,5 +744,16 @@
  "app.assistant.emptyChatSpeakOnly": "Tayari — gusa Ongea, kisha Tafsiri & sema. Utasikia lugha nyingine tu.",
  "app.assistant.chatHintSpeakOnly": "Hakuna maandishi. Tafsiri ya sauti tu inacheza.",
  "app.assistant.speakingNow": "Inazungumza kwa {language}…",
- "app.assistant.speakOriginalFallback": "Imeshindwa kutafsiri — inasema maneno yako kwa sauti."
+ "app.assistant.speakOriginalFallback": "Imeshindwa kutafsiri — inasema maneno yako kwa sauti.",
+ "app.common.retry": "Jaribu tena",
+ "app.products.saving": "Inahifadhi…",
+ "app.products.loadFailed": "Imeshindwa kupakia bidhaa.",
+ "app.products.voiceTitle": "Ongeza kwa sauti",
+ "app.products.voiceHint": "Say something like: \"Rice sell 15000 cost 12000 stock 20 bag\" — then check the form and Save.",
+ "app.products.voiceAdd": "Sema bidhaa",
+ "app.products.voiceStop": "Simamisha",
+ "app.products.voiceFilled": "Fomu imejazwa — kagua na Hifadhi.",
+ "app.products.voiceFilledSpeak": "Angalia fomu, kisha hifadhi.",
+ "app.products.voiceNeedName": "Nimekusikia, lakini nahitaji jina la bidhaa.",
+ "app.products.voiceFailed": "Sauti imeshindwa. Andika badala yake."
 }

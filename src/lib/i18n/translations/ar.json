@@ -744,5 +744,16 @@
  "app.assistant.emptyChatSpeakOnly": "جاهز — اضغط تحدّث ثم ترجم وانطق. ستسمع اللغة الأخرى فقط.",
  "app.assistant.chatHintSpeakOnly": "لا يظهر نص. يُشغَّل الصوت المترجم فقط.",
  "app.assistant.speakingNow": "يتحدّث بـ {language}…",
- "app.assistant.speakOriginalFallback": "تعذّرت الترجمة — ننطق كلماتك بصوت عال."
+ "app.assistant.speakOriginalFallback": "تعذّرت الترجمة — ننطق كلماتك بصوت عال.",
+ "app.common.retry": "Try again",
+ "app.products.saving": "Saving…",
+ "app.products.loadFailed": "Could not load products.",
+ "app.products.voiceTitle": "Add with your voice",
+ "app.products.voiceHint": "Say something like: \"Rice sell 15000 cost 12000 stock 20 bag\" — then check the form and Save.",
+ "app.products.voiceAdd": "Speak product",
+ "app.products.voiceStop": "Stop",
+ "app.products.voiceFilled": "Form filled from your voice — check and Save.",
+ "app.products.voiceFilledSpeak": "Check the form, then save.",
+ "app.products.voiceNeedName": "I heard you, but need a product name. Try again.",
+ "app.products.voiceFailed": "Voice failed. Type the product instead."
 }
