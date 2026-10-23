@@ -47,16 +47,20 @@ export type NkenneClientConfig = {
 
 const DEFAULT_BASE_URL = "https://developers-api.nkenne.ai";
 
-/** Strip accidental quotes/whitespace from dashboard-pasted secrets. */
+/** Strip accidental quotes/whitespace/zero-width chars from dashboard-pasted secrets. */
 export function sanitizeSecret(value: string | undefined | null): string | null {
   if (!value) return null;
-  let v = value.trim();
+  let v = value.trim()
+    // BOM / zero-width / bidi marks that sneak in from copy-paste
+    .replace(/[\u200B-\u200D\uFEFF\u202A-\u202E]/g, "");
   if (
     (v.startsWith('"') && v.endsWith('"')) ||
     (v.startsWith("'") && v.endsWith("'"))
   ) {
     v = v.slice(1, -1).trim();
   }
+  // API keys never contain whitespace — remove any that got pasted mid-string
+  v = v.replace(/\s+/g, "");
   return v.length > 0 ? v : null;
 }
 
@@ -120,7 +124,13 @@ async function attemptOnce(
   }
 
   if (res.status === 401 || res.status === 403) {
-    throw new NkenneError("INVALID_CREDENTIALS", "Translation is not configured correctly. Please contact support.", 502);
+    // 401 = bad/missing key; 403 = key rejected or plan/IP restriction.
+    // Same user-facing message — never echo provider body.
+    throw new NkenneError(
+      "INVALID_CREDENTIALS",
+      "Translation is not configured correctly. Please contact support.",
+      502,
+    );
   }
   if (res.status === 429) {
     throw new NkenneError("QUOTA_EXCEEDED", "Translation limit reached for now. Please try again later.", 429);
