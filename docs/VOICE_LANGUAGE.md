@@ -1,47 +1,35 @@
 # Phase 5 — Voice & African-Language Support: Status Report
 
-Honest capability matrix. Unit tests use mocked provider responses. **Live NKENNEAi text translation was verified 2026-10-23** (English→Yoruba returned `translated_text` with HTTP 200).
+Honest capability matrix. Unit tests use mocked provider responses. **Live NKENNEAi text + Speech Studio TTS/STT verified 2026-10-23**.
 
-## Provider verification (NKENNEAi, official quickstart checked 2026-10-21)
+## Provider verification (NKENNEAi)
 
-| Question | Documented answer |
+| Question | Documented / live answer |
 |----------|-------------------|
-| Endpoint | `POST https://developers-api.nkenne.ai/api/translate/with-api-key` |
-| Auth | `Authorization: <API_KEY>` header |
-| Payload / response | `{ text, fromLanguage, toLanguage }` → `{ translated_text }` (live) |
-| Languages | English, Yoruba, Swahili, Nigerian Pidgin (exact strings) |
-| Pairs | English ↔ each other; other cross-pairs via English pivot (implemented) |
-| Speech (STT/TTS) | **Not documented** — Tijar does not claim NKENNEAi speech |
-| Rate limits / quotas / pricing / max length | **Not published in the quickstart** — Tijar defends itself: 1000-char cap, 20 req/min per user/IP, cache, 1 retry, 12 s timeout |
-| Errors | Not documented; HTTP status mapped to stable Tijar codes (401/403 credentials, 429 quota, 400 unsupported, timeout/network) |
+| Text endpoint | `POST https://developers-api.nkenne.ai/api/translate/with-api-key` |
+| TTS | `POST /api/tts/v1/{language}/with-api-key` → audio bytes (WAV/MP3) |
+| STT | `POST /api/stt/v1/{language}/with-api-key` + `audio_file` → `{ transcription }` (live) / `{ text }` (docs) |
+| Speech Translations | `POST /api/st/v1/{pair}/with-api-key` → `{ translated_text }`; live pairs: `swahili↔english`, `yoruba→english`, `pidgin→english` |
+| Auth | `Authorization: <API_KEY>` (raw key) |
+| Languages | English, Yoruba, Swahili, Nigerian Pidgin |
 
 ## What is genuinely implemented
 
 | Capability | How | Languages | Tested |
 |------------|-----|-----------|--------|
-| Text translation | Server route `/api/translate` → provider interface `TranslationProvider` (NKENNE adapter) | En ↔ Yo, Sw, Pidgin (+ pivot Yo↔Sw etc.) | Mocked unit tests (12) — both directions, errors, cache, rate limit |
-| Batch translation | `/api/translate-batch` (system strings tool) | Same | Mocked via service tests |
-| Speech-to-text | Device speech engine (Web Speech API), push-to-talk only, permission on demand, no raw-audio retention (audio never uploaded; recognition runs on device/browser) | English, Hausa, Swahili, Yoruba (device-dependent) | Manual/device — cannot be unit-tested; typing fallback always present |
-| Text-to-speech | Device `speechSynthesis`, explicit "Hear it"/toggle | Same | Manual/device |
-| Voice records | Talk to TIJAR: transcript shown → draft → explicit Confirm → transaction service | Same | Parser unit tests (7) |
-| Voice onboarding | Spoken Q&A creates business profile after review | En, Ha, Sw, Yo prompts | Parser tests (4) |
-| Dashboard explanations | "Explain my profit" → real analytics (30-day/today) → phrased, optionally NKENNE-translated (Yo/Sw) and spoken | En (+ Yo/Sw translation) | Unit tests (figures, loss, missing data) |
-| Translated search | Discover: search in Yo/Sw/Pidgin → translated to English for matching, original query preserved and displayed | Yo, Sw, Pidgin | Code path via mocked translate service |
-| Conversation translator | `/translate` two-person mode, originals preserved, spoken output | Voice: Ha/En/Sw/Yo · Text: NKENNE languages | UI + mocked service |
+| Text translation | `/api/translate` | En ↔ Yo, Sw, Pidgin (+ pivot) | Mocked + live |
+| Batch translation | `/api/translate-batch` | Same | Mocked |
+| Speech-to-text | NKENNE STT via `/api/translate-speech` (MediaRecorder), browser Web Speech fallback | En, Yo, Sw, Pidgin (+ Hausa browser-only) | Mocked speech client; live STT Yoruba |
+| Text-to-speech | NKENNE TTS via `/api/speak`, browser `speechSynthesis` fallback | Same | Mocked + live TTS Yoruba/English/Swahili |
+| Speech translate | Prefer `/api/st/...`; else STT + text translate | Live ST pairs; others via fallback | Mocked orchestration |
+| Voice records | Talk → draft → Confirm | Same | Parser tests |
+| Conversation translator | `/translate` + NKENNE speak-back | Same | UI + services |
 
 ## Not supported / not claimed
 
-- **Hausa text translation** — not in the documented NKENNEAi API. UI labels this clearly; Hausa voice and Hausa UI strings work. Never presented as working.
-- **NKENNEAi speech** — undocumented; `/api/translate-speech` returns `501 VOICE_NOT_AVAILABLE` until official docs exist.
-- Igbo/Arabic/Fulfulde UI locales exist as static files; they are not NKENNEAi translation targets.
+- **Hausa text / NKENNE speech** — not in the API. Hausa UI + browser voice only.
+- Speech Studio is **Beta** — ST can 503; TIJAR always has text + browser fallbacks.
 
 ## Privacy
 
-Audio is processed only after an explicit button press; recognition is single-utterance (never continuous); raw audio is not stored or uploaded by Tijar (browser engine may process per its own policy — disclosed to users by the platform). Transcripts/translations are shown for editing before any send/save. Provider request text is never logged.
-
-## To verify live (needs credentials)
-
-1. Add `NKENNEAI_API_KEY` (Vercel + `.env.local`), redeploy
-2. `POST /api/translate` English→Yoruba and Yoruba→English; confirm `translatedText`
-3. Repeat Swahili + Nigerian Pidgin; test an unsupported request (Hausa) returns `UNSUPPORTED_LANGUAGE`
-4. Only then update this matrix from "mock-tested" to "live-tested" per language
+Audio is uploaded only after an explicit record/mic press (≤5 MB / ~60 s), never logged, and only to TIJAR’s server which proxies to NKENNE with the server-side key. Transcripts are shown for review before save/send where the UI requires it.

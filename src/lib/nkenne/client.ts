@@ -1,9 +1,11 @@
 /**
- * NKENNEAi HTTP client — official text-to-text endpoint only:
+ * NKENNEAi HTTP client — text-to-text:
  *   POST https://developers-api.nkenne.ai/api/translate/with-api-key
  *   Header: Authorization: <API_KEY>   (raw key, per official examples)
  *   Body:   { text, fromLanguage, toLanguage }
  *   OK:     { translated_text } (live API) or { translatedText } (docs/legacy)
+ *
+ * Speech Studio (TTS/STT/ST) lives in `./speech.ts`.
  *
  * Never log request/response text. Errors are mapped to stable codes so
  * routes can respond without leaking provider internals.

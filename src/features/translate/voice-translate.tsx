@@ -5,17 +5,29 @@ import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/context";
+import { isNkenneLanguage } from "@/lib/nkenne/languages";
+import { transcribeAudioClient } from "./use-speech";
 
 const MAX_SECONDS = 60;
 
+type VoiceTranslateProps = {
+  onUseTranscript: (text: string) => void;
+  /** Spoken language (NKENNE display name). */
+  language?: string;
+  /** Optional: translate speech into this language before offering the text. */
+  toLanguage?: string;
+};
+
 /**
- * Explicit, user-initiated voice recording (never continuous listening).
- * Audio goes only to our server endpoint (/api/translate-speech), which
- * currently reports voice as unavailable because the documented NKENNEAi
- * API is text-only. The transcript, when available, is always shown for
- * review before the user chooses to use it.
+ * Explicit push-to-talk recording → NKENNE Speech Studio STT
+ * (or speech-translate when toLanguage is set). Transcript is always
+ * shown for review before the user chooses to use it.
  */
-export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: string) => void }) {
+export function VoiceTranslate({
+  onUseTranscript,
+  language = "English",
+  toLanguage,
+}: VoiceTranslateProps) {
   const { t } = useTranslation();
   const [state, setState] = useState<
     | { kind: "idle" }
@@ -29,20 +41,32 @@ export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: st
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function start() {
+    if (!isNkenneLanguage(language)) {
+      setState({
+        kind: "error",
+        message: t("app.translator.voiceLanguageUnsupported"),
+      });
+      return;
+    }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       setState({ kind: "error", message: t("app.translator.voiceNotSupported") });
       return;
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(
+        (type) => MediaRecorder.isTypeSupported(type),
+      );
+      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
-      recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size) chunksRef.current.push(e.data);
+      };
       recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach((track) => track.stop());
         if (timerRef.current) clearInterval(timerRef.current);
-        void upload(new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" }));
+        void upload(new Blob(chunksRef.current, { type: recorder.mimeType || mime || "audio/webm" }));
       };
       recorder.start();
       let seconds = 0;
@@ -66,25 +90,27 @@ export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: st
       setState({ kind: "error", message: t("app.translator.recordingTooLarge") });
       return;
     }
-    setState({ kind: "processing" });
-    try {
-      const form = new FormData();
-      form.append("audio", blob, "voice.webm");
-      const res = await fetch("/api/translate-speech", { method: "POST", body: form });
-      const body = (await res.json().catch(() => null)) as
-        | { transcript?: string; error?: { message: string } }
-        | null;
-      if (res.ok && body?.transcript) {
-        setState({ kind: "done", transcript: body.transcript });
-      } else {
-        setState({
-          kind: "error",
-          message: body?.error?.message ?? t("app.translator.voiceProcessingFailed"),
-        });
-      }
-    } catch {
-      setState({ kind: "error", message: t("app.translator.voiceServiceUnreachable") });
+    if (blob.size < 256) {
+      setState({ kind: "error", message: t("app.translator.voiceProcessingFailed") });
+      return;
     }
+    setState({ kind: "processing" });
+    const result = await transcribeAudioClient({
+      audio: blob,
+      language,
+      toLanguage: toLanguage && toLanguage !== language ? toLanguage : undefined,
+    });
+    if (result.ok) {
+      const text = (result.translatedText || result.transcript).trim();
+      if (text) {
+        setState({ kind: "done", transcript: text });
+        return;
+      }
+    }
+    setState({
+      kind: "error",
+      message: result.ok === false ? result.message : t("app.translator.voiceProcessingFailed"),
+    });
   }
 
   return (
@@ -92,11 +118,20 @@ export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: st
       <div className="flex items-center gap-2">
         {state.kind === "recording" ? (
           <Button type="button" size="sm" variant="destructive" className="min-h-10 rounded-xl" onClick={stop}>
-            <Square className="mr-1 size-4" /> {t("app.translator.stopWithSeconds").replace("{seconds}", String(state.seconds))}
+            <Square className="mr-1 size-4" />{" "}
+            {t("app.translator.stopWithSeconds").replace("{seconds}", String(state.seconds))}
           </Button>
         ) : (
-          <Button type="button" size="sm" variant="outline" className="min-h-10 rounded-xl" onClick={start} disabled={state.kind === "processing"}>
-            <Mic className="mr-1 size-4" /> {state.kind === "processing" ? t("app.translator.processing") : t("app.translator.recordVoice")}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="min-h-10 rounded-xl"
+            onClick={start}
+            disabled={state.kind === "processing"}
+          >
+            <Mic className="mr-1 size-4" />{" "}
+            {state.kind === "processing" ? t("app.translator.processing") : t("app.translator.recordVoice")}
           </Button>
         )}
         <span className="text-xs text-muted-foreground">{t("app.translator.maxSixtyHint")}</span>
@@ -105,7 +140,12 @@ export function VoiceTranslate({ onUseTranscript }: { onUseTranscript: (text: st
         <div className="mt-2 text-sm">
           <p className="font-semibold">{t("app.translator.transcriptLabel")}</p>
           <p className="mt-0.5">{state.transcript}</p>
-          <Button type="button" size="sm" className="mt-2 min-h-9 rounded-lg text-xs" onClick={() => onUseTranscript(state.transcript)}>
+          <Button
+            type="button"
+            size="sm"
+            className="mt-2 min-h-9 rounded-lg text-xs"
+            onClick={() => onUseTranscript(state.transcript)}
+          >
             {t("app.translator.useThisText")}
           </Button>
         </div>

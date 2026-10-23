@@ -1,686 +1,135 @@
-# TIJAR: Business Visibility
+# TIJAR — Making Every Business Visible
 
-Build a professional, modern, responsive website for a startup called TIJAR.
+**NKENNEAi API Hackathon submission**
 
-BRAND
+TIJAR helps everyday African business owners (market traders, food sellers, artisans, small shops) record sales, understand their business, and become discoverable online — **in the languages they already speak**.
 
-Name: TIJAR
+- **Live app:** https://tijar-two.vercel.app  
+- **Repository:** https://github.com/musnad/tijar-business-visibility  
+- **Stack:** TanStack Start (React + Vite), Supabase, Vercel  
+- **Languages (NKENNEAi):** English, Yoruba, Swahili, Nigerian Pidgin  
 
-Tagline: Making Every Business Visible.
+> **Security:** Never commit API keys, tokens, or passwords. Use `.env.local` (gitignored) and host env vars (e.g. Vercel). Only placeholders belong in `.env.example`.
 
-Product philosophy: Learn. Run. Grow.
+---
 
-TIJAR is a digital platform designed for everyday business owners in Africa, especially informal and micro businesses such as market traders, food sellers, tailors, artisans, retailers, mechanics, restaurants, beauty businesses, phone/accessory sellers and small shops.
+## The problem we are solving
 
-Many of these business owners may have little or no formal education. Therefore, the website must be extremely simple, visual, friendly and easy to understand.
+Millions of micro and informal businesses across Africa run successfully every day, but:
 
-TIJAR helps business owners:
+1. **Language barrier** — Owners speak Hausa, Yoruba, Swahili, Pidgin, etc. Most business software is English-only. Typing and reading in a second language slows them down or locks them out.
+2. **Voice is how they work** — Many prefer speaking over typing (low literacy, busy hands, noisy markets). Generic phone TTS/STT often fails on African languages and accents.
+3. **Customers and sellers do not share a language** — A buyer may enquire in Swahili while the seller’s books and replies are in English or Yoruba. Without translation, Discover / storefront messaging breaks down.
+4. **Visibility without understanding is useless** — A public storefront only helps if product descriptions and enquiries can be understood on both sides.
 
-1. Record sales, expenses and customer debts.
+**TIJAR uses NKENNEAi** so recording books, talking to the app, translating storefronts, and two-person conversation can happen in African languages — not as a demo widget, but inside the real product workflow.
 
-2. Understand how their business is performing.
+---
 
-3. Learn practical business skills through short, interactive lessons.
+## How we use the NKENNEAi API
 
-4. Complete KYC and create a verified digital business identity.
+All NKENNE calls run **server-side only**. The browser never sees `NKENNEAI_API_KEY`. Clients call our proxies; we forward to `https://developers-api.nkenne.ai` with the documented raw `Authorization` header.
 
-5. Create a professional online business profile.
+| NKENNEAi API | Official endpoint | TIJAR proxy | Role in the product |
+|--------------|-------------------|-------------|---------------------|
+| **Text-to-Text (TTT)** | `POST /api/translate/with-api-key` | `POST /api/translate`, `POST /api/translate-batch` | Storefront / product translation, seller enquiry translation, Talk replies, Discover search pivot, admin system-string tool |
+| **Text-to-Speech (TTS)** | `POST /api/tts/v1/{language}/with-api-key` | `POST /api/speak` | “Hear it”, Talk speak-back, Translator spoken output |
+| **Speech-to-Text (STT)** | `POST /api/stt/v1/{language}/with-api-key` | `POST /api/translate-speech` | Talk mic, Translator mic, storefront voice enquiry |
+| **Speech Translations (ST)** | `POST /api/st/v1/{pair}/with-api-key` | `POST /api/translate-speech` (with `toLanguage`) | Spoken cross-language path when a pair is supported; else STT → TTT |
 
-6. Become discoverable by potential customers.
+### Integration design (token-efficient & reliable)
 
-7. Eventually connect with suppliers, financial institutions and other business services.
+- **Cache** successful text translations in memory (~1 h) to avoid repeat token spend.
+- **Rate limits** per client IP (and verified user when signed in).
+- **Pivot via English** for text pairs that are not direct in the TTT docs (e.g. Yoruba → Swahili = two cached steps).
+- **Speech Studio Beta fallbacks:** if ST returns 503 / fails, we use STT + TTT; if NKENNE TTS fails, we fall back to the device speech engine. Hausa uses device voice only (not in the documented NKENNE language list).
+- **No silent writes:** Talk parses voice into a **draft**; the owner must **Confirm** before a sale/expense is saved.
+- **Originals preserved:** translations are shown alongside originals; never auto-overwrite seller copy without review.
 
-Do NOT position TIJAR as merely accounting software, a loan app or a fintech app.
+### Code map
 
-The long-term vision is:
+| Area | Path |
+|------|------|
+| TTT client | `src/lib/nkenne/client.ts` |
+| Speech Studio client (TTS / STT / ST) | `src/lib/nkenne/speech.ts` |
+| Orchestration + cache / rate limit | `src/lib/nkenne/service.ts`, `speech-service.ts`, `cache.ts`, `rate-limit.ts` |
+| API routes | `src/routes/api.translate.tsx`, `api.translate-batch.tsx`, `api.speak.tsx`, `api.translate-speech.tsx` |
+| Talk UI | `src/features/assistant/assistant-screen.tsx` |
+| Translator | `src/features/translate/` |
+| Deeper notes | [docs/NKENNEAI.md](./docs/NKENNEAI.md), [docs/VOICE_LANGUAGE.md](./docs/VOICE_LANGUAGE.md) |
 
-Business Activity → Business Record → Verified Identity → Digital Visibility → Business Intelligence → Business Growth
+### Auth & request shapes (as documented)
 
-DESIGN DIRECTION
+```http
+Authorization: YOUR_API_KEY
+```
 
-Create a premium but extremely simple African technology brand.
+```json
+// TTT
+{ "text": "…", "fromLanguage": "English", "toLanguage": "Yoruba" }
+// Live success field: translated_text (we also accept translatedText)
+```
 
-The design should feel:
+```json
+// TTS  POST /api/tts/v1/yoruba/with-api-key
+{ "text": "…", "voice_name": "optional", "speaking_rate": 1.0 }
+// Response: binary audio (audio/mpeg or audio/wav)
+```
 
-- Modern
+```text
+// STT  POST /api/stt/v1/yoruba/with-api-key
+multipart: audio_file=<binary>
+// Response: { text | transcription, … }
+```
 
-- Trustworthy
+```text
+// ST   POST /api/st/v1/swahili-to-english/with-api-key
+multipart: audio_file=<binary>
+// Response: { translated_text, source_language, target_language }
+```
 
-- Friendly
+Supported ST pairs (official docs):  
+`swahili-to-english`, `yoruba-to-english`, `pidgin-to-english`, `english-to-swahili`, `english-to-yoruba`, `english-to-pidgin`.
 
-- Professional
+---
 
-- Accessible
+## Features judges can try
 
-- Human
+| Feature | Where | NKENNE APIs |
+|---------|-------|-------------|
+| **Talk — My books** | `/app/assistant` | STT (mic) → intent draft → Confirm; TTS for replies; TTT when speaking Yo/Sw/Pidgin |
+| **Talk — Two people** | `/app/assistant` (chat mode) | STT + TTT + TTS (speak-only translate) |
+| **Translator** | `/translate` | STT + TTT + TTS |
+| **Discover / storefront** | `/discover`, `/b/{slug}` | TTT for descriptions/products; STT for voice enquiry |
+| **Seller publish / enquiries** | `/app/business/…` | TTT with original preserved |
+| **Hear it** | throughout | TTS (NKENNE first, browser fallback) |
 
-- African but not stereotypical
+---
 
-- Suitable for both men and women
+## Setup
 
-- Suitable for users with limited formal education
+### Requirements
 
-- Strong enough to eventually become a major African technology company
+- [Bun](https://bun.sh)
+- A [NKENNEAi](https://nkenne.ai/) account + API key (Developer Tools → API Keys)
+- Optional: Supabase project for auth / business data (see [SUPABASE.md](./SUPABASE.md))
 
-Avoid:
+### Environment (placeholders only)
 
-- Excessive gradients
+```sh
+cp .env.example .env.local
+```
 
-- Excessive animations
+Set **server-only** (never `VITE_`-prefix the NKENNE key):
 
-- Complicated dashboards
+| Variable | Purpose |
+|----------|---------|
+| `NKENNEAI_API_KEY` | NKENNEAi API key — **secret** |
+| `NKENNEAI_BASE_URL` | Optional; default `https://developers-api.nkenne.ai` |
+| `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Public Supabase client config |
+| `VITE_PUBLIC_APP_URL` | Public site URL (production) |
 
-- Cryptocurrency aesthetics
-
-- Generic banking aesthetics
-
-- Excessive African patterns
-
-- Stock-photo-heavy layouts
-
-- Too much text
-
-- Corporate jargon
-
-- Fake statistics
-
-- Fake testimonials
-
-- Fake customer logos
-
-Use generous whitespace, large typography, rounded cards, clear icons and strong visual hierarchy.
-
-Use a clean sans-serif font such as Inter, Manrope or another modern readable font.
-
-Use a restrained brand palette based around deep green, warm gold and neutral white/black. Keep the interface mostly white with subtle brand-color accents.
-
-The logo should simply display:
-
-TIJAR
-
-Use a clean wordmark and a small abstract symbol suggesting business, visibility, growth and connection.
-
-If no logo asset is available, create a simple temporary text-based wordmark rather than inventing a complicated logo.
-
-WEBSITE STRUCTURE
-
-Create the following pages:
-
-1. Home
-
-2. How TIJAR Works
-
-3. Learn
-
-4. Business Visibility
-
-5. About
-
-6. Contact
-
-7. Privacy Policy
-
-8. Terms
-
-The primary CTA throughout the website should be:
-
-Get Started
-
-Secondary CTA:
-
-Download TIJAR
-
-HOME PAGE
-
-Navigation
-
-Desktop navigation:
-
-TIJAR logo
-
-- How It Works
-
-- Learn
-
-- Business Visibility
-
-- About
-
-Right side:
-
-Sign In
-
-Get Started
-
-Mobile navigation should be a clean hamburger menu.
-
-Make the navigation sticky but subtle.
-
-HERO SECTION
-
-Use a large, confident headline:
-
-Your business deserves to be seen.
-
-Supporting text:
-
-TIJAR helps everyday business owners record their business, learn practical skills, build a verified digital identity and become visible online.
-
-Primary button:
-
-Get Started
-
-Secondary button:
-
-Learn How It Works
-
-On the right side, show a beautiful modern smartphone mockup displaying a simple TIJAR dashboard.
-
-The dashboard mockup should show:
-
-Good morning, Aisha 👋
-
-Today's Sales
-
-₦85,000
-
-Expenses
-
-₦22,000
-
-Customers Owing
-
-₦47,000
-
-Today's Lesson
-
-How to Calculate Profit
-
-Keep the mockup clean and realistic.
-
-SECTION: THE PROBLEM
-
-Headline:
-
-Your business is real. But is it visible?
-
-Explain simply:
-
-Millions of people run successful businesses every day without proper business records, a digital presence or a verified business identity.
-
-Their businesses exist physically, but online they may be almost invisible.
-
-TIJAR helps change that.
-
-Use three simple visual cards:
-
-No Records
-
-Important business information is often kept in notebooks or memory.
-
-No Digital Presence
-
-Customers may not know where to find the business.
-
-Limited Opportunities
-
-Without reliable business information, it can be harder to access new opportunities.
-
-Do not make exaggerated claims about loans or financing.
-
-SECTION: WHAT TIJAR DOES
-
-Headline:
-
-Everything you need to build a better business.
-
-Create four clean cards.
-
-01 — Record
-
-Keep track of what happens in your business.
-
-Record sales, expenses and customer debts simply.
-
-02 — Understand
-
-Know what is happening in your business.
-
-See sales, expenses and other simple business insights.
-
-03 — Learn
-
-Learn business in minutes.
-
-Short, interactive lessons designed around real business situations.
-
-04 — Get Verified
-
-Build your digital business identity.
-
-Complete KYC and create a professional TIJAR business profile.
-
-SECTION: LEARN WITH TIJAR
-
-This is a major differentiator.
-
-Headline:
-
-Learn business like you learn a language.
-
-Supporting copy:
-
-Short lessons. Simple questions. Real business situations. Learn a little every day.
-
-Show a mock lesson:
-
-Today's Lesson
-
-Understanding Profit
-
-3 min
-
-You bought a product for ₦5,000 and sold it for ₦6,500.
-
-How much did you make?
-
-A. ₦500
-
-B. ₦1,500
-
-C. ₦2,500
-
-Correct answer:
-
-₦1,500 ✓
-
-+10 XP
-
-Add a subtle progress indicator:
-
-Business Level 3
-
-1,240 XP
-
-🔥 5 day learning streak
-
-CTA:
-
-Explore TIJAR Learning
-
-Make it clear that this is an example interface, not a functioning learning system yet.
-
-SECTION: BUSINESS VISIBILITY
-
-Headline:
-
-Turn your business into a digital business.
-
-Explain:
-
-Once a business completes verification, TIJAR can create a professional public business profile that makes it easier for customers to discover and contact the business.
-
-Show an example profile:
-
-🟢 VERIFIED BUSINESS
-
-Aisha Foods
-
-Foodstuff & Provisions
-
-📍 Kano, Nigeria
-
-⭐ 4.8
-
-Rice • Beans • Oil • Flour
-
-Call
-
-WhatsApp
-
-Get Directions
-
-Share Business
-
-Supporting message:
-
-Your shop may be in the market. Your business can also be online.
-
-CTA:
-
-Create Your Business Profile
-
-Do not claim that TIJAR currently provides Google ranking or guaranteed customer acquisition.
-
-SECTION: HOW IT WORKS
-
-Headline:
-
-Start in three simple steps.
-
-01
-
-Create your business
-
-Tell us what you do.
-
-02
-
-Record and learn
-
-Keep simple records and learn practical business skills.
-
-03
-
-Get verified and grow
-
-Build your digital business identity and become easier to discover.
-
-Use a clean horizontal timeline on desktop and vertical layout on mobile.
-
-SECTION: FOR EVERY BUSINESS
-
-Headline:
-
-Built for the businesses that keep communities moving.
-
-Use simple visual categories:
-
-Food & Provisions
-
-Fashion & Tailoring
-
-Restaurants
-
-Beauty
-
-Electronics
-
-Auto & Mechanics
-
-Building Materials
-
-General Retail
-
-Artisans
-
-Other Businesses
-
-Do not imply TIJAR is limited to these categories.
-
-SECTION: LANGUAGES
-
-Headline:
-
-Business education in your language.
-
-Copy:
-
-TIJAR is designed to make business knowledge accessible — not complicated.
-
-Mention:
-
-English
-
-Hausa
-
-Yoruba
-
-Igbo
-
-Eventually more African languages.
-
-Do not claim that all languages are already supported unless technically implemented.
-
-FINAL CTA
-
-Create a strong clean section:
-
-Your business is already working.
-
-Now make it visible.
-
-Primary button:
-
-Get Started
-
-Secondary button:
-
-Download TIJAR
-
-Use a subtle brand-color background.
-
-FOOTER
-
-TIJAR
-
-Making Every Business Visible.
-
-Navigation:
-
-Product
-
-How It Works
-
-Learn
-
-Business Visibility
-
-About
-
-Contact
-
-Help
-
-Legal:
-
-Privacy
-
-Terms
-
-Social media icons.
-
-Copyright:
-
-© 2026 TIJAR. All rights reserved.
-
-Do not invent company registration numbers, addresses, phone numbers or email addresses.
-
-IMPORTANT UX PRINCIPLES
-
-The website must work beautifully on mobile because many users will access it from smartphones.
-
-Use:
-
-- Large buttons
-
-- Large readable text
-
-- High contrast
-
-- Short paragraphs
-
-- Clear icons
-
-- Simple navigation
-
-- Fast loading
-
-- Responsive design
-
-- Accessible components
-
-Every major section should have one clear action.
-
-Avoid making the visitor think:
-
-"What am I supposed to click?"
-
-The answer should always be obvious.
-
-APP PREVIEW
-
-Create several realistic but static UI previews of the future TIJAR app.
-
-Show these screens:
-
-Home
-
-Today's Sales
-
-₦85,000
-
-Expenses
-
-₦22,000
-
-Customers Owing
-
-₦47,000
-
-Today's Lesson
-
-Record
-
-What happened today?
-
-[ Sale ]
-
-[ Expense ]
-
-[ Customer Debt ]
-
-[ 🎙 Tell TIJAR ]
-
-Learn
-
-Today's Lesson
-
-How to Calculate Profit
-
-3 minutes
-
-Start Lesson
-
-Business
-
-Aisha Foods
-
-Verified Business
-
-Foodstuff & Provisions
-
-Kano
-
-Share Profile
-
-Make these previews visually consistent with the website.
-
-CALL TO ACTION BEHAVIOUR
-
-The "Get Started" buttons should lead to a simple signup/waitlist page for now.
-
-Create a clean form:
-
-Full Name
-
-Phone Number
-
-Business Name
-
-Business Type
-
-City
-
-Preferred Language
-
-Button:
-
-Join TIJAR
-
-After submission show:
-
-You're on the TIJAR list.
-
-We're building a simpler way for everyday businesses to learn, run and grow.
-
-Do not build a complex authentication system unless necessary.
-
-The website should be ready for integration with a real app later.
-
-TECHNICAL REQUIREMENTS
-
-Build the site using a modern production-ready React stack (TanStack Start + Vite).
-
-Requirements:
-
-- Fully responsive
-
-- Mobile-first
-
-- SEO-friendly
-
-- Fast loading
-
-- Accessible
-
-- Clean reusable components
-
-- Proper semantic HTML
-
-- Optimized images
-
-- Smooth but restrained animations
-
-- No unnecessary libraries
-
-- No fake API data presented as real
-
-- No fake testimonials
-
-- No fake statistics
-
-- No fake partnerships
-
-Create reusable components for:
-
-Navbar
-
-Hero
-
-Feature cards
-
-App mockups
-
-Learning lesson card
-
-Business profile card
-
-CTA sections
-
-Footer
-
-Use realistic placeholder data only for product mockups and clearly treat them as examples.
-
-MOST IMPORTANT INSTRUCTION
-
-Do not overdesign this website.
-
-TIJAR should look like a serious technology company that could eventually serve millions of African businesses.
-
-The website should communicate the idea in less than 60 seconds:
-
-TIJAR helps everyday business owners learn, run, verify and grow their businesses — and become visible online.
-
-The final visual feeling should be:
-
-Simple. Trustworthy. Human. African. Scalable.
-
-Do not add features or sections that are not requested above.
-
-## Development
-
-Requires [Bun](https://bun.sh). Copy `.env.example` → `.env.local` and set Supabase keys (see [SUPABASE.md](./SUPABASE.md)).
+### Run locally
 
 ```sh
 git clone https://github.com/musnad/tijar-business-visibility.git
@@ -689,8 +138,70 @@ bun install
 bun run dev
 ```
 
-Health check: [http://localhost:3000/api/supabase-health](http://localhost:3000/api/supabase-health)
+Open http://localhost:3000  
 
-## Deploy (same app as local)
+Health: http://localhost:3000/api/supabase-health (add `?nkenne=1` to probe NKENNE config **without** returning the key).
 
-See **[DEPLOY.md](./DEPLOY.md)** — set `VITE_*` env vars at build time, configure Supabase Auth URLs, then `bun run build` && `bun run start` (or Docker).
+```sh
+bun run test    # unit tests (mocked NKENNE; no real tokens)
+bun run build   # production build
+```
+
+### Deploy
+
+See **[DEPLOY.md](./DEPLOY.md)**. On Vercel, set `NKENNEAI_API_KEY` as a **server** env var (not exposed to the client bundle).
+
+---
+
+## Demo walkthrough
+
+1. Open the live app (or local `bun run dev`).
+2. Set app language (top bar) to English, Yoruba, or Swahili.
+3. **Translator** (`/translate`): pick two languages → Speak → Translate & speak. Confirm the other side hears NKENNE TTS.
+4. **Talk** (`/app/assistant`, sign in):  
+   - *My books* — say e.g. “sale of rice for five thousand” → review draft → Confirm.  
+   - *Two people* — Person A speaks in English, Person B hears Yoruba (speak-only).
+5. **Storefront** — open a `/b/{slug}` page → Translate description → optional Record voice on enquiry.
+6. Confirm Network tab shows calls to **our** `/api/translate`, `/api/speak`, `/api/translate-speech` only — never a browser call to NKENNE with a key.
+
+---
+
+## Token usage approach
+
+- Prefer **cached TTT** for repeated UI strings and search queries.
+- Cap request size (text ≤ 1000 chars; voice uploads capped in-app at ~5 MB / 60 s even though the API allows up to 25 MB).
+- One retry on transient provider failures; no aggressive polling.
+- Speech Studio is used when it improves Yoruba/Swahili/Pidgin quality; browser engines cover Hausa and offline fallback so demos still work if Beta speech returns 503.
+- Unit tests **mock** the provider so CI does not burn tokens.
+
+---
+
+## Known limitations
+
+1. **Hausa (and Igbo / Arabic / Fulfulde)** — UI strings exist; **not** in the documented NKENNE language list. Text translation is refused clearly; voice uses the device engine only.
+2. **TTT pairs** — Direct non-English pairs are not in the TTT docs; we pivot via English (two calls, cached).
+3. **Speech Studio is Beta** — ST/STT can return upstream 503; we degrade gracefully (STT+TTT or browser speech).
+4. **Browser audio formats** — Mic often records `audio/webm`; if a provider rejects a format, browser STT/TTS fallback applies.
+5. **In-memory cache / rate limits** — per server instance (fine for demo; use Redis for multi-region production scale).
+6. **Supabase** — full books / auth needs configured Supabase; translation/speech proxies work with only `NKENNEAI_API_KEY`.
+
+---
+
+## Third-party services
+
+| Service | Use |
+|---------|-----|
+| **NKENNEAi** | Text translation, TTS, STT, speech translation |
+| **Supabase** | Auth, Postgres, business data |
+| **Vercel** | Hosting |
+| Browser Web Speech API | Fallback STT/TTS when NKENNE speech is unavailable or language unsupported |
+
+Pre-existing TIJAR product code (records, discover, onboarding) is extended with NKENNE for language/voice; see commit history for scope.
+
+---
+
+## License / contact
+
+© 2026 TIJAR. Hackathon support (NKENNE): see organizers’ channels; API docs https://nkenne.ai/nkenneai-api  
+
+**Do not email or paste live API keys into issues, Discord, or the README.**

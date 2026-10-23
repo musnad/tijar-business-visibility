@@ -5,18 +5,18 @@ import {
   clientIp,
   jsonSecure,
 } from "@/lib/nkenne/api-security";
-import { checkRateLimit } from "@/lib/nkenne/rate-limit";
+import { transcribeOrTranslateSpeech } from "@/lib/nkenne/speech-service";
 
 /**
- * POST /api/translate-speech — voice structure only.
+ * POST /api/translate-speech — NKENNE Speech Studio STT / Speech Translations.
  *
- * Documented NKENNEAi covers text-to-text only; this route validates
- * size/type, enforces origin + rate limits, and returns 501 until official
- * speech docs exist. No audio bytes are forwarded or logged.
+ * multipart/form-data:
+ *   audio | audio_file  — recording (≤5 MB)
+ *   language            — source language display name (English, Yoruba, …)
+ *   toLanguage          — optional target; when set, speech-translate or STT+text
+ *
+ * Success: { transcript, translatedText?, language, mode }
  */
-const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
-const ALLOWED_TYPES = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg"];
-
 export const Route = createFileRoute("/api/translate-speech")({
   server: {
     handlers: {
@@ -26,59 +26,59 @@ export const Route = createFileRoute("/api/translate-speech")({
           return jsonSecure({ error: { code: origin.code, message: origin.message } }, { status: origin.status });
         }
 
-        const limit = checkRateLimit(`speech-ip:${clientIp(request)}`, 10);
-        if (!limit.allowed) {
+        const contentType = request.headers.get("content-type") ?? "";
+        if (!contentType.includes("multipart/form-data")) {
           return jsonSecure(
-            {
-              error: {
-                code: "RATE_LIMITED",
-                message: `Too many voice requests. Try again in ${limit.retryAfterSeconds}s.`,
-              },
-            },
-            { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+            { error: { code: "UNSUPPORTED_MEDIA", message: "Send audio as multipart/form-data." } },
+            { status: 415 },
           );
         }
 
-        const contentType = request.headers.get("content-type") ?? "";
-        if (contentType.includes("multipart/form-data")) {
-          const form = await request.formData().catch(() => null);
-          const file = form?.get("audio");
-          if (file instanceof File) {
-            if (file.size > MAX_AUDIO_BYTES) {
-              return jsonSecure(
-                {
-                  error: {
-                    code: "AUDIO_TOO_LARGE",
-                    message: "Recording is too large (max 5 MB / about 60 seconds).",
-                  },
-                },
-                { status: 400 },
-              );
-            }
-            if (file.type && !ALLOWED_TYPES.includes(file.type)) {
-              return jsonSecure(
-                {
-                  error: {
-                    code: "AUDIO_UNSUPPORTED",
-                    message: `Audio type ${file.type} is not supported.`,
-                  },
-                },
-                { status: 400 },
-              );
-            }
-          }
+        const form = await request.formData().catch(() => null);
+        if (!form) {
+          return jsonSecure(
+            { error: { code: "VALIDATION", message: "Invalid voice request." } },
+            { status: 400 },
+          );
         }
 
-        return jsonSecure(
+        const file = form.get("audio") ?? form.get("audio_file");
+        if (!(file instanceof File) && !(file instanceof Blob)) {
+          return jsonSecure(
+            { error: { code: "VALIDATION", message: "Audio recording is required." } },
+            { status: 400 },
+          );
+        }
+
+        const language = String(form.get("language") ?? form.get("fromLanguage") ?? "").trim();
+        const toLanguageRaw = String(form.get("toLanguage") ?? "").trim();
+        const toLanguage = toLanguageRaw || undefined;
+
+        const result = await transcribeOrTranslateSpeech(
           {
-            error: {
-              code: "VOICE_NOT_AVAILABLE",
-              message:
-                "Voice translation is not available yet: the documented NKENNEAi API currently covers text translation only. Text translation still works.",
-            },
+            audio: file,
+            language,
+            toLanguage,
           },
-          { status: 501 },
+          {
+            rateLimitKey: `speech-ip:${clientIp(request)}`,
+            rateLimit: 10,
+          },
         );
+
+        if (!result.ok) {
+          return jsonSecure(
+            { error: { code: result.code, message: result.message } },
+            { status: result.status },
+          );
+        }
+
+        return jsonSecure({
+          transcript: result.transcript,
+          translatedText: result.translatedText ?? null,
+          language: result.language,
+          mode: result.mode,
+        });
       },
     },
   },

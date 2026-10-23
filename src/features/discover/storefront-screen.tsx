@@ -11,12 +11,14 @@ import { Input } from "@/components/ui/input";
 import { TranslateText } from "@/features/translate/translate-text";
 import { VoiceTranslate } from "@/features/translate/voice-translate";
 import { useTranslation } from "@/lib/i18n/context";
+import { nkenneLanguageForLocale } from "@/lib/nkenne/languages";
 import { getMapsProvider } from "@/lib/maps/provider";
 import { fetchStorefront, submitEnquiry } from "@/services/discover-service";
 import { formatNgn } from "@/utils/money";
 
 export function StorefrontScreen({ slug }: { slug: string }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const voiceLang = nkenneLanguageForLocale(locale) ?? "English";
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
@@ -190,7 +192,7 @@ export function StorefrontScreen({ slug }: { slug: string }) {
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("app.storefront.namePlaceholder")} className="min-h-11 rounded-xl text-base" required />
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("app.storefront.phonePlaceholder")} className="min-h-11 rounded-xl text-base" inputMode="tel" />
           <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("app.storefront.messagePlaceholder")} rows={4} className="w-full rounded-xl border border-input bg-background px-3 py-2 text-base" required />
-          <VoiceTranslate onUseTranscript={(text) => setMessage(text)} />
+          <VoiceTranslate language={voiceLang} onUseTranscript={(text) => setMessage(text)} />
           <Button type="submit" disabled={sending} className="min-h-11 w-full rounded-xl font-bold">{sending ? t("app.storefront.sending") : t("app.storefront.sendMessage")}</Button>
         </form>
       </section>

@@ -27,6 +27,8 @@ export const translatorI18n: Record<Locale, MessageTree> = {
         hausaNoteEnd:
           "is not yet in the documented NKENNEAi API (English, Yoruba, Swahili and Nigerian Pidgin are). Hausa text messages will show a clear error instead of a wrong translation.",
         voiceNotSupported: "Voice recording is not supported on this device.",
+        voiceLanguageUnsupported:
+          "Voice works in English, Yoruba, Swahili, or Nigerian Pidgin. Switch language or type instead.",
         micDenied: "Microphone permission was denied. You can type your message instead.",
         recordingTooLarge: "Recording is too large. Keep it under 60 seconds.",
         voiceProcessingFailed: "Voice processing failed. Please type your message.",
@@ -79,6 +81,8 @@ export const translatorI18n: Record<Locale, MessageTree> = {
         hausaNoteEnd:
           "ba ta riga ta kasance cikin bayanan API na NKENNEAi da aka rubuta ba (Turanci, Yarbanci, Swahili da Pidgin na Najeriya sun kasance). Saƙonnin rubutun Hausa za su nuna kuskure a sarari maimakon fassara mara kyau.",
         voiceNotSupported: "Ba a tallafa wa yin rikodin murya a wannan na'urar ba.",
+        voiceLanguageUnsupported:
+          'Murya tana aiki da Turanci, Yarbanci, Swahili, ko Pidgin. Canja harshe ko rubuta.',
         micDenied: "An ƙi ba da izinin makirufo. Za ka iya rubuta saƙonka a maimakon haka.",
         recordingTooLarge: "Rikodin ya yi girma sosai. Ka kiyaye shi ƙasa da daƙiƙa 60.",
         voiceProcessingFailed: "Sarrafawar murya ta gaza. Don Allah ka rubuta saƙonka.",
@@ -130,6 +134,8 @@ export const translatorI18n: Record<Locale, MessageTree> = {
         hausaNoteEnd:
           "ليست بعد ضمن واجهة NKENNEAi الموثّقة (الإنجليزية واليوروبا والسواحيلية وبيدجين النيجيرية موجودة). ستظهر رسائل الهوسا النصية خطأً واضحًا بدلًا من ترجمة خاطئة.",
         voiceNotSupported: "تسجيل الصوت غير مدعوم على هذا الجهاز.",
+        voiceLanguageUnsupported:
+          'الصوت يعمل بالإنجليزية أو اليوروبا أو السواحيلية أو البيدجين. غيّر اللغة أو اكتب.',
         micDenied: "تم رفض إذن الميكروفون. يمكنك كتابة رسالتك بدلًا من ذلك.",
         recordingTooLarge: "التسجيل كبير جدًا. اجعله أقل من 60 ثانية.",
         voiceProcessingFailed: "فشلت معالجة الصوت. يرجى كتابة رسالتك.",
@@ -182,6 +188,8 @@ export const translatorI18n: Record<Locale, MessageTree> = {
         hausaNoteEnd:
           "kò tíì sí nínú API NKENNEAi tí a ṣe àkọsílẹ̀ rẹ̀ (Gẹ̀ẹ́sì, Yorùbá, Swahili àti Pidgin Nàìjíríà wà). Àwọn ìfiránṣẹ́ ọ̀rọ̀ Hausa yóò fi àṣìṣe tí ó ṣe kedere hàn dípò ìtúmọ̀ tí kò tọ́.",
         voiceNotSupported: "A kò ṣe àtìlẹ́yìn fún gbígbóhùn sílẹ̀ lórí ẹ̀rọ yìí.",
+        voiceLanguageUnsupported:
+          'Ohùn ṣiṣẹ́ ní Èdè Gẹ̀ẹ́sì, Yorùbá, Swahili, tàbí Pidgin. Pààrọ̀ èdè tàbí tẹ̀ẹ́.',
         micDenied: "A kọ̀ láti fún ni ìyọ̀nda gbohùngbohùn. O lè tẹ ìfiránṣẹ́ rẹ dípò rẹ̀.",
         recordingTooLarge: "Gbígbóhùn náà tóbi jù. Jẹ́ kí ó wà lábẹ́ ìṣẹ́jú-aaya 60.",
         voiceProcessingFailed: "Ìṣiṣẹ́ ohùn kùnà. Jọ̀wọ́ tẹ ìfiránṣẹ́ rẹ.",
@@ -234,6 +242,8 @@ export const translatorI18n: Record<Locale, MessageTree> = {
         hausaNoteEnd:
           "abanyebeghị na API NKENNEAi edepụtara (Bekee, Yoruba, Swahili na Nigerian Pidgin dị). Ozi ederede Hausa ga-egosi mperi doro anya kama ntụgharị na-ezighi ezi.",
         voiceNotSupported: "A kwadoghị ndekọ olu na ngwaọrụ a.",
+        voiceLanguageUnsupported:
+          'Olu na-arụ ọrụ n\'asụsụ Bekee, Yoruba, Swahili, ma ọ bụ Pidgin. Gbanwee asụsụ ma ọ bụ dee.',
         micDenied: "Ajụrụ ikike igwe okwu. Ị nwere ike dee ozi gị kama ya.",
         recordingTooLarge: "Ndekọ ahụ buru ibu nke ukwuu. Debe ya n'okpuru sekọnd 60.",
         voiceProcessingFailed: "Nhazi olu dara ada. Biko dee ozi gị.",
@@ -286,6 +296,8 @@ export const translatorI18n: Record<Locale, MessageTree> = {
         hausaNoteEnd:
           "bado haipo katika API ya NKENNEAi iliyorekodiwa (Kiingereza, Kiyoruba, Kiswahili na Pidgin ya Nigeria zipo). Ujumbe wa maandishi wa Hausa utaonyesha hitilafu wazi badala ya tafsiri isiyo sahihi.",
         voiceNotSupported: "Kurekodi sauti hakutumiki kwenye kifaa hiki.",
+        voiceLanguageUnsupported:
+          'Sauti inafanya kazi kwa Kiingereza, Kiyoruba, Kiswahili, au Pidgin. Badilisha lugha au andika.',
         micDenied: "Ruhusa ya kipaza sauti imekataliwa. Unaweza kuandika ujumbe wako badala yake.",
         recordingTooLarge: "Rekodi ni kubwa sana. Iweke chini ya sekunde 60.",
         voiceProcessingFailed: "Uchakataji wa sauti umeshindwa. Tafadhali andika ujumbe wako.",
@@ -338,6 +350,8 @@ export const translatorI18n: Record<Locale, MessageTree> = {
         hausaNoteEnd:
           "naatnaaka tawo e API NKENNEAi winndaaɗo oo (Engele, Yoruba, Suwahili e Pidgin Naajeeriya ina ngoodi). Mesaasuuji binndol Hausa maa kollu majjere laaɓtunde e nokku firo majjaaɗo.",
         voiceNotSupported: "Winnditagol daande jaɓaaka e ngal kaɓirgal.",
+        voiceLanguageUnsupported:
+          'Daande ina golle e Engeleere, Yoruba, Swahili, walla Pidgin. Waylu ɗemngal walla winndu.',
         micDenied: "Yamiroore mikro ndee salaama. Aɗa waawi winndude mesaas maa e nokku mum.",
         recordingTooLarge: "Winnditagol ngol ina mawnde no feewi. Njokku ngol les sekon 60.",
         voiceProcessingFailed: "Golloraade daande ndee dañaaki. Tiiño winndu mesaas maa.",
