@@ -73,7 +73,12 @@ export function sanitizeSecret(value: string | undefined | null): string | null 
 
 function readDynamicEnv(names: readonly string[], override?: Record<string, string | undefined>): string | undefined {
   for (const name of names) {
-    if (override && override[name]) return override[name];
+    // Explicit override map (tests): only read from that map, never host env.
+    if (override) {
+      const v = override[name];
+      if (typeof v === "string" && v.trim()) return v;
+      continue;
+    }
     const fromReader = readEnvString(name);
     if (fromReader) return fromReader;
     if (typeof process !== "undefined" && process.env) {
