@@ -74,10 +74,13 @@ describe("client (mocked provider)", () => {
     ).rejects.toMatchObject({ code: "NOT_CONFIGURED" });
   });
 
-  it("maps 401/429/timeout", async () => {
+  it("maps 401/402/429/timeout", async () => {
     await expect(
-      nkenneTranslate({ apiKey: "k", fetchImpl: mockFetch({ ok: false, status: 401 }), sleep: async () => {} }, { text: "hi", fromLanguage: "English", toLanguage: "Yoruba" }),
+      nkenneTranslate({ apiKey: "k", fetchImpl: mockFetch({ ok: false, status: 401 }), sleep: async () => {}, maxRetries: 0 }, { text: "hi", fromLanguage: "English", toLanguage: "Yoruba" }),
     ).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+    await expect(
+      nkenneTranslate({ apiKey: "k", fetchImpl: mockFetch({ ok: false, status: 402 }), sleep: async () => {} }, { text: "hi", fromLanguage: "English", toLanguage: "Yoruba" }),
+    ).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" });
     await expect(
       nkenneTranslate({ apiKey: "k", fetchImpl: mockFetch({ ok: false, status: 429 }), sleep: async () => {} }, { text: "hi", fromLanguage: "English", toLanguage: "Yoruba" }),
     ).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" });

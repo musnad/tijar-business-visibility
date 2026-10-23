@@ -158,7 +158,7 @@ async function attemptOnce(
     throw new NkenneError("PROVIDER_ERROR", "Translation service returned an unexpected response.", 502);
   }
 
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
     throw new NkenneError(
       "INVALID_CREDENTIALS",
       "Translation key was rejected. Re-check NKENNEAI_API_KEY on the server, then redeploy.",
@@ -166,8 +166,22 @@ async function attemptOnce(
       res.status,
     );
   }
-  if (res.status === 429) {
-    throw new NkenneError("QUOTA_EXCEEDED", "Translation limit reached for now. Please try again later.", 429);
+  if (res.status === 403) {
+    throw new NkenneError(
+      "PROVIDER_ERROR",
+      "The translation service blocked this server. Try again later, or contact NKENNEAi support.",
+      502,
+      res.status,
+    );
+  }
+  // NKENNEAi returns 402 when the API key has no tokens left.
+  if (res.status === 402 || res.status === 429) {
+    throw new NkenneError(
+      "QUOTA_EXCEEDED",
+      "Translation credits are finished. Top up tokens in your NKENNEAi dashboard, then try again.",
+      429,
+      res.status,
+    );
   }
   if (res.status === 400 || res.status === 422) {
     throw new NkenneError("UNSUPPORTED_LANGUAGE", "That language or text could not be translated.", 400);
@@ -195,19 +209,23 @@ export async function nkenneTranslate(
   const maxRetries = config.maxRetries ?? 1;
   const sleep = config.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
 
-  // Official docs use the raw key; some gateways accept Bearer as well.
+  // Official docs: raw API key in Authorization. Only fall back to Bearer on 401.
   const authStyles = [resolved.apiKey, `Bearer ${resolved.apiKey}`];
 
   let lastError: unknown;
-  for (const authHeader of authStyles) {
+  for (let styleIndex = 0; styleIndex < authStyles.length; styleIndex++) {
+    const authHeader = authStyles[styleIndex]!;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await attemptOnce(resolved, input, authHeader);
       } catch (err) {
         lastError = err;
-        const isCreds = err instanceof NkenneError && err.code === "INVALID_CREDENTIALS";
-        // Try the next Authorization style on 401/403 instead of retrying the same one.
-        if (isCreds) break;
+        if (err instanceof NkenneError && err.code === "QUOTA_EXCEEDED") {
+          throw err; // Don't burn more tokens trying Bearer
+        }
+        if (err instanceof NkenneError && err.code === "INVALID_CREDENTIALS") {
+          break; // try next auth style
+        }
         const retryable =
           err instanceof NkenneError && (err.code === "NETWORK" || err.code === "PROVIDER_ERROR");
         if (!retryable || attempt === maxRetries) break;
