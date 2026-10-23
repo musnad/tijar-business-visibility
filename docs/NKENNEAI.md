@@ -12,14 +12,14 @@ Source: https://nkenne.ai/nkenneai-api (page is bot-protected; facts cross-check
 | Endpoint | `POST /api/translate/with-api-key` |
 | Auth | Header `Authorization: <YOUR_API_KEY>` (raw key), `Content-Type: application/json` |
 | Body | `{ "text": "...", "fromLanguage": "English", "toLanguage": "Yoruba" }` |
-| Success field | `translatedText` |
+| Success field | `translated_text` (live) / `translatedText` (accepted) |
 | Supported languages | **English, Yoruba, Swahili, Nigerian Pidgin** (exact strings) |
 | Supported pairs | English ↔ Yoruba / Swahili / Nigerian Pidgin only. No same-language, no direct non-English pairs |
 | Speech (STT/TTS/speech translation) | Marketed on nkenne.ai but **no endpoint/format is documented** in the quickstart — not implemented against invented specs |
 
 **Hausa is not a documented API language today.** Tijar's largest audience speaks Hausa, so the UI says "not supported yet" for Hausa instead of failing. Re-check the docs periodically; adding Hausa later is a one-line change in `src/lib/nkenne/languages.ts` once documented.
 
-No live API call has been verified: **no NKENNEAi key is configured** in this environment. All tests use mocked provider responses.
+Live API verified (2026-10-23): success body uses **`translated_text`** (snake_case), plus `tokensRemaining` / `message`. Our client accepts both `translated_text` and camelCase `translatedText`.
 
 ## Configuration
 

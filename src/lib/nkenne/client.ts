@@ -3,7 +3,7 @@
  *   POST https://developers-api.nkenne.ai/api/translate/with-api-key
  *   Header: Authorization: <API_KEY>   (raw key, per official examples)
  *   Body:   { text, fromLanguage, toLanguage }
- *   OK:     { translatedText, ... }
+ *   OK:     { translated_text } (live API) or { translatedText } (docs/legacy)
  *
  * Never log request/response text. Errors are mapped to stable codes so
  * routes can respond without leaking provider internals.
@@ -78,10 +78,16 @@ async function attemptOnce(
   }
 
   if (res.ok) {
-    const data = (await res.json().catch(() => null)) as { translatedText?: unknown } | null;
-    if (typeof data?.translatedText === "string" && data.translatedText) {
-      return data.translatedText;
-    }
+    const data = (await res.json().catch(() => null)) as {
+      translatedText?: unknown;
+      translated_text?: unknown;
+    } | null;
+    // Live NKENNEAi returns snake_case; docs/examples sometimes show camelCase.
+    const translated =
+      (typeof data?.translated_text === "string" && data.translated_text) ||
+      (typeof data?.translatedText === "string" && data.translatedText) ||
+      null;
+    if (translated) return translated;
     throw new NkenneError("PROVIDER_ERROR", "Translation service returned an unexpected response.", 502);
   }
 

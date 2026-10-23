@@ -1,6 +1,6 @@
 # Phase 5 — Voice & African-Language Support: Status Report
 
-Honest capability matrix. "Tested" means automated tests with mocked provider responses; **no live NKENNEAi call has been made** (no API key configured in this environment).
+Honest capability matrix. Unit tests use mocked provider responses. **Live NKENNEAi text translation was verified 2026-10-23** (English→Yoruba returned `translated_text` with HTTP 200).
 
 ## Provider verification (NKENNEAi, official quickstart checked 2026-10-21)
 
@@ -8,7 +8,7 @@ Honest capability matrix. "Tested" means automated tests with mocked provider re
 |----------|-------------------|
 | Endpoint | `POST https://developers-api.nkenne.ai/api/translate/with-api-key` |
 | Auth | `Authorization: <API_KEY>` header |
-| Payload / response | `{ text, fromLanguage, toLanguage }` → `{ translatedText }` |
+| Payload / response | `{ text, fromLanguage, toLanguage }` → `{ translated_text }` (live) |
 | Languages | English, Yoruba, Swahili, Nigerian Pidgin (exact strings) |
 | Pairs | English ↔ each other; other cross-pairs via English pivot (implemented) |
 | Speech (STT/TTS) | **Not documented** — Tijar does not claim NKENNEAi speech |

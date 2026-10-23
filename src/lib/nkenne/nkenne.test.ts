@@ -59,6 +59,15 @@ describe("client (mocked provider)", () => {
     expect((init as RequestInit).headers).toMatchObject({ Authorization: "test-key" });
   });
 
+  it("accepts live API snake_case translated_text", async () => {
+    const fetchImpl = mockFetch({ jsonBody: { translated_text: "Mo n ṣiṣẹ́", tokensRemaining: 37 } });
+    const out = await nkenneTranslate(
+      { apiKey: "test-key", fetchImpl, sleep: async () => {} },
+      { text: "I am working", fromLanguage: "English", toLanguage: "Yoruba" },
+    );
+    expect(out).toBe("Mo n ṣiṣẹ́");
+  });
+
   it("fails safely without credentials", async () => {
     await expect(
       nkenneTranslate({ fetchImpl: okFetch() }, { text: "hi", fromLanguage: "English", toLanguage: "Yoruba" }),
