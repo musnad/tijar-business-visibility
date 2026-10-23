@@ -37,8 +37,10 @@ import { translateTextClient } from "@/services/translate-service";
 import { buildExplanation, parseExplainRequest } from "@/utils/explain";
 import { formatNgn } from "@/utils/money";
 import {
-  parseVoiceCommand,
+  parseAmount,
+  parseVoiceCommandWithHint,
   summarizeDraft,
+  withAmount,
   type ParsedVoiceCommand,
   type VoiceIntentType,
 } from "@/utils/voice-intent";
@@ -90,6 +92,7 @@ export function AssistantScreen() {
   const business = data?.business ?? null;
   const queryClient = useQueryClient();
   const threadRef = useRef<HTMLDivElement>(null);
+  const draftRef = useRef<ParsedVoiceCommand | null>(null);
 
   const [mode, setMode] = useState<Mode>("books");
   const [speakLang, setSpeakLang] = useState("English");
@@ -100,7 +103,14 @@ export function AssistantScreen() {
   const [draftB, setDraftB] = useState("");
   const [input, setInput] = useState("");
   const [activeSpeaker, setActiveSpeaker] = useState<"A" | "B" | "books" | null>(null);
-  const [draft, setDraft] = useState<ParsedVoiceCommand | null>(null);
+  const [draft, setDraftState] = useState<ParsedVoiceCommand | null>(null);
+  function setDraft(next: ParsedVoiceCommand | null | ((prev: ParsedVoiceCommand | null) => ParsedVoiceCommand | null)) {
+    setDraftState((prev) => {
+      const value = typeof next === "function" ? next(prev) : next;
+      draftRef.current = value;
+      return value;
+    });
+  }
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [speakingStatus, setSpeakingStatus] = useState<string | null>(null);
@@ -177,6 +187,7 @@ export function AssistantScreen() {
     return {
       unknown: t("app.assistant.summaryUnknown"),
       text: t("app.assistant.summaryText"),
+      needAmount: t("app.assistant.summaryNeedAmount"),
       labels: {
         sale: t("app.assistant.intentSale"),
         expense: t("app.assistant.intentExpense"),
@@ -187,17 +198,44 @@ export function AssistantScreen() {
     };
   }
 
-  function understand(text: string) {
+  async function englishHintForBooks(text: string): Promise<string | null> {
+    if (speakLang === "English" || !canTranslatePair(speakLang, "English")) return null;
+    setSpeakingStatus(t("app.assistant.translatingForBooks"));
+    const result = await translateTextClient({
+      text,
+      fromLanguage: speakLang as NkenneLanguage,
+      toLanguage: "English",
+    });
+    setSpeakingStatus(null);
+    return result.ok ? result.translatedText : null;
+  }
+
+  async function understand(text: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
     recordYouSaid(trimmed);
+
+    // Follow-up: draft already knows the type (e.g. sale) but needs an amount.
+    const pending = draftRef.current;
+    if (pending && pending.intent !== "unknown" && (pending.amount === null || pending.amount <= 0)) {
+      const onlyAmount = parseAmount(trimmed);
+      if (onlyAmount !== null && onlyAmount > 0) {
+        const next = withAmount(pending, onlyAmount);
+        setDraft(next);
+        sayBooks(summarizeDraft(next, summaryStrings()));
+        return;
+      }
+    }
+
     const metric = parseExplainRequest(trimmed);
     if (metric) {
       setDraft(null);
       void explain(metric);
       return;
     }
-    const cmd = parseVoiceCommand(trimmed);
+
+    const hint = await englishHintForBooks(trimmed);
+    const cmd = parseVoiceCommandWithHint(trimmed, hint);
     setDraft(cmd);
     sayBooks(summarizeDraft(cmd, summaryStrings()));
   }
@@ -208,7 +246,7 @@ export function AssistantScreen() {
       const transcript = await listen(speakLang);
       if (transcript) {
         setInput(transcript);
-        understand(transcript);
+        await understand(transcript);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("app.assistant.voiceFailed"));
@@ -447,8 +485,8 @@ export function AssistantScreen() {
           ))}
       </section>
 
-      {/* Draft confirmation (books) */}
-      {mode === "books" && draft && draftMeta && draft.amount !== null && (
+      {/* Draft confirmation (books) — sale/expense etc.; amount can be filled in */}
+      {mode === "books" && draft && draftMeta && (
         <section className="mt-4 overflow-hidden rounded-3xl border-2 border-primary/50 bg-card shadow-lg">
           <div className="flex items-center justify-between gap-2 bg-primary/5 px-5 py-3.5">
             <p className="flex items-center gap-2 font-extrabold">
@@ -468,9 +506,30 @@ export function AssistantScreen() {
               <span className={cn("flex size-12 items-center justify-center rounded-2xl", draftMeta.className)}>
                 <DraftIcon className="size-6" />
               </span>
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t(draftMeta.labelKey)}</p>
-                <p className="text-3xl font-extrabold tabular-nums leading-none">{formatNgn(draft.amount)}</p>
+                {draft.amount !== null && draft.amount > 0 ? (
+                  <p className="text-3xl font-extrabold tabular-nums leading-none">{formatNgn(draft.amount)}</p>
+                ) : (
+                  <label className="mt-1 block">
+                    <span className="sr-only">{t("app.assistant.amountNeeded")}</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={1}
+                      step="any"
+                      placeholder={t("app.assistant.amountNeeded")}
+                      className="w-full max-w-[12rem] rounded-xl border border-input bg-background px-3 py-2 text-2xl font-extrabold tabular-nums outline-none focus:ring-2 focus:ring-primary/40"
+                      onChange={(e) => {
+                        const n = Number.parseFloat(e.target.value);
+                        if (Number.isFinite(n) && n > 0) {
+                          setDraft((prev) => (prev ? withAmount(prev, n) : prev));
+                        }
+                      }}
+                    />
+                    <span className="mt-1 block text-xs text-muted-foreground">{t("app.assistant.amountNeededHint")}</span>
+                  </label>
+                )}
               </div>
             </div>
             <dl className="mt-4 divide-y divide-border rounded-2xl bg-muted/50 text-sm">
@@ -487,7 +546,7 @@ export function AssistantScreen() {
               <Button
                 type="button"
                 className="min-h-12 flex-1 rounded-2xl text-base font-bold shadow-md"
-                disabled={saving || !business}
+                disabled={saving || !business || draft.amount === null || draft.amount <= 0}
                 onClick={confirmSave}
               >
                 <Check className="mr-1.5 size-5" /> {saving ? t("app.assistant.saving") : t("app.assistant.confirmSave")}
@@ -540,18 +599,20 @@ export function AssistantScreen() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey && input.trim()) {
                   e.preventDefault();
-                  understand(input);
+                  const value = input;
                   setInput("");
+                  void understand(value);
                 }
               }}
             />
             <Button
               type="button"
               className="size-12 shrink-0 rounded-2xl shadow-md"
-              disabled={!input.trim()}
+              disabled={!input.trim() || busy}
               onClick={() => {
-                understand(input);
+                const value = input;
                 setInput("");
+                void understand(value);
               }}
               aria-label={t("app.assistant.understand")}
             >
