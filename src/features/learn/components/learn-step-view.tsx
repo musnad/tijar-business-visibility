@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { LearnVoiceControls } from "@/features/learn/components/learn-voice-controls";
 import {
   LearnContinueButton,
   LearnExplainCard,
@@ -54,9 +55,11 @@ export function LearnStepView({
   const stepNum = stepIndex + 1;
 
   if (step.kind === "story") {
+    const storyText = step.paragraphKeys.map((k) => t(k)).join(". ");
     return (
       <div className="learn-step space-y-5">
         <LearnStepProgress current={stepNum} total={totalSteps} />
+        <LearnVoiceControls readText={storyText} />
         <LearnStoryScene
           paragraphKeys={step.paragraphKeys}
           sceneEmoji={step.sceneEmoji}
@@ -69,9 +72,14 @@ export function LearnStepView({
   }
 
   if (step.kind === "visual") {
+    const visualText = step.lineKeys
+      .map((k) => t(k))
+      .filter((line) => line.trim() !== "↓" && !line.includes("↓"))
+      .join(". ");
     return (
       <div className="learn-step space-y-5">
         <LearnStepProgress current={stepNum} total={totalSteps} />
+        <LearnVoiceControls readText={visualText} />
         <div className="learn-visual-flow overflow-hidden rounded-3xl border border-primary/15 bg-card shadow-sm">
           {step.lineKeys.map((key, i) => {
             const line = t(key);
@@ -98,10 +106,12 @@ export function LearnStepView({
   }
 
   if (step.kind === "insight") {
+    const insightBody = t(step.bodyKey);
     return (
       <div className="learn-step space-y-5">
         <LearnStepProgress current={stepNum} total={totalSteps} />
-        <LearnInsightCard body={t(step.bodyKey)} />
+        <LearnVoiceControls readText={insightBody} />
+        <LearnInsightCard body={insightBody} />
         <LearnContinueButton onClick={() => onStepComplete()} />
       </div>
     );
@@ -163,10 +173,25 @@ export function LearnStepView({
   }
 
   if (step.kind === "compare") {
+    const prompt = t(step.promptKey);
+    const labels = step.businesses.map((b) => t(b.labelKey));
+    const pick = (index: number) => {
+      if (revealed) return;
+      setSelected(index);
+      setRevealed(true);
+      if (index !== step.correctIndex) onWrong();
+    };
     return (
       <div className="learn-step space-y-5">
         <LearnStepProgress current={stepNum} total={totalSteps} />
-        <LearnQuizPrompt>{t(step.promptKey)}</LearnQuizPrompt>
+        <LearnQuizPrompt>{prompt}</LearnQuizPrompt>
+        <p className="text-xs text-muted-foreground">{t("app.learn.voiceHint")}</p>
+        <LearnVoiceControls
+          readText={`${prompt}. ${labels.map((l, i) => `${String.fromCharCode(65 + i)}. ${l}`).join(". ")}`}
+          optionLabels={labels}
+          disabled={revealed}
+          onPickOption={pick}
+        />
         <div className="space-y-2">
           {step.businesses.map((b, index) => {
             const profit = b.sales - b.costs;
@@ -180,11 +205,7 @@ export function LearnStepView({
                 key={b.labelKey}
                 type="button"
                 disabled={revealed}
-                onClick={() => {
-                  setSelected(index);
-                  setRevealed(true);
-                  if (index !== step.correctIndex) onWrong();
-                }}
+                onClick={() => pick(index)}
                 className={cn(
                   "w-full rounded-2xl border-2 p-4 text-left transition-all active:scale-[0.99]",
                   variant,
@@ -217,6 +238,8 @@ export function LearnStepView({
 
   if (step.kind === "multi_pick") {
     const correctSet = new Set(step.correctIndices);
+    const prompt = t(step.promptKey);
+    const labels = step.optionKeys.map((key) => t(key));
     const toggle = (i: number) => {
       if (multiDone) return;
       setPicked((prev) => {
@@ -236,8 +259,15 @@ export function LearnStepView({
     return (
       <div className="learn-step space-y-5">
         <LearnStepProgress current={stepNum} total={totalSteps} />
-        <LearnQuizPrompt>{t(step.promptKey)}</LearnQuizPrompt>
+        <LearnQuizPrompt>{prompt}</LearnQuizPrompt>
         <p className="text-xs text-muted-foreground">{t("app.learn.multiHint")}</p>
+        <LearnVoiceControls
+          readText={`${prompt}. ${labels.map((l, i) => `${String.fromCharCode(65 + i)}. ${l}`).join(". ")}`}
+          optionLabels={labels}
+          disabled={multiDone}
+          onToggleOption={toggle}
+          onSpokenSubmit={submitMulti}
+        />
         <div className="space-y-2">
           {step.optionKeys.map((key, i) => (
             <button
@@ -266,10 +296,25 @@ export function LearnStepView({
 
   if (step.kind === "choose") {
     const isCorrect = revealed && selected === step.correctIndex ? true : false;
+    const prompt = t(step.promptKey);
+    const labels = step.optionKeys.map((key) => t(key));
+    const pick = (index: number) => {
+      if (revealed) return;
+      setSelected(index);
+      setRevealed(true);
+      if (index !== step.correctIndex) onWrong();
+    };
     return (
       <div className="learn-step space-y-5">
         <LearnStepProgress current={stepNum} total={totalSteps} />
-        <LearnQuizPrompt>{t(step.promptKey)}</LearnQuizPrompt>
+        <LearnQuizPrompt>{prompt}</LearnQuizPrompt>
+        <p className="text-xs text-muted-foreground">{t("app.learn.voiceHint")}</p>
+        <LearnVoiceControls
+          readText={`${prompt}. ${labels.map((l, i) => `${String.fromCharCode(65 + i)}. ${l}`).join(". ")}`}
+          optionLabels={labels}
+          disabled={revealed}
+          onPickOption={pick}
+        />
         <div className="space-y-3">
           {step.optionKeys.map((key, index) => (
             <LearnOptionButton
@@ -280,11 +325,7 @@ export function LearnStepView({
               selected={selected === index}
               revealed={revealed}
               isCorrect={index === step.correctIndex}
-              onClick={() => {
-                setSelected(index);
-                setRevealed(true);
-                if (index !== step.correctIndex) onWrong();
-              }}
+              onClick={() => pick(index)}
             />
           ))}
         </div>

@@ -755,5 +755,11 @@
  "app.products.voiceFilled": "Fomu imejazwa — kagua na Hifadhi.",
  "app.products.voiceFilledSpeak": "Angalia fomu, kisha hifadhi.",
  "app.products.voiceNeedName": "Nimekusikia, lakini nahitaji jina la bidhaa.",
- "app.products.voiceFailed": "Sauti imeshindwa. Andika badala yake."
+ "app.products.voiceFailed": "Sauti imeshindwa. Andika badala yake.",
+ "app.learn.voiceHear": "Sikiliza swali",
+ "app.learn.voiceAnswer": "Sema jibu",
+ "app.learn.voiceStop": "Simamisha",
+ "app.learn.voiceNoMatch": "Sikuelewa jibu. Sema A, B, C, au maneno ya chaguo.",
+ "app.learn.voiceFailed": "Sauti imeshindwa. Gusa jibu.",
+ "app.learn.voiceHint": "TIJAR inaweza kusoma swali. Unaweza kusema A, B, C — au maneno ya jibu."
 }

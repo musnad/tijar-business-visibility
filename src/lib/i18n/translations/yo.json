@@ -755,5 +755,11 @@
  "app.products.voiceFilled": "Fọ́ọ̀mù ti kún — ṣàyẹ̀wò kí o sì fi pamọ́.",
  "app.products.voiceFilledSpeak": "Ṣàyẹ̀wò fọ́ọ̀mù, lẹ́yìn náà fi pamọ́.",
  "app.products.voiceNeedName": "Mo gbọ́ ọ, ṣùgbọ́n mo nílò orúkọ ọjà.",
- "app.products.voiceFailed": "Ohùn kùnà. Tẹ̀ẹ́ dípò rẹ̀."
+ "app.products.voiceFailed": "Ohùn kùnà. Tẹ̀ẹ́ dípò rẹ̀.",
+ "app.learn.voiceHear": "Gbọ́ ìbéèrè",
+ "app.learn.voiceAnswer": "Sọ ìdáhùn",
+ "app.learn.voiceStop": "Dáwọ́ dúró",
+ "app.learn.voiceNoMatch": "Mi ò mọ ìdáhùn. Sọ A, B, C, tàbí ọ̀rọ̀ àṣàyàn.",
+ "app.learn.voiceFailed": "Ohùn kùnà. Tẹ ìdáhùn.",
+ "app.learn.voiceHint": "TIJAR lè ka ìbéèrè. O lè sọ A, B, C — tàbí ọ̀rọ̀ ìdáhùn."
 }

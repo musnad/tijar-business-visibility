@@ -755,5 +755,11 @@
  "app.products.voiceFilled": "An cika fom — duba kuma ajiye.",
  "app.products.voiceFilledSpeak": "Duba fom, sannan ajiye.",
  "app.products.voiceNeedName": "Na ji ka, amma ina bukatar sunan kaya.",
- "app.products.voiceFailed": "Murya ta gaza. Rubuta maimakon."
+ "app.products.voiceFailed": "Murya ta gaza. Rubuta maimakon.",
+ "app.learn.voiceHear": "Ji tambaya",
+ "app.learn.voiceAnswer": "Faɗi amsa",
+ "app.learn.voiceStop": "Tsaya",
+ "app.learn.voiceNoMatch": "Ban fahimci amsar ba. Faɗi A, B, C, ko kalmomin zabin.",
+ "app.learn.voiceFailed": "Murya ta gaza. Taɓa amsa.",
+ "app.learn.voiceHint": "TIJAR na iya karanta tambayar. Ka iya faɗin A, B, C — ko kalmomin amsa."
 }

@@ -755,5 +755,11 @@
  "app.products.voiceFilled": "Form filled from your voice — check and Save.",
  "app.products.voiceFilledSpeak": "Check the form, then save.",
  "app.products.voiceNeedName": "I heard you, but need a product name. Try again.",
- "app.products.voiceFailed": "Voice failed. Type the product instead."
+ "app.products.voiceFailed": "Voice failed. Type the product instead.",
+ "app.learn.voiceHear": "Hear question",
+ "app.learn.voiceAnswer": "Speak answer",
+ "app.learn.voiceStop": "Stop",
+ "app.learn.voiceNoMatch": "I did not catch that answer. Say A, B, C, or the option words.",
+ "app.learn.voiceFailed": "Voice failed. Tap an answer instead.",
+ "app.learn.voiceHint": "TIJAR can read the question. You can speak A, B, C — or the answer words."
 }
