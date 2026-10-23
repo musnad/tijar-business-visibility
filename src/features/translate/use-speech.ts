@@ -101,19 +101,31 @@ export function scoreVoiceForLocale(voice: SpeechSynthesisVoice, locale: string)
 export function pickBestVoice(languageName: string, voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
   if (voices.length === 0) return null;
   const locales = speechLocaleCandidates(languageName);
-  let best: SpeechSynthesisVoice | null = null;
-  let bestScore = -1;
-  for (const locale of locales) {
-    for (const voice of voices) {
-      const score = scoreVoiceForLocale(voice, locale);
-      if (score > bestScore) {
-        bestScore = score;
-        best = voice;
+  const primary = SPEECH_LOCALES[languageName] ?? "en-NG";
+  const primaryBase = primary.split("-")[0] ?? primary;
+  // Prefer same-language voices first; only fall back to English if none exist.
+  const preferred = locales.filter((l) => l === primary || l === primaryBase || l.startsWith(`${primaryBase}-`));
+  const fallbacks = locales.filter((l) => !preferred.includes(l));
+
+  const bestIn = (list: string[]): { voice: SpeechSynthesisVoice | null; score: number } => {
+    let best: SpeechSynthesisVoice | null = null;
+    let bestScore = -1;
+    for (const locale of list) {
+      for (const voice of voices) {
+        const score = scoreVoiceForLocale(voice, locale);
+        if (score > bestScore) {
+          bestScore = score;
+          best = voice;
+        }
       }
+      if (bestScore >= 100) break;
     }
-    if (bestScore >= 100) break; // exact match found
-  }
-  return best;
+    return { voice: best, score: bestScore };
+  };
+
+  const first = bestIn(preferred);
+  if (first.voice && first.score > 0) return first.voice;
+  return bestIn(fallbacks).voice;
 }
 
 function loadVoices(): Promise<SpeechSynthesisVoice[]> {
