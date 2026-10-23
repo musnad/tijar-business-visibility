@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/context";
 import { isNkenneLanguage } from "@/lib/nkenne/languages";
-import { transcribeAudioClient } from "./use-speech";
+import { startAudioRecording, transcribeAudioClient } from "./use-speech";
 
 const MAX_SECONDS = 60;
 
@@ -36,8 +36,8 @@ export function VoiceTranslate({
     | { kind: "done"; transcript: string }
     | { kind: "error"; message: string }
   >({ kind: "idle" });
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const stopRef = useRef<(() => Promise<Blob>) | null>(null);
+  const cancelRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function start() {
@@ -48,41 +48,38 @@ export function VoiceTranslate({
       });
       return;
     }
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      setState({ kind: "error", message: t("app.translator.voiceNotSupported") });
-      return;
-    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find(
-        (type) => MediaRecorder.isTypeSupported(type),
-      );
-      const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
-      recorderRef.current = recorder;
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data.size) chunksRef.current.push(e.data);
-      };
-      recorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
-        if (timerRef.current) clearInterval(timerRef.current);
-        void upload(new Blob(chunksRef.current, { type: recorder.mimeType || mime || "audio/webm" }));
-      };
-      recorder.start();
+      const session = await startAudioRecording();
+      stopRef.current = session.stop;
+      cancelRef.current = session.cancel;
       let seconds = 0;
       setState({ kind: "recording", seconds });
       timerRef.current = setInterval(() => {
         seconds += 1;
         setState({ kind: "recording", seconds });
-        if (seconds >= MAX_SECONDS) stop();
+        if (seconds >= MAX_SECONDS) void stop();
       }, 1000);
     } catch {
       setState({ kind: "error", message: t("app.translator.micDenied") });
     }
   }
 
-  function stop() {
-    recorderRef.current?.stop();
+  async function stop() {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    const stopper = stopRef.current;
+    stopRef.current = null;
+    cancelRef.current = null;
+    if (!stopper) return;
+    setState({ kind: "processing" });
+    try {
+      const blob = await stopper();
+      await upload(blob);
+    } catch {
+      setState({ kind: "error", message: t("app.translator.voiceProcessingFailed") });
+    }
   }
 
   async function upload(blob: Blob) {
@@ -90,11 +87,10 @@ export function VoiceTranslate({
       setState({ kind: "error", message: t("app.translator.recordingTooLarge") });
       return;
     }
-    if (blob.size < 256) {
+    if (blob.size < 800) {
       setState({ kind: "error", message: t("app.translator.voiceProcessingFailed") });
       return;
     }
-    setState({ kind: "processing" });
     const result = await transcribeAudioClient({
       audio: blob,
       language,
@@ -117,7 +113,7 @@ export function VoiceTranslate({
     <div className="rounded-xl bg-muted/60 p-3">
       <div className="flex items-center gap-2">
         {state.kind === "recording" ? (
-          <Button type="button" size="sm" variant="destructive" className="min-h-10 rounded-xl" onClick={stop}>
+          <Button type="button" size="sm" variant="destructive" className="min-h-10 rounded-xl" onClick={() => void stop()}>
             <Square className="mr-1 size-4" />{" "}
             {t("app.translator.stopWithSeconds").replace("{seconds}", String(state.seconds))}
           </Button>
@@ -127,7 +123,7 @@ export function VoiceTranslate({
             size="sm"
             variant="outline"
             className="min-h-10 rounded-xl"
-            onClick={start}
+            onClick={() => void start()}
             disabled={state.kind === "processing"}
           >
             <Mic className="mr-1 size-4" />{" "}

@@ -56,8 +56,12 @@ export function LearnVoiceControls({
     const key = readText.slice(0, 200);
     if (lastAutoKey.current === key) return;
     lastAutoKey.current = key;
-    void speakText(readText, lang, { rate: 0.92 });
+    // Slight delay so the step UI paints before audio starts.
+    const timer = window.setTimeout(() => {
+      void speakText(readText, lang, { rate: 0.92 });
+    }, 350);
     return () => {
+      window.clearTimeout(timer);
       stopSpeaking();
     };
   }, [autoRead, readText, lang, disabled]);
@@ -75,6 +79,8 @@ export function LearnVoiceControls({
     if (!optionLabels?.length && !onSpokenSubmit) return;
     try {
       stopSpeaking();
+      // Let TTS fully release the mic on mobile before listening.
+      await new Promise((r) => window.setTimeout(r, 200));
       const transcript = await listen(lang);
       if (!transcript.trim()) return;
 

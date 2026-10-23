@@ -334,13 +334,31 @@ export async function speakText(
 }
 
 const MAX_RECORD_MS = 60_000;
+/** Auto-stop for NKENNE fallback recording when the user does not tap Stop. */
+const NKENNE_AUTO_STOP_MS = 8_000;
 
 function pickRecorderMime(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
-  for (const type of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"]) {
+  // Prefer formats NKENNE documents (mp4/m4a, ogg) before webm when the browser allows.
+  for (const type of [
+    "audio/mp4",
+    "audio/aac",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+    "audio/webm;codecs=opus",
+    "audio/webm",
+  ]) {
     if (MediaRecorder.isTypeSupported(type)) return type;
   }
   return undefined;
+}
+
+function canRecordAudio(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !!navigator.mediaDevices?.getUserMedia &&
+    typeof MediaRecorder !== "undefined"
+  );
 }
 
 /**
@@ -350,56 +368,102 @@ export async function startAudioRecording(): Promise<{
   stop: () => Promise<Blob>;
   cancel: () => void;
 }> {
-  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+  if (!canRecordAudio()) {
     throw new Error("Voice recording is not supported on this device. Please type instead.");
   }
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+  });
   const mime = pickRecorderMime();
   const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
   const chunks: Blob[] = [];
+  let settled = false;
   let settle: ((blob: Blob) => void) | null = null;
   let fail: ((err: Error) => void) | null = null;
   const done = new Promise<Blob>((resolve, reject) => {
     settle = resolve;
     fail = reject;
   });
+
+  const finishOk = (blob: Blob) => {
+    if (settled) return;
+    settled = true;
+    window.clearTimeout(maxTimer);
+    stream.getTracks().forEach((t) => t.stop());
+    settle?.(blob);
+  };
+  const finishErr = (err: Error) => {
+    if (settled) return;
+    settled = true;
+    window.clearTimeout(maxTimer);
+    stream.getTracks().forEach((t) => t.stop());
+    fail?.(err);
+  };
+
   const maxTimer = window.setTimeout(() => {
     try {
-      if (recorder.state === "recording") recorder.stop();
+      if (recorder.state === "recording") {
+        try {
+          recorder.requestData();
+        } catch {
+          /* ignore */
+        }
+        recorder.stop();
+      }
     } catch {
       /* ignore */
     }
   }, MAX_RECORD_MS);
 
   recorder.ondataavailable = (e) => {
-    if (e.data.size) chunks.push(e.data);
+    if (e.data?.size) chunks.push(e.data);
   };
   recorder.onerror = () => {
-    stream.getTracks().forEach((t) => t.stop());
-    window.clearTimeout(maxTimer);
-    fail?.(new Error("Recording failed. Please try again."));
+    finishErr(new Error("Recording failed. Please try again."));
   };
   recorder.onstop = () => {
-    stream.getTracks().forEach((t) => t.stop());
-    window.clearTimeout(maxTimer);
     const type = recorder.mimeType || mime || "audio/webm";
-    settle?.(new Blob(chunks, { type }));
+    finishOk(new Blob(chunks, { type }));
   };
-  recorder.start();
+
+  // Timeslice so Safari/Chrome flush audio chunks before stop.
+  try {
+    recorder.start(250);
+  } catch {
+    recorder.start();
+  }
 
   return {
     stop: async () => {
-      if (recorder.state === "recording") recorder.stop();
+      if (recorder.state === "recording") {
+        try {
+          recorder.requestData();
+        } catch {
+          /* ignore */
+        }
+        recorder.stop();
+      } else if (recorder.state === "inactive" && !settled) {
+        const type = recorder.mimeType || mime || "audio/webm";
+        finishOk(new Blob(chunks, { type }));
+      }
       return done;
     },
     cancel: () => {
       try {
-        recorder.stop();
+        if (recorder.state === "recording") recorder.stop();
       } catch {
         /* ignore */
       }
       stream.getTracks().forEach((t) => t.stop());
       window.clearTimeout(maxTimer);
+      if (!settled) {
+        settled = true;
+        fail?.(Object.assign(new Error(mapRecognitionError("aborted", true)), { code: "aborted" }));
+      }
     },
   };
 }
@@ -496,6 +560,22 @@ function listenOnce(
     rec.maxAlternatives = 1;
 
     let finalTranscript = "";
+    // Safety: some browsers never fire onend after no-speech.
+    const watchdog = window.setTimeout(() => {
+      try {
+        rec.stop();
+      } catch {
+        /* ignore */
+      }
+    }, 12_000);
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(watchdog);
+      onInstance(null);
+      fn();
+    };
 
     rec.onresult = (e) => {
       const transcript = Array.from({ length: e.results.length }, (_, i) => e.results[i]?.[0]?.transcript ?? "")
@@ -505,36 +585,35 @@ function listenOnce(
     };
 
     rec.onerror = (e) => {
-      if (!settled) {
-        settled = true;
-        onInstance(null);
+      finish(() => {
         if (e?.error === "aborted") {
           reject(Object.assign(new Error(mapRecognitionError("aborted", isSecure)), { code: "aborted" }));
+          return;
+        }
+        // no-speech sometimes arrives as an error before onend — treat as empty.
+        if (e?.error === "no-speech") {
+          reject(Object.assign(new Error(mapRecognitionError("no-speech", isSecure)), { code: "no-speech" }));
           return;
         }
         const err = new Error(mapRecognitionError(e?.error, isSecure));
         (err as Error & { code?: string }).code = e?.error ?? "unknown";
         reject(err);
-      }
+      });
     };
     rec.onend = () => {
-      onInstance(null);
-      if (settled) return;
-      settled = true;
-      const text = finalTranscript.trim();
-      if (text) resolve(text);
-      else reject(Object.assign(new Error(mapRecognitionError("no-speech", isSecure)), { code: "no-speech" }));
+      finish(() => {
+        const text = finalTranscript.trim();
+        if (text) resolve(text);
+        else reject(Object.assign(new Error(mapRecognitionError("no-speech", isSecure)), { code: "no-speech" }));
+      });
     };
     try {
-      // Don't let TTS talk over the mic.
       stopSpeaking();
       rec.start();
     } catch {
-      if (!settled) {
-        settled = true;
-        onInstance(null);
+      finish(() => {
         reject(new Error("Microphone is busy. Wait a second and try again."));
-      }
+      });
     }
   });
 }
@@ -542,25 +621,21 @@ function listenOnce(
 /**
  * Explicit push-to-talk recognition. Never continuous/background.
  *
- * For NKENNE languages: hold/record via MediaRecorder → Speech Studio STT,
- * with browser Web Speech as fallback. For Hausa / unsupported: browser only.
+ * Order (most reliable UX first):
+ * 1) Browser Web Speech when available (auto end-of-utterance — best for Learn A/B/C)
+ * 2) MediaRecorder → NKENNE STT for African languages when the browser fails
+ *    or has no speech recognition
  */
 export function useSpeechRecognition() {
   const [listening, setListening] = useState(false);
-  const [supported] = useState(
-    () =>
-      recognitionSupported() ||
-      (typeof window !== "undefined" &&
-        !!navigator.mediaDevices?.getUserMedia &&
-        typeof MediaRecorder !== "undefined"),
-  );
+  const [supported] = useState(() => recognitionSupported() || canRecordAudio());
   const activeRef = useRef(false);
   const recRef = useRef<RecognitionLike | null>(null);
   const recordStopRef = useRef<(() => Promise<Blob>) | null>(null);
   const recordCancelRef = useRef<(() => void) | null>(null);
 
   const stop = useCallback(() => {
-    // NKENNE recorder: stop means "finish and transcribe", not abort.
+    // MediaRecorder: stop means "finish and transcribe", not abort.
     const stopper = recordStopRef.current;
     if (stopper) {
       recordStopRef.current = null;
@@ -582,8 +657,12 @@ export function useSpeechRecognition() {
 
   const listenBrowser = useCallback(async (languageName: string, isSecure: boolean): Promise<string> => {
     if (!getRecognitionCtor()) {
-      throw new Error("Voice input is not supported on this device or browser. Please type instead.");
+      throw Object.assign(new Error("Voice input is not supported on this device or browser. Please type instead."), {
+        code: "language-not-supported",
+      });
     }
+    // Brief pause after canceling TTS — Chrome often drops the first listen otherwise.
+    await new Promise((r) => window.setTimeout(r, 120));
     const candidates = speechLocaleCandidates(languageName);
     let lastError: Error | null = null;
     for (const locale of candidates) {
@@ -598,10 +677,54 @@ export function useSpeechRecognition() {
         lastError = err instanceof Error ? err : new Error("Voice failed.");
         const code = (err as Error & { code?: string }).code;
         if (code === "aborted") throw lastError;
+        // Retry next locale only for locale / network problems.
         if (code !== "language-not-supported" && code !== "network") break;
       }
     }
     throw lastError ?? new Error(mapRecognitionError(undefined, isSecure));
+  }, []);
+
+  const listenNkenne = useCallback(async (languageName: string, isSecure: boolean): Promise<string> => {
+    if (!nkenneSpeechLanguage(languageName) || !canRecordAudio()) {
+      throw Object.assign(new Error(mapRecognitionError("language-not-supported", isSecure)), {
+        code: "language-not-supported",
+      });
+    }
+    const session = await startAudioRecording();
+    recordCancelRef.current = session.cancel;
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      let settled = false;
+      const finish = (p: Promise<Blob>) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(auto);
+        recordStopRef.current = null;
+        p.then(resolve, reject);
+      };
+      const auto = window.setTimeout(() => finish(session.stop()), NKENNE_AUTO_STOP_MS);
+      recordStopRef.current = async () => {
+        const b = await session.stop();
+        finish(Promise.resolve(b));
+        return b;
+      };
+    });
+
+    recordStopRef.current = null;
+    recordCancelRef.current = null;
+
+    if (!activeRef.current) {
+      throw Object.assign(new Error(mapRecognitionError("aborted", isSecure)), { code: "aborted" });
+    }
+    if (blob.size < 800) {
+      throw Object.assign(new Error(mapRecognitionError("no-speech", isSecure)), { code: "no-speech" });
+    }
+
+    const result = await transcribeAudioClient({ audio: blob, language: languageName });
+    if (result.ok && result.transcript.trim()) return result.transcript.trim();
+    throw Object.assign(new Error(result.ok === false ? result.message : mapRecognitionError("no-speech", isSecure)), {
+      code: result.ok === false ? result.code : "no-speech",
+    });
   }, []);
 
   const listen = useCallback(
@@ -619,57 +742,26 @@ export function useSpeechRecognition() {
       stopSpeaking();
 
       try {
-        // NKENNE STT: record ~5s (or until stop()), then transcribe.
-        if (
-          nkenneSpeechLanguage(languageName) &&
-          navigator.mediaDevices?.getUserMedia &&
-          typeof MediaRecorder !== "undefined"
-        ) {
+        // 1) Browser first when available — instant end-of-speech for short answers.
+        if (getRecognitionCtor()) {
           try {
-            const session = await startAudioRecording();
-            recordCancelRef.current = session.cancel;
-
-            const blob = await new Promise<Blob>((resolve, reject) => {
-              let settled = false;
-              const finish = (p: Promise<Blob>) => {
-                if (settled) return;
-                settled = true;
-                window.clearTimeout(auto);
-                recordStopRef.current = null;
-                p.then(resolve, reject);
-              };
-              const auto = window.setTimeout(() => finish(session.stop()), 5000);
-              recordStopRef.current = async () => {
-                const b = await session.stop();
-                finish(Promise.resolve(b));
-                return b;
-              };
-            });
-
-            recordStopRef.current = null;
-            recordCancelRef.current = null;
-
-            if (!activeRef.current) {
-              throw Object.assign(new Error(mapRecognitionError("aborted", isSecure)), { code: "aborted" });
-            }
-            if (blob.size < 256) {
-              throw Object.assign(new Error(mapRecognitionError("no-speech", isSecure)), { code: "no-speech" });
-            }
-
-            const result = await transcribeAudioClient({ audio: blob, language: languageName });
-            if (result.ok && result.transcript.trim()) return result.transcript.trim();
-            // Fall through to browser recognition.
+            return await listenBrowser(languageName, isSecure);
           } catch (err) {
             const code = (err as Error & { code?: string }).code;
-            if (code === "aborted") throw err;
-            recordCancelRef.current?.();
-            recordStopRef.current = null;
-            recordCancelRef.current = null;
-            // Fall through
+            if (code === "aborted" || code === "not-allowed" || code === "service-not-allowed") {
+              throw err;
+            }
+            // African languages often lack browser ASR — try NKENNE next.
+            if (!nkenneSpeechLanguage(languageName) || !canRecordAudio()) throw err;
           }
         }
 
-        return await listenBrowser(languageName, isSecure);
+        // 2) NKENNE STT via MediaRecorder (tap Stop or wait ~8s).
+        if (nkenneSpeechLanguage(languageName) && canRecordAudio()) {
+          return await listenNkenne(languageName, isSecure);
+        }
+
+        throw new Error("Voice input is not supported on this device or browser. Please type instead.");
       } finally {
         activeRef.current = false;
         recRef.current = null;
@@ -678,7 +770,7 @@ export function useSpeechRecognition() {
         setListening(false);
       }
     },
-    [listenBrowser],
+    [listenBrowser, listenNkenne],
   );
 
   return { listen, stop, listening, supported };

@@ -24,16 +24,21 @@ export const ALLOWED_SPEECH_TYPES = [
   "audio/mp4",
   "audio/mpeg",
   "audio/mp3",
+  "audio/aac",
   "audio/wav",
   "audio/x-wav",
   "audio/ogg",
   "audio/wave",
+  "audio/x-m4a",
+  "audio/m4a",
 ] as const;
 
 export function isAllowedSpeechType(type: string): boolean {
   if (!type) return true; // some browsers omit type
   const base = type.split(";")[0]!.trim().toLowerCase();
-  return (ALLOWED_SPEECH_TYPES as readonly string[]).includes(base);
+  if ((ALLOWED_SPEECH_TYPES as readonly string[]).includes(base)) return true;
+  // e.g. audio/webm;codecs=opus already stripped — also accept vendor prefixes
+  return base.startsWith("audio/");
 }
 
 const speakSchema = z.object({
