@@ -138,6 +138,8 @@ async function attemptOnce(
         Authorization: authHeader,
         "Content-Type": "application/json",
         Accept: "application/json",
+        // Some API gateways block bare datacenter clients; identify as TIJAR server.
+        "User-Agent": "TIJAR/1.0 (+https://tijar-two.vercel.app)",
       },
       body: JSON.stringify(input),
       signal: controller.signal,
