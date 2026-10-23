@@ -1,163 +1,238 @@
 "use client";
 
-import { ArrowLeftRight, Mic, Send, Square, Volume2 } from "lucide-react";
+import { ArrowLeftRight, Mic, Square, Volume2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/context";
-import { NKENNE_LANGUAGES, type NkenneLanguage } from "@/lib/nkenne/languages";
+import { isNkenneLanguage, type NkenneLanguage } from "@/lib/nkenne/languages";
+import { cn } from "@/lib/utils";
 import { translateTextClient } from "@/services/translate-service";
 import { HearItButton } from "./hear-it-button";
 import { speakText, useSpeechRecognition } from "./use-speech";
 
-type Turn = {
-  speaker: "A" | "B";
+/** NKENNE text API languages first; Hausa is voice-only. */
+const LANG_OPTIONS = ["English", "Yoruba", "Swahili", "Nigerian Pidgin", "Hausa"] as const;
+
+type Result = {
   original: string;
-  originalLang: string;
+  from: string;
   translated: string;
-  translatedLang: string;
+  to: string;
 };
 
 /**
- * Two-person conversation translator. Each person speaks/types in their
- * language; the other hears/reads it in theirs. Originals are always
- * preserved. Hausa voice works via the phone's speech engine; Hausa
- * text translation appears when NKENNEAi documents Hausa support.
+ * Simple text-to-text translator: type → Translate → see the result.
+ * Optional speak / Hear it. Original always kept above the translation.
  */
-const LANG_OPTIONS = ["English", "Hausa", "Swahili", "Yoruba", "Nigerian Pidgin"] as const;
-
 export function TranslatorScreen() {
   const { t } = useTranslation();
-  const [langA, setLangA] = useState<string>("Hausa");
-  const [langB, setLangB] = useState<string>("English");
-  const [draftA, setDraftA] = useState("");
-  const [draftB, setDraftB] = useState("");
-  const [turns, setTurns] = useState<Turn[]>([]);
+  const [fromLang, setFromLang] = useState<string>("English");
+  const [toLang, setToLang] = useState<string>("Yoruba");
+  const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<Result | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { listen, stop, listening, supported } = useSpeechRecognition();
 
-  async function speakAs(speaker: "A" | "B") {
-    const lang = speaker === "A" ? langA : langB;
+  function swap() {
+    setFromLang(toLang);
+    setToLang(fromLang);
+    if (result) {
+      setInput(result.translated);
+      setResult({
+        original: result.translated,
+        from: result.to,
+        translated: result.original,
+        to: result.from,
+      });
+    }
+  }
+
+  async function onMic() {
+    setError(null);
     try {
-      const transcript = await listen(lang);
-      if (speaker === "A") setDraftA(transcript);
-      else setDraftB(transcript);
+      const transcript = await listen(fromLang);
+      if (transcript) setInput(transcript);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("app.translator.voiceFailed"));
     }
   }
 
-  async function send(speaker: "A" | "B") {
-    const text = (speaker === "A" ? draftA : draftB).trim();
+  async function translate(alsoSpeak: boolean) {
+    const text = input.trim();
     if (!text) return;
-    const from = speaker === "A" ? langA : langB;
-    const to = speaker === "A" ? langB : langA;
+    setError(null);
     setBusy(true);
-    const result = await translateTextClient({
-      text,
-      fromLanguage: from as NkenneLanguage,
-      toLanguage: to as NkenneLanguage,
-    });
-    setBusy(false);
-    if (!result.ok) {
-      toast.error(result.message);
+
+    if (!isNkenneLanguage(fromLang) || !isNkenneLanguage(toLang)) {
+      const msg =
+        fromLang === "Hausa" || toLang === "Hausa"
+          ? `${t("app.translator.hausaNotePrefix")} ${t("app.translator.hausaTextWord")} ${t("app.translator.hausaNoteEnd")}`
+          : t("app.translator.translationFailed");
+      setResult(null);
+      setError(msg);
+      setBusy(false);
       return;
     }
-    const turn: Turn = {
-      speaker,
+
+    if (fromLang === toLang) {
+      setResult(null);
+      setError(t("app.translator.sameLanguage"));
+      setBusy(false);
+      return;
+    }
+
+    const response = await translateTextClient({
+      text,
+      fromLanguage: fromLang as NkenneLanguage,
+      toLanguage: toLang as NkenneLanguage,
+    });
+    setBusy(false);
+
+    if (!response.ok) {
+      setResult(null);
+      setError(response.message);
+      toast.error(response.message);
+      return;
+    }
+
+    const next: Result = {
       original: text,
-      originalLang: from,
-      translated: result.translatedText,
-      translatedLang: to,
+      from: fromLang,
+      translated: response.translatedText,
+      to: toLang,
     };
-    setTurns((prev) => [...prev, turn]);
-    void speakText(turn.translated, to);
-    if (speaker === "A") setDraftA("");
-    else setDraftB("");
-  }
-
-  function swap() {
-    setLangA(langB);
-    setLangB(langA);
-  }
-
-  function panel(speaker: "A" | "B") {
-    const lang = speaker === "A" ? langA : langB;
-    const setLang = speaker === "A" ? setLangA : setLangB;
-    const draft = speaker === "A" ? draftA : draftB;
-    const setDraft = speaker === "A" ? setDraftA : setDraftB;
-    return (
-      <div className="flex-1 rounded-2xl border border-border p-4">
-        <p className="font-bold">{t("app.translator.person").replace("{speaker}", speaker)}</p>
-        <select value={lang} onChange={(e) => setLang(e.target.value)} className="mt-2 min-h-11 w-full rounded-xl border border-input bg-background px-2" aria-label={t("app.translator.personLanguage").replace("{speaker}", speaker)}>
-          {LANG_OPTIONS.map((l) => <option key={l} value={l}>{l}</option>)}
-        </select>
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          rows={3}
-          placeholder={t("app.translator.typeOrSpeak")}
-          className="mt-2 w-full rounded-xl border border-input bg-background px-3 py-2 text-base"
-        />
-        <div className="mt-2 flex gap-2">
-          {supported && (
-            listening ? (
-              <Button type="button" variant="destructive" className="min-h-11 flex-1 rounded-xl" onClick={stop}><Square className="mr-1 size-4" /> {t("app.translator.stop")}</Button>
-            ) : (
-              <Button type="button" variant="outline" className="min-h-11 flex-1 rounded-xl" onClick={() => speakAs(speaker)}><Mic className="mr-1 size-4" /> {t("app.translator.speak")}</Button>
-            )
-          )}
-          <Button type="button" className="min-h-11 flex-1 rounded-xl font-bold" disabled={busy || !draft.trim()} onClick={() => send(speaker)}>
-            <Volume2 className="mr-1 size-4" /> {t("app.translator.translateSpeak")}
-          </Button>
-        </div>
-      </div>
-    );
+    setResult(next);
+    if (alsoSpeak) void speakText(next.translated, toLang);
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8">
+    <div className="mx-auto w-full max-w-lg px-4 py-8">
       <h1 className="text-2xl font-extrabold">{t("app.translator.title")}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t("app.translator.subtitle")}
-      </p>
+      <p className="mt-1 text-sm text-muted-foreground">{t("app.translator.simpleSubtitle")}</p>
 
-      {(langA === "Hausa" || langB === "Hausa") && (
-        <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
-          {t("app.translator.hausaNotePrefix")} <strong>{t("app.translator.hausaVoiceWord")}</strong> {t("app.translator.hausaNoteMiddle")} <strong>{t("app.translator.hausaTextWord")}</strong> {t("app.translator.hausaNoteEnd")}
-        </p>
-      )}
-
-      <div className="mt-5 flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">
-        {panel("A")}
-        <Button type="button" variant="ghost" className="mx-auto min-h-11 rounded-full" onClick={swap} aria-label={t("app.translator.swapLanguages")}>
+      {/* From / To */}
+      <div className="mt-5 flex items-end gap-2">
+        <label className="flex-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          {t("app.translator.fromLabel")}
+          <select
+            value={fromLang}
+            onChange={(e) => setFromLang(e.target.value)}
+            className="mt-1 min-h-12 w-full rounded-xl border border-input bg-background px-3 text-base font-semibold text-foreground"
+          >
+            {LANG_OPTIONS.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="mb-0.5 size-12 shrink-0 rounded-xl"
+          onClick={swap}
+          aria-label={t("app.translator.swapLanguages")}
+        >
           <ArrowLeftRight className="size-5" />
         </Button>
-        {panel("B")}
+        <label className="flex-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          {t("app.translator.toLabel")}
+          <select
+            value={toLang}
+            onChange={(e) => setToLang(e.target.value)}
+            className="mt-1 min-h-12 w-full rounded-xl border border-input bg-background px-3 text-base font-semibold text-foreground"
+          >
+            {LANG_OPTIONS.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      <section className="mt-6 space-y-3" aria-live="polite">
-        {turns.map((turn, i) => (
-          <article key={i} className={`max-w-[85%] rounded-2xl p-3 ${turn.speaker === "A" ? "bg-primary/10" : "ms-auto bg-muted"}`}>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-              {t("app.translator.originalSpeakerLine").replace("{speaker}", turn.speaker).replace("{language}", turn.originalLang)}
+      {/* Input */}
+      <textarea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        rows={4}
+        placeholder={t("app.translator.typeOrSpeak")}
+        className="mt-4 w-full rounded-2xl border border-input bg-background px-4 py-3 text-base leading-relaxed"
+        aria-label={t("app.translator.fromLabel")}
+      />
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {supported &&
+          (listening ? (
+            <Button type="button" variant="destructive" className="min-h-12 flex-1 rounded-xl" onClick={stop}>
+              <Square className="mr-1.5 size-4" /> {t("app.translator.stop")}
+            </Button>
+          ) : (
+            <Button type="button" variant="outline" className="min-h-12 rounded-xl px-4" onClick={onMic}>
+              <Mic className="mr-1.5 size-4" /> {t("app.translator.speak")}
+            </Button>
+          ))}
+        <Button
+          type="button"
+          className="min-h-12 flex-[2] rounded-xl text-base font-bold"
+          disabled={busy || !input.trim()}
+          onClick={() => void translate(false)}
+        >
+          {busy ? t("app.translator.translating") : t("app.translator.translate")}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          className="min-h-12 rounded-xl px-4 font-bold"
+          disabled={busy || !input.trim()}
+          onClick={() => void translate(true)}
+        >
+          <Volume2 className="mr-1.5 size-4" /> {t("app.translator.translateSpeak")}
+        </Button>
+      </div>
+
+      {/* Result — always show after translate */}
+      {error && (
+        <div className="mt-5 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive" role="alert">
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <section className="mt-5 space-y-3" aria-live="polite">
+          <div className="rounded-2xl border border-border bg-muted/40 p-4">
+            <p className="text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground">
+              {t("app.translator.youWrote").replace("{language}", result.from)}
             </p>
-            <p className="mt-0.5">{turn.original}</p>
-            <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-              {t("app.translator.translationLabel").replace("{language}", turn.translatedLang)}
+            <p className="mt-1 text-base leading-relaxed">{result.original}</p>
+          </div>
+          <div
+            className={cn(
+              "rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 shadow-sm",
+            )}
+          >
+            <p className="text-[11px] font-extrabold uppercase tracking-wide text-primary">
+              {t("app.translator.translationLabel").replace("{language}", result.to)}
             </p>
-            <p className="mt-0.5 font-semibold">{turn.translated}</p>
+            <p className="mt-2 text-xl font-bold leading-relaxed text-foreground">{result.translated}</p>
             <HearItButton
-              text={turn.translated}
-              language={turn.translatedLang}
+              text={result.translated}
+              language={result.to}
               label={t("app.translator.hearIt")}
               stopLabel={t("app.translator.stop")}
+              className="mt-3 bg-card"
             />
-          </article>
-        ))}
-        {turns.length === 0 && <p className="text-center text-sm text-muted-foreground">{t("app.translator.emptyConversation")}</p>}
-      </section>
+          </div>
+        </section>
+      )}
+
+      {!result && !error && (
+        <p className="mt-8 text-center text-sm text-muted-foreground">{t("app.translator.emptySimple")}</p>
+      )}
     </div>
   );
 }

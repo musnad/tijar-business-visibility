@@ -79,19 +79,23 @@ export function TranslateText({
       </div>
 
       {state.kind === "done" && (
-        <div className="mt-2 rounded-xl bg-muted/70 p-3 text-sm">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-            {target} translation{state.cached ? " (saved copy)" : ""}
+        <div className="mt-3 rounded-2xl border-2 border-primary/30 bg-primary/5 p-4 text-sm shadow-sm">
+          <p className="text-[11px] font-extrabold uppercase tracking-wide text-primary">
+            {target}{state.cached ? " · saved copy" : ""}
           </p>
-          <p className="mt-1 leading-relaxed">{state.translated}</p>
+          <p className="mt-2 text-base font-semibold leading-relaxed text-foreground">{state.translated}</p>
           {onUseTranslation && (
-            <Button type="button" size="sm" className="mt-2 min-h-9 rounded-lg text-xs" onClick={() => onUseTranslation(state.translated)}>
+            <Button type="button" size="sm" className="mt-3 min-h-10 rounded-xl text-xs font-bold" onClick={() => onUseTranslation(state.translated)}>
               Use this translation
             </Button>
           )}
         </div>
       )}
-      {state.kind === "error" && <p className="mt-2 text-xs text-destructive">{state.message}</p>}
+      {state.kind === "error" && (
+        <p className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive" role="alert">
+          {state.message}
+        </p>
+      )}
     </div>
   );
 }

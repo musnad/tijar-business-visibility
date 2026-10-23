@@ -106,6 +106,12 @@ export function AssistantScreen() {
   const [speakingStatus, setSpeakingStatus] = useState<string | null>(null);
   const [booksTurns, setBooksTurns] = useState<BooksTurn[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [chatLast, setChatLast] = useState<{
+    from: string;
+    to: string;
+    original: string;
+    translated: string;
+  } | null>(null);
   const { listen, stop, listening, supported } = useSpeechRecognition();
   const { speaking: ttsSpeaking, stop: stopTts } = useSpeechPlayback();
 
@@ -231,7 +237,6 @@ export function AssistantScreen() {
     const from = speaker === "A" ? langA : langB;
     const to = speaker === "A" ? langB : langA;
 
-    // Translate & speak: audio only — no transcript text on screen.
     setBusy(true);
     setSpeakingStatus(t("app.assistant.speakingNow").replace("{language}", to));
     let spoken = text;
@@ -249,6 +254,7 @@ export function AssistantScreen() {
     } else if (from !== to && (from === "Hausa" || to === "Hausa")) {
       toast.message(t("app.assistant.hausaVoiceOnly"));
     }
+    setChatLast({ from, to, original: text, translated: spoken });
     setBusy(false);
     await speakText(spoken, to);
     if (speaker === "A") setDraftA("");
@@ -371,25 +377,46 @@ export function AssistantScreen() {
           <p className="py-8 text-center text-sm text-muted-foreground">{t("app.assistant.emptyBooks")}</p>
         )}
         {mode === "chat" && (
-          <div className="flex min-h-[140px] flex-col items-center justify-center gap-3 py-6 text-center">
-            <span
-              className={cn(
-                "flex size-14 items-center justify-center rounded-full text-primary",
-                ttsSpeaking || busy || listening ? "bg-primary/15" : "bg-primary/10",
-              )}
-            >
-              <Volume2 className={cn("size-7", (ttsSpeaking || busy || listening) && "animate-pulse")} />
-            </span>
-            <p className="text-sm font-semibold">
-              {ttsSpeaking
-                ? speakingStatus ?? t("app.assistant.speakingNow").replace("{language}", "")
-                : listening
-                  ? t("app.assistant.listeningNow")
-                  : t("app.assistant.emptyChatSpeakOnly")}
-            </p>
-            <p className="max-w-xs text-xs text-muted-foreground">{t("app.assistant.chatHintSpeakOnly")}</p>
+          <div className="flex min-h-[140px] flex-col gap-3 py-2">
+            {!chatLast && !ttsSpeaking && !listening && (
+              <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+                <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Volume2 className="size-7" />
+                </span>
+                <p className="text-sm font-semibold">{t("app.assistant.emptyChatSpeakOnly")}</p>
+                <p className="max-w-xs text-xs text-muted-foreground">{t("app.assistant.chatHintSpeakOnly")}</p>
+              </div>
+            )}
+            {(ttsSpeaking || listening) && (
+              <p className="text-center text-sm font-semibold text-primary">
+                {ttsSpeaking
+                  ? speakingStatus ?? t("app.assistant.speakingNow").replace("{language}", "")
+                  : t("app.assistant.listeningNow")}
+              </p>
+            )}
+            {chatLast && (
+              <>
+                <article className="rounded-2xl bg-muted/70 p-3">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground">
+                    {chatLast.from}
+                  </p>
+                  <p className="mt-1 text-[15px] leading-relaxed">{chatLast.original}</p>
+                </article>
+                <article className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-3">
+                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-primary">{chatLast.to}</p>
+                  <p className="mt-1 text-lg font-bold leading-relaxed">{chatLast.translated}</p>
+                  <HearItButton
+                    text={chatLast.translated}
+                    language={chatLast.to}
+                    label={t("app.assistant.hearIt")}
+                    stopLabel={t("app.assistant.stop")}
+                    className="mt-2 bg-card"
+                  />
+                </article>
+              </>
+            )}
             {ttsSpeaking && (
-              <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={stopTts}>
+              <Button type="button" variant="outline" size="sm" className="mx-auto rounded-full" onClick={stopTts}>
                 <Square className="mr-1 size-3.5" /> {t("app.assistant.stop")}
               </Button>
             )}
