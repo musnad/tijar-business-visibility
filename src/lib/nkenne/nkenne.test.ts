@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { clearTranslationCache, translationCacheSize } from "./cache";
-import { nkenneTranslate, NkenneError } from "./client";
+import { nkenneTranslate, NkenneError, readNkenneConfig, sanitizeSecret } from "./client";
 import { checkLanguagePair, nkenneLanguageForLocale } from "./languages";
 import { clearRateLimits } from "./rate-limit";
 import { translateText } from "./service";
@@ -168,5 +168,14 @@ describe("NkenneError shape", () => {
     const e = new NkenneError("TIMEOUT", "x", 504);
     expect(e.code).toBe("TIMEOUT");
     expect(e.status).toBe(504);
+  });
+});
+
+describe("secret sanitization", () => {
+  it("strips quotes and whitespace from dashboard pastes", () => {
+    expect(sanitizeSecret('  "nk_abc"  ')).toBe("nk_abc");
+    expect(sanitizeSecret("'nk_abc'")).toBe("nk_abc");
+    expect(sanitizeSecret("")).toBeNull();
+    expect(readNkenneConfig({ NKENNEAI_API_KEY: '"nk_test"' }).apiKey).toBe("nk_test");
   });
 });

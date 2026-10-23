@@ -42,12 +42,25 @@ export type NkenneClientConfig = {
 
 const DEFAULT_BASE_URL = "https://developers-api.nkenne.ai";
 
+/** Strip accidental quotes/whitespace from dashboard-pasted secrets. */
+export function sanitizeSecret(value: string | undefined | null): string | null {
+  if (!value) return null;
+  let v = value.trim();
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    v = v.slice(1, -1).trim();
+  }
+  return v.length > 0 ? v : null;
+}
+
 export function readNkenneConfig(env: Record<string, string | undefined> = process.env): {
   apiKey: string | null;
   baseUrl: string;
 } {
-  const apiKey = env.NKENNEAI_API_KEY?.trim() ? env.NKENNEAI_API_KEY.trim() : null;
-  const baseUrl = (env.NKENNEAI_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/$/, "");
+  const apiKey = sanitizeSecret(env.NKENNEAI_API_KEY);
+  const baseUrl = (sanitizeSecret(env.NKENNEAI_BASE_URL) || DEFAULT_BASE_URL).replace(/\/$/, "");
   return { apiKey, baseUrl };
 }
 
