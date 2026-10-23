@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { readNkenneConfig } from "@/lib/nkenne/client";
+import { nkenneKeyFingerprint, readNkenneConfig } from "@/lib/nkenne/client";
 import {
   fetchBusinessCategoriesServer,
   isSupabaseEnvPresent,
@@ -15,11 +15,9 @@ export const Route = createFileRoute("/api/supabase-health")({
       GET: async () => {
         const authPing = await pingSupabaseServer();
         const categories = await fetchBusinessCategoriesServer();
-        // Presence/format only — never the secret value.
+        // Presence / length / masked hint only — never the full secret.
         const nkenne = readNkenneConfig();
-        const nkenneKeyOk = Boolean(
-          nkenne.apiKey && nkenne.apiKey.startsWith("nk_") && nkenne.apiKey.length >= 20,
-        );
+        const finger = nkenneKeyFingerprint(nkenne.apiKey);
 
         return Response.json({
           env: {
@@ -28,8 +26,10 @@ export const Route = createFileRoute("/api/supabase-health")({
             appEnv: import.meta.env.VITE_APP_ENV ?? "development",
             keysPresent: {
               ...supabaseEnvDiagnostics(),
-              NKENNEAI_API_KEY: Boolean(nkenne.apiKey),
-              NKENNEAI_API_KEY_FORMAT_OK: nkenneKeyOk,
+              NKENNEAI_API_KEY: finger.present,
+              NKENNEAI_API_KEY_FORMAT_OK: finger.formatOk,
+              NKENNEAI_API_KEY_LENGTH: finger.length,
+              NKENNEAI_API_KEY_HINT: finger.hint,
             },
           },
           auth: authPing,

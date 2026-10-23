@@ -28,10 +28,13 @@ export type NkenneErrorCode =
 export class NkenneError extends Error {
   code: NkenneErrorCode;
   status: number;
-  constructor(code: NkenneErrorCode, message: string, status = 502) {
+  /** Provider HTTP status when known (never returned to browsers). */
+  providerStatus?: number;
+  constructor(code: NkenneErrorCode, message: string, status = 502, providerStatus?: number) {
     super(message);
     this.code = code;
     this.status = status;
+    if (providerStatus !== undefined) this.providerStatus = providerStatus;
   }
 }
 
@@ -47,45 +50,78 @@ export type NkenneClientConfig = {
 
 const DEFAULT_BASE_URL = "https://developers-api.nkenne.ai";
 
+/** Env names accepted (first non-empty wins). Never use a VITE_ prefix for secrets. */
+const API_KEY_ENV_NAMES = ["NKENNEAI_API_KEY", "NKENNE_API_KEY"] as const;
+const BASE_URL_ENV_NAMES = ["NKENNEAI_BASE_URL", "NKENNE_BASE_URL"] as const;
+
 /** Strip accidental quotes/whitespace/zero-width chars from dashboard-pasted secrets. */
 export function sanitizeSecret(value: string | undefined | null): string | null {
   if (!value) return null;
-  let v = value.trim()
-    // BOM / zero-width / bidi marks that sneak in from copy-paste
+  let v = value
+    .trim()
     .replace(/[\u200B-\u200D\uFEFF\u202A-\u202E]/g, "");
-  if (
-    (v.startsWith('"') && v.endsWith('"')) ||
-    (v.startsWith("'") && v.endsWith("'"))
-  ) {
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
     v = v.slice(1, -1).trim();
   }
-  // API keys never contain whitespace — remove any that got pasted mid-string
   v = v.replace(/\s+/g, "");
+  // Common paste mistake: "Bearer nk_…" stored as the whole env value
+  if (/^bearer/i.test(v)) {
+    v = v.replace(/^bearer/i, "").trim();
+  }
   return v.length > 0 ? v : null;
+}
+
+function readDynamicEnv(names: readonly string[], override?: Record<string, string | undefined>): string | undefined {
+  for (const name of names) {
+    if (override && override[name]) return override[name];
+    const fromReader = readEnvString(name);
+    if (fromReader) return fromReader;
+    if (typeof process !== "undefined" && process.env) {
+      const fromProcess = process.env[name];
+      if (typeof fromProcess === "string" && fromProcess.trim()) return fromProcess;
+    }
+  }
+  return undefined;
 }
 
 export function readNkenneConfig(env?: Record<string, string | undefined>): {
   apiKey: string | null;
   baseUrl: string;
 } {
-  // Prefer explicit env (tests); otherwise dynamic host env — never static
-  // process.env.NKENNEAI_API_KEY (Vite can replace that with undefined at build).
-  const rawKey = env
-    ? env["NKENNEAI_API_KEY"]
-    : (readEnvString("NKENNEAI_API_KEY") ??
-      (typeof process !== "undefined" ? process.env["NKENNEAI_API_KEY"] : undefined));
-  const rawBase = env
-    ? env["NKENNEAI_BASE_URL"]
-    : (readEnvString("NKENNEAI_BASE_URL") ??
-      (typeof process !== "undefined" ? process.env["NKENNEAI_BASE_URL"] : undefined));
-  const apiKey = sanitizeSecret(rawKey);
-  const baseUrl = (sanitizeSecret(rawBase) || DEFAULT_BASE_URL).replace(/\/$/, "");
+  const apiKey = sanitizeSecret(readDynamicEnv(API_KEY_ENV_NAMES, env));
+  const baseUrl = (sanitizeSecret(readDynamicEnv(BASE_URL_ENV_NAMES, env)) || DEFAULT_BASE_URL).replace(
+    /\/$/,
+    "",
+  );
   return { apiKey, baseUrl };
+}
+
+/** Safe fingerprint for health checks — never the full secret. */
+export function nkenneKeyFingerprint(apiKey: string | null): {
+  present: boolean;
+  formatOk: boolean;
+  length: number;
+  hint: string | null;
+} {
+  if (!apiKey) return { present: false, formatOk: false, length: 0, hint: null };
+  const formatOk = apiKey.startsWith("nk_") && apiKey.length >= 20 && apiKey.length <= 128;
+  const hint =
+    apiKey.length >= 8 ? `${apiKey.slice(0, 4)}…${apiKey.slice(-4)}` : `${apiKey.slice(0, 2)}…`;
+  return { present: true, formatOk, length: apiKey.length, hint };
+}
+
+function parseTranslatedText(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  if (typeof obj["translated_text"] === "string" && obj["translated_text"]) return obj["translated_text"];
+  if (typeof obj["translatedText"] === "string" && obj["translatedText"]) return obj["translatedText"];
+  return null;
 }
 
 async function attemptOnce(
   config: Required<Pick<NkenneClientConfig, "baseUrl" | "timeoutMs" | "fetchImpl">> & { apiKey: string },
   input: { text: string; fromLanguage: string; toLanguage: string },
+  authHeader: string,
 ): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), config.timeoutMs);
@@ -94,8 +130,9 @@ async function attemptOnce(
     res = await config.fetchImpl(`${config.baseUrl}/api/translate/with-api-key`, {
       method: "POST",
       headers: {
-        Authorization: config.apiKey,
+        Authorization: authHeader,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify(input),
       signal: controller.signal,
@@ -110,26 +147,18 @@ async function attemptOnce(
   }
 
   if (res.ok) {
-    const data = (await res.json().catch(() => null)) as {
-      translatedText?: unknown;
-      translated_text?: unknown;
-    } | null;
-    // Live NKENNEAi returns snake_case; docs/examples sometimes show camelCase.
-    const translated =
-      (typeof data?.translated_text === "string" && data.translated_text) ||
-      (typeof data?.translatedText === "string" && data.translatedText) ||
-      null;
+    const data = await res.json().catch(() => null);
+    const translated = parseTranslatedText(data);
     if (translated) return translated;
     throw new NkenneError("PROVIDER_ERROR", "Translation service returned an unexpected response.", 502);
   }
 
   if (res.status === 401 || res.status === 403) {
-    // 401 = bad/missing key; 403 = key rejected or plan/IP restriction.
-    // Same user-facing message — never echo provider body.
     throw new NkenneError(
       "INVALID_CREDENTIALS",
-      "Translation is not configured correctly. Please contact support.",
+      "Translation key was rejected. Re-check NKENNEAI_API_KEY on the server, then redeploy.",
       502,
+      res.status,
     );
   }
   if (res.status === 429) {
@@ -138,7 +167,7 @@ async function attemptOnce(
   if (res.status === 400 || res.status === 422) {
     throw new NkenneError("UNSUPPORTED_LANGUAGE", "That language or text could not be translated.", 400);
   }
-  throw new NkenneError("PROVIDER_ERROR", "Translation service is unavailable. Please try again.", 502);
+  throw new NkenneError("PROVIDER_ERROR", "Translation service is unavailable. Please try again.", 502, res.status);
 }
 
 export async function nkenneTranslate(
@@ -161,16 +190,24 @@ export async function nkenneTranslate(
   const maxRetries = config.maxRetries ?? 1;
   const sleep = config.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
 
+  // Official docs use the raw key; some gateways accept Bearer as well.
+  const authStyles = [resolved.apiKey, `Bearer ${resolved.apiKey}`];
+
   let lastError: unknown;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await attemptOnce(resolved, input);
-    } catch (err) {
-      lastError = err;
-      const retryable =
-        err instanceof NkenneError && (err.code === "NETWORK" || err.code === "PROVIDER_ERROR");
-      if (!retryable || attempt === maxRetries) break;
-      await sleep(300 * (attempt + 1));
+  for (const authHeader of authStyles) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await attemptOnce(resolved, input, authHeader);
+      } catch (err) {
+        lastError = err;
+        const isCreds = err instanceof NkenneError && err.code === "INVALID_CREDENTIALS";
+        // Try the next Authorization style on 401/403 instead of retrying the same one.
+        if (isCreds) break;
+        const retryable =
+          err instanceof NkenneError && (err.code === "NETWORK" || err.code === "PROVIDER_ERROR");
+        if (!retryable || attempt === maxRetries) break;
+        await sleep(300 * (attempt + 1));
+      }
     }
   }
   throw lastError instanceof Error ? lastError : new NkenneError("PROVIDER_ERROR", "Translation failed.", 502);

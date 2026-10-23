@@ -172,10 +172,12 @@ describe("NkenneError shape", () => {
 });
 
 describe("secret sanitization", () => {
-  it("strips quotes and whitespace from dashboard pastes", () => {
+  it("strips quotes, whitespace, and Bearer prefix from dashboard pastes", () => {
     expect(sanitizeSecret('  "nk_abc"  ')).toBe("nk_abc");
     expect(sanitizeSecret("'nk_abc'")).toBe("nk_abc");
+    expect(sanitizeSecret("Bearer nk_abc")).toBe("nk_abc");
     expect(sanitizeSecret("")).toBeNull();
     expect(readNkenneConfig({ NKENNEAI_API_KEY: '"nk_test"' }).apiKey).toBe("nk_test");
+    expect(readNkenneConfig({ NKENNE_API_KEY: "nk_alias" }).apiKey).toBe("nk_alias");
   });
 });

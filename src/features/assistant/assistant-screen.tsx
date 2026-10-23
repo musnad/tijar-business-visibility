@@ -61,17 +61,6 @@ const INTENT_META: Record<VoiceIntentType, { labelKey: string; icon: typeof Shop
 
 type Mode = "books" | "chat";
 
-type ChatTurn = {
-  id: number;
-  kind: "chat";
-  speaker: "A" | "B";
-  original: string;
-  originalLang: string;
-  translated: string;
-  translatedLang: string;
-  at: string;
-};
-
 type BooksTurn = {
   id: number;
   kind: "books";
@@ -113,7 +102,7 @@ export function AssistantScreen() {
   const [draft, setDraft] = useState<ParsedVoiceCommand | null>(null);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
+  const [speakingStatus, setSpeakingStatus] = useState<string | null>(null);
   const [booksTurns, setBooksTurns] = useState<BooksTurn[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const { listen, stop, listening, supported } = useSpeechRecognition();
@@ -128,7 +117,7 @@ export function AssistantScreen() {
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
-  }, [chatTurns, booksTurns, draft]);
+  }, [booksTurns, draft, speakingStatus]);
 
   function sayBooks(text: string, lang = speakLang) {
     setBooksTurns((prev) => [
@@ -240,56 +229,29 @@ export function AssistantScreen() {
     const from = speaker === "A" ? langA : langB;
     const to = speaker === "A" ? langB : langA;
 
-    if (!canTranslatePair(from, to)) {
-      // Still show + speak original in the other person's listen language if same,
-      // or speak original when text translate isn't available (e.g. Hausa).
-      const turn: ChatTurn = {
-        id: Date.now(),
-        kind: "chat",
-        speaker,
-        original: text,
-        originalLang: from,
-        translated: text,
-        translatedLang: to,
-        at: nowTime(),
-      };
-      setChatTurns((prev) => [...prev, turn]);
-      speakText(text, to);
-      if (from !== to && (from === "Hausa" || to === "Hausa")) {
-        toast.message(t("app.assistant.hausaVoiceOnly"));
-      } else if (from === to) {
-        toast.message(t("app.assistant.sameLanguageHint"));
-      }
-      if (speaker === "A") setDraftA("");
-      else setDraftB("");
-      return;
-    }
-
+    // Translate & speak: audio only — no transcript text on screen.
     setBusy(true);
-    const result = await translateTextClient({
-      text,
-      fromLanguage: from as NkenneLanguage,
-      toLanguage: to as NkenneLanguage,
-    });
-    setBusy(false);
-    if (!result.ok) {
-      toast.error(result.message);
-      return;
+    setSpeakingStatus(t("app.assistant.speakingNow").replace("{language}", to));
+    let spoken = text;
+    if (canTranslatePair(from, to)) {
+      const result = await translateTextClient({
+        text,
+        fromLanguage: from as NkenneLanguage,
+        toLanguage: to as NkenneLanguage,
+      });
+      if (result.ok) {
+        spoken = result.translatedText;
+      } else {
+        toast.message(t("app.assistant.speakOriginalFallback"));
+      }
+    } else if (from !== to && (from === "Hausa" || to === "Hausa")) {
+      toast.message(t("app.assistant.hausaVoiceOnly"));
     }
-    const turn: ChatTurn = {
-      id: Date.now(),
-      kind: "chat",
-      speaker,
-      original: text,
-      originalLang: from,
-      translated: result.translatedText,
-      translatedLang: to,
-      at: nowTime(),
-    };
-    setChatTurns((prev) => [...prev, turn]);
-    speakText(turn.translated, to);
+    setBusy(false);
+    speakText(spoken, to);
     if (speaker === "A") setDraftA("");
     else setDraftB("");
+    window.setTimeout(() => setSpeakingStatus(null), 2500);
   }
 
   async function confirmSave() {
@@ -406,8 +368,16 @@ export function AssistantScreen() {
         {mode === "books" && booksTurns.length === 0 && (
           <p className="py-8 text-center text-sm text-muted-foreground">{t("app.assistant.emptyBooks")}</p>
         )}
-        {mode === "chat" && chatTurns.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">{t("app.assistant.emptyChat")}</p>
+        {mode === "chat" && (
+          <div className="flex min-h-[140px] flex-col items-center justify-center gap-3 py-6 text-center">
+            <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Volume2 className={cn("size-7", (busy || speakingStatus) && "animate-pulse")} />
+            </span>
+            <p className="text-sm font-semibold">
+              {speakingStatus ?? (listening ? t("app.assistant.listeningNow") : t("app.assistant.emptyChatSpeakOnly"))}
+            </p>
+            <p className="max-w-xs text-xs text-muted-foreground">{t("app.assistant.chatHintSpeakOnly")}</p>
+          </div>
         )}
 
         {mode === "books" &&
@@ -426,36 +396,6 @@ export function AssistantScreen() {
               <button
                 type="button"
                 onClick={() => speakText(turn.text, turn.lang)}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-bold text-primary ring-1 ring-primary/20"
-              >
-                <Volume2 className="size-3.5" /> {t("app.assistant.hearIt")}
-              </button>
-            </article>
-          ))}
-
-        {mode === "chat" &&
-          chatTurns.map((turn) => (
-            <article
-              key={turn.id}
-              className={cn(
-                "max-w-[90%] rounded-2xl p-3",
-                turn.speaker === "A" ? "bg-primary/10" : "ms-auto bg-muted/70",
-              )}
-            >
-              <p className="text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground">
-                {t("app.assistant.personSaid")
-                  .replace("{speaker}", turn.speaker)
-                  .replace("{language}", turn.originalLang)}{" "}
-                · {turn.at}
-              </p>
-              <p className="mt-1 text-[15px] leading-relaxed">{turn.original}</p>
-              <p className="mt-2 text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground">
-                {t("app.assistant.heardIn").replace("{language}", turn.translatedLang)}
-              </p>
-              <p className="mt-0.5 text-[15px] font-semibold leading-relaxed">{turn.translated}</p>
-              <button
-                type="button"
-                onClick={() => speakText(turn.translated, turn.translatedLang)}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-bold text-primary ring-1 ring-primary/20"
               >
                 <Volume2 className="size-3.5" /> {t("app.assistant.hearIt")}
