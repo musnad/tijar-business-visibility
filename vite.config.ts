@@ -17,6 +17,14 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  // Tesseract is browser-only (Scan Document). Keep it out of the Nitro/SSR graph
+  // so production builds do not hang tracing its worker/wasm assets.
+  ssr: {
+    external: ["tesseract.js"],
+  },
+  optimizeDeps: {
+    exclude: ["tesseract.js"],
+  },
   plugins: [
     tailwindcss(),
     tanstackStart({
@@ -25,6 +33,10 @@ export default defineConfig({
       server: { entry: "server" },
     }),
     viteReact(),
-    nitro(),
+    nitro({
+      rollupConfig: {
+        external: ["tesseract.js"],
+      },
+    }),
   ],
 });

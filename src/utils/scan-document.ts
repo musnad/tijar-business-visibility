@@ -97,14 +97,14 @@ export function parseScannedDocument(rawInput: string): ScanDraft {
   if (totalMatch?.[1]) {
     const amount = amountFromMatch(totalMatch[1]);
     if (Number.isFinite(amount) && amount > 0) {
-      const intent = intentFromText(normalized);
-      const resolved: VoiceIntentType | "unknown" = intent === "unknown" ? "sale" : intent;
+      const detected = intentFromText(normalized);
+      const resolved: VoiceIntentType = detected === "unknown" ? "sale" : detected;
       return {
         intent: resolved,
         amount,
         description: descriptionFromLines(lines, amount) || fromIntent.description,
         rawText,
-        confidence: resolved !== "unknown" ? "high" : "low",
+        confidence: "high",
         source: "total",
       };
     }
@@ -112,14 +112,20 @@ export function parseScannedDocument(rawInput: string): ScanDraft {
 
   // 3) Last line that looks like “item 5000”.
   for (let i = lines.length - 1; i >= 0; i--) {
-    const m = lines[i].match(LINE_RE);
-    if (!m?.[2]) continue;
+    const line = lines[i];
+    if (!line) continue;
+    const m = line.match(LINE_RE);
+    if (!m?.[1] || !m[2]) continue;
     const amount = amountFromMatch(m[2]);
     if (!Number.isFinite(amount) || amount <= 0) continue;
     const label = m[1].replace(/[-–:]+$/, "").trim();
-    const lineIntent = intentFromText(`${label} ${lines[i]}`);
-    const intent: VoiceIntentType | "unknown" =
-      fromIntent.intent !== "unknown" ? fromIntent.intent : lineIntent !== "unknown" ? lineIntent : "sale";
+    const lineIntent = intentFromText(`${label} ${line}`);
+    const intent: VoiceIntentType =
+      fromIntent.intent !== "unknown"
+        ? fromIntent.intent
+        : lineIntent !== "unknown"
+          ? lineIntent
+          : "sale";
     return {
       intent,
       amount,
@@ -133,8 +139,13 @@ export function parseScannedDocument(rawInput: string): ScanDraft {
   // 4) Any amount + best-effort intent (default sale for shop receipts).
   const amount = fromIntent.amount ?? parseAmount(normalized);
   if (amount !== null && amount > 0) {
-    const intent: VoiceIntentType | "unknown" =
-      fromIntent.intent !== "unknown" ? fromIntent.intent : intentFromText(normalized) === "unknown" ? "sale" : intentFromText(normalized);
+    const detected = intentFromText(normalized);
+    const intent: VoiceIntentType =
+      fromIntent.intent !== "unknown"
+        ? fromIntent.intent
+        : detected === "unknown"
+          ? "sale"
+          : detected;
     return {
       intent,
       amount,

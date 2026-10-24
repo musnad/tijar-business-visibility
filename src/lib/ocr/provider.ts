@@ -1,6 +1,6 @@
 /**
  * OCR provider abstraction — extract text from a receipt / handwritten note image.
- * Browser implementation uses Tesseract.js (on-device; no API key).
+ * Browser-only via Tesseract.js (on-device; no API key). Never imported on the server.
  */
 
 export type OcrProgress = {
@@ -23,6 +23,9 @@ export type OcrProvider = {
 let workerPromise: Promise<import("tesseract.js").Worker> | null = null;
 
 async function getWorker(onProgress?: (p: OcrProgress) => void) {
+  if (typeof window === "undefined") {
+    throw new Error("Document scan only works in the browser.");
+  }
   if (!workerPromise) {
     workerPromise = (async () => {
       const { createWorker } = await import("tesseract.js");
@@ -44,7 +47,8 @@ export const browserOcrProvider: OcrProvider = {
     const worker = await getWorker(onProgress);
     const result = await worker.recognize(image);
     const text = (result.data.text ?? "").trim();
-    const confidence = typeof result.data.confidence === "number" ? result.data.confidence / 100 : 0.5;
+    const confidence =
+      typeof result.data.confidence === "number" ? result.data.confidence / 100 : 0.5;
     return { text, confidence };
   },
 };

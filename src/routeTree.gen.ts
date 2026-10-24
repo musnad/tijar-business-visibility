@@ -23,11 +23,11 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TranslateRouteImport } from './routes/translate'
 import { Route as ApiPublicConfigRouteImport } from './routes/api.public-config'
+import { Route as ApiSpeakRouteImport } from './routes/api.speak'
 import { Route as ApiSupabaseHealthRouteImport } from './routes/api.supabase-health'
 import { Route as ApiTranslateRouteImport } from './routes/api.translate'
 import { Route as ApiTranslateBatchRouteImport } from './routes/api.translate-batch'
 import { Route as ApiTranslateSpeechRouteImport } from './routes/api.translate-speech'
-import { Route as ApiSpeakRouteImport } from './routes/api.speak'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppAssistantRouteImport } from './routes/app/assistant'
 import { Route as AppBusinessRouteImport } from './routes/app/business'
@@ -131,6 +131,11 @@ const ApiPublicConfigRoute = ApiPublicConfigRouteImport.update({
   path: '/api/public-config',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSpeakRoute = ApiSpeakRouteImport.update({
+  id: '/api/speak',
+  path: '/api/speak',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSupabaseHealthRoute = ApiSupabaseHealthRouteImport.update({
   id: '/api/supabase-health',
   path: '/api/supabase-health',
@@ -149,11 +154,6 @@ const ApiTranslateBatchRoute = ApiTranslateBatchRouteImport.update({
 const ApiTranslateSpeechRoute = ApiTranslateSpeechRouteImport.update({
   id: '/api/translate-speech',
   path: '/api/translate-speech',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSpeakRoute = ApiSpeakRouteImport.update({
-  id: '/api/speak',
-  path: '/api/speak',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -334,11 +334,11 @@ export interface FileRoutesByFullPath {
   '/app/customers': typeof AppCustomersRouteRouteWithChildren
   '/app/learn': typeof AppLearnRouteRouteWithChildren
   '/api/public-config': typeof ApiPublicConfigRoute
+  '/api/speak': typeof ApiSpeakRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/translate-batch': typeof ApiTranslateBatchRoute
   '/api/translate-speech': typeof ApiTranslateSpeechRoute
-  '/api/speak': typeof ApiSpeakRoute
   '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
@@ -384,11 +384,11 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/translate': typeof TranslateRoute
   '/api/public-config': typeof ApiPublicConfigRoute
+  '/api/speak': typeof ApiSpeakRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/translate-batch': typeof ApiTranslateBatchRoute
   '/api/translate-speech': typeof ApiTranslateSpeechRoute
-  '/api/speak': typeof ApiSpeakRoute
   '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
@@ -438,11 +438,11 @@ export interface FileRoutesById {
   '/app/customers': typeof AppCustomersRouteRouteWithChildren
   '/app/learn': typeof AppLearnRouteRouteWithChildren
   '/api/public-config': typeof ApiPublicConfigRoute
+  '/api/speak': typeof ApiSpeakRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/translate-batch': typeof ApiTranslateBatchRoute
   '/api/translate-speech': typeof ApiTranslateSpeechRoute
-  '/api/speak': typeof ApiSpeakRoute
   '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
@@ -493,11 +493,11 @@ export interface FileRouteTypes {
     | '/app/customers'
     | '/app/learn'
     | '/api/public-config'
+    | '/api/speak'
     | '/api/supabase-health'
     | '/api/translate'
     | '/api/translate-batch'
     | '/api/translate-speech'
-    | '/api/speak'
     | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
@@ -509,6 +509,7 @@ export interface FileRouteTypes {
     | '/app/records'
     | '/app/register'
     | '/app/sales'
+    | '/app/scan'
     | '/app/suppliers'
     | '/app/transactions'
     | '/b/$slug'
@@ -542,11 +543,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/translate'
     | '/api/public-config'
+    | '/api/speak'
     | '/api/supabase-health'
     | '/api/translate'
     | '/api/translate-batch'
     | '/api/translate-speech'
-    | '/api/speak'
     | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
@@ -558,6 +559,7 @@ export interface FileRouteTypes {
     | '/app/records'
     | '/app/register'
     | '/app/sales'
+    | '/app/scan'
     | '/app/suppliers'
     | '/app/transactions'
     | '/b/$slug'
@@ -594,11 +596,11 @@ export interface FileRouteTypes {
     | '/app/customers'
     | '/app/learn'
     | '/api/public-config'
+    | '/api/speak'
     | '/api/supabase-health'
     | '/api/translate'
     | '/api/translate-batch'
     | '/api/translate-speech'
-    | '/api/speak'
     | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
@@ -610,6 +612,7 @@ export interface FileRouteTypes {
     | '/app/records'
     | '/app/register'
     | '/app/sales'
+    | '/app/scan'
     | '/app/suppliers'
     | '/app/transactions'
     | '/b/$slug'
@@ -645,11 +648,11 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   TranslateRoute: typeof TranslateRoute
   ApiPublicConfigRoute: typeof ApiPublicConfigRoute
+  ApiSpeakRoute: typeof ApiSpeakRoute
   ApiSupabaseHealthRoute: typeof ApiSupabaseHealthRoute
   ApiTranslateRoute: typeof ApiTranslateRoute
   ApiTranslateBatchRoute: typeof ApiTranslateBatchRoute
   ApiTranslateSpeechRoute: typeof ApiTranslateSpeechRoute
-  ApiSpeakRoute: typeof ApiSpeakRoute
   BSlugRoute: typeof BSlugRoute
 }
 
@@ -753,6 +756,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/speak': {
+      id: '/api/speak'
+      path: '/api/speak'
+      fullPath: '/api/speak'
+      preLoaderRoute: typeof ApiSpeakRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/supabase-health': {
       id: '/api/supabase-health'
       path: '/api/supabase-health'
@@ -779,13 +789,6 @@ declare module '@tanstack/react-router' {
       path: '/api/translate-speech'
       fullPath: '/api/translate-speech'
       preLoaderRoute: typeof ApiTranslateSpeechRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/speak': {
-      id: '/api/speak'
-      path: '/api/speak'
-      fullPath: '/api/speak'
-      preLoaderRoute: typeof ApiSpeakRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -1161,11 +1164,11 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   TranslateRoute: TranslateRoute,
   ApiPublicConfigRoute: ApiPublicConfigRoute,
+  ApiSpeakRoute: ApiSpeakRoute,
   ApiSupabaseHealthRoute: ApiSupabaseHealthRoute,
   ApiTranslateRoute: ApiTranslateRoute,
   ApiTranslateBatchRoute: ApiTranslateBatchRoute,
   ApiTranslateSpeechRoute: ApiTranslateSpeechRoute,
-  ApiSpeakRoute: ApiSpeakRoute,
   BSlugRoute: BSlugRoute,
 }
 export const routeTree = rootRouteImport
