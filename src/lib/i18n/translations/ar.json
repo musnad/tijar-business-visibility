@@ -792,5 +792,10 @@
  "app.dashboard.scanSoon": "افتح مسح مستند لتصوير إيصال، ثم راجع قبل الحفظ.",
  "app.products.priceFormatHint": "يمكنك كتابة 15000 أو 15,000 أو ₦15000 أو 15k.",
  "app.products.photoSection": "صورة (اختياري)",
- "app.products.saveHint": "الاسم يكفي للحفظ. أضف الأسعار والمخزون عندما تتوفر."
+ "app.products.saveHint": "الاسم يكفي للحفظ. أضف الأسعار والمخزون عندما تتوفر.",
+ "app.products.nameRequired": "أدخل اسم المنتج للحفظ.",
+ "app.products.ignoredBadPrice": "السعر غير واضح — حُفظ بدونها. يمكنك التعديل لاحقًا.",
+ "app.products.ignoredBadStock": "رقم المخزون غير واضح — حُفظ بدون مخزون افتتاحي.",
+ "app.products.needBusinessHint": "أكمل إعداد متجرك أولًا، ثم يمكنك إضافة منتجات.",
+ "app.products.setupBusiness": "إعداد مشروعي"
 }

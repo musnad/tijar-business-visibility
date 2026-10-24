@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 
+import { Button } from "@/components/ui/button";
 import { AppShell } from "@/features/app/app-shell";
 import { AppPageHeader } from "@/features/app-layout/app-page-header";
 import { BackLinkButton } from "@/features/app-layout/back-link-button";
@@ -24,7 +25,7 @@ function NewProductPage() {
 function NewProductPageContent() {
   const { t } = useTranslation();
   const { profile } = useAuth();
-  const { data, isLoading } = usePrimaryBusiness(profile?.id);
+  const { data, isLoading, isError, error, refetch } = usePrimaryBusiness(profile?.id);
   const business = data?.business;
 
   return (
@@ -35,8 +36,30 @@ function NewProductPageContent() {
         action={<BackLinkButton to="/app/products" label={t("app.common.back")} />}
       />
       {isLoading && <p className="mt-8 text-muted-foreground">…</p>}
-      {!isLoading && !business && (
-        <p className="mt-8 text-sm text-destructive">{t("app.errors.noBusiness")}</p>
+      {isError && (
+        <div className="mt-6 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+          <p className="font-semibold text-destructive">{t("app.products.loadFailed")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {error instanceof Error ? error.message : ""}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3 min-h-10 rounded-xl"
+            onClick={() => void refetch()}
+          >
+            {t("app.common.retry")}
+          </Button>
+        </div>
+      )}
+      {!isLoading && !isError && !business && (
+        <div className="mt-6 rounded-2xl border border-dashed border-border p-6 text-center">
+          <p className="text-sm text-destructive">{t("app.errors.noBusiness")}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("app.products.needBusinessHint")}</p>
+          <Button className="mt-4 min-h-11 rounded-xl font-bold" asChild>
+            <Link to="/app/onboarding">{t("app.products.setupBusiness")}</Link>
+          </Button>
+        </div>
       )}
       {business && profile?.id && (
         <NewProductForm businessId={business.id} profileId={profile.id} />

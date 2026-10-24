@@ -1,6 +1,6 @@
 "use client";
 
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Mic, Square } from "lucide-react";
 import { useState } from "react";
@@ -10,7 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormSection } from "@/features/app-layout/form-section";
 import { ProductPhotoField } from "@/features/products/product-photo-field";
-import { productFormSchema } from "@/features/products/schemas";
+import {
+  normalizeMoneyRaw,
+  normalizeQtyRaw,
+  productFormSchema,
+} from "@/features/products/schemas";
 import { speakText, useSpeechRecognition } from "@/features/translate/use-speech";
 import { invalidateBusinessQueries } from "@/lib/invalidate-business-queries";
 import { useTranslation } from "@/lib/i18n/context";
@@ -24,7 +28,24 @@ import { parseVoiceProduct } from "@/utils/voice-product";
 
 const goodsUnits = ["piece", "bag", "carton", "kg", "litre"] as const;
 
-type FieldErrors = Partial<Record<"name" | "salePrice" | "costPrice" | "initialStock" | "lowStockThreshold", string>>;
+type FieldErrors = Partial<
+  Record<"name" | "salePrice" | "costPrice" | "initialStock" | "lowStockThreshold", string>
+>;
+
+/** Keep optional numbers soft: bad input is dropped so name-only save still works. */
+function softMoney(raw: string): string | undefined {
+  const n = normalizeMoneyRaw(raw);
+  if (n === undefined) return undefined;
+  if (!/^\d+(\.\d{1,2})?$/.test(n)) return undefined;
+  return n;
+}
+
+function softQty(raw: string): string | undefined {
+  const n = normalizeQtyRaw(raw);
+  if (n === undefined) return undefined;
+  if (!/^\d+(\.\d{1,3})?$/.test(n)) return undefined;
+  return n;
+}
 
 export function NewProductForm({
   businessId,
@@ -46,6 +67,7 @@ export function NewProductForm({
   const [notes, setNotes] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [voiceHint, setVoiceHint] = useState<string | null>(null);
   const { listen, stop, listening, supported } = useSpeechRecognition();
@@ -53,10 +75,12 @@ export function NewProductForm({
   const speakLang =
     locale === "yo" ? "Yoruba" : locale === "sw" ? "Swahili" : locale === "ha" ? "Hausa" : "English";
 
-  const cost = costPrice ? Number.parseFloat(costPrice.replace(/[₦,\s]/g, "").replace(/k$/i, "000")) : 0;
-  const sale = salePrice ? Number.parseFloat(salePrice.replace(/[₦,\s]/g, "").replace(/k$/i, "000")) : 0;
+  const saleNum = Number.parseFloat(softMoney(salePrice) ?? "");
+  const costNum = Number.parseFloat(softMoney(costPrice) ?? "");
   const previewProfit =
-    sale > 0 ? saleLineTotals(sale, Number.isFinite(cost) ? cost : 0, 1).profit : null;
+    Number.isFinite(saleNum) && saleNum > 0
+      ? saleLineTotals(saleNum, Number.isFinite(costNum) ? costNum : 0, 1).profit
+      : null;
 
   async function onVoice() {
     setVoiceHint(null);
@@ -78,6 +102,7 @@ export function NewProductForm({
       if (draft.costPrice) setCostPrice(draft.costPrice);
       if (draft.initialStock) setInitialStock(draft.initialStock);
       setFieldErrors({});
+      setFormError(null);
       setVoiceHint(transcript);
       toast.success(t("app.products.voiceFilled"));
       void speakText(t("app.products.voiceFilledSpeak"), speakLang);
@@ -86,18 +111,46 @@ export function NewProductForm({
     }
   }
 
-  async function submit() {
+  async function submit(e?: React.FormEvent) {
+    e?.preventDefault();
     setFieldErrors({});
+    setFormError(null);
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setFieldErrors({ name: t("app.products.nameRequired") });
+      setFormError(t("app.products.nameRequired"));
+      toast.error(t("app.products.nameRequired"));
+      return;
+    }
+
+    // Soft-clean optional fields so a typo in price never blocks saving the product.
+    const cleanedSale = softMoney(salePrice);
+    const cleanedCost = softMoney(costPrice);
+    const cleanedStock = kind === "goods" ? softQty(initialStock) : undefined;
+    const cleanedLow = kind === "goods" ? softQty(lowThreshold) ?? "5" : undefined;
+
+    if (salePrice.trim() && !cleanedSale) {
+      toast.message(t("app.products.ignoredBadPrice"));
+    }
+    if (costPrice.trim() && !cleanedCost) {
+      toast.message(t("app.products.ignoredBadPrice"));
+    }
+    if (kind === "goods" && initialStock.trim() && !cleanedStock) {
+      toast.message(t("app.products.ignoredBadStock"));
+    }
+
     const parsed = productFormSchema.safeParse({
-      name,
+      name: trimmedName,
       kind,
       unit: kind === "service" ? "job" : unit,
-      salePrice: salePrice || undefined,
-      costPrice: costPrice || undefined,
-      initialStock: kind === "goods" ? initialStock || undefined : undefined,
-      lowStockThreshold: kind === "goods" ? lowThreshold || undefined : undefined,
-      notes: notes || undefined,
+      salePrice: cleanedSale,
+      costPrice: cleanedCost,
+      initialStock: cleanedStock,
+      lowStockThreshold: cleanedLow,
+      notes: notes.trim() || undefined,
     });
+
     if (!parsed.success) {
       const next: FieldErrors = {};
       for (const issue of parsed.error.issues) {
@@ -113,7 +166,9 @@ export function NewProductForm({
         }
       }
       setFieldErrors(next);
-      toast.error(parsed.error.issues[0]?.message ?? t("app.errors.validation"));
+      const msg = parsed.error.issues[0]?.message ?? t("app.errors.validation");
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -121,6 +176,7 @@ export function NewProductForm({
     try {
       const { product, error } = await createProduct(businessId, profileId, parsed.data);
       if (error && !product) {
+        setFormError(error);
         toast.error(error);
         return;
       }
@@ -138,7 +194,9 @@ export function NewProductForm({
       }
 
       if (!product) {
-        toast.error(t("app.errors.saveFailed"));
+        const msg = t("app.errors.saveFailed");
+        setFormError(msg);
+        toast.error(msg);
         return;
       }
 
@@ -149,14 +207,16 @@ export function NewProductForm({
       await invalidateBusinessQueries(queryClient, businessId);
       void navigate({ to: "/app/products" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("app.errors.saveFailed"));
+      const msg = err instanceof Error ? err.message : t("app.errors.saveFailed");
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="mt-5 space-y-4 pb-28">
+    <form className="mt-5 space-y-4 pb-8" onSubmit={(e) => void submit(e)}>
       {/* Voice add */}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <p className="text-sm font-bold">{t("app.products.voiceTitle")}</p>
@@ -164,7 +224,12 @@ export function NewProductForm({
         <div className="mt-3 flex gap-2">
           {supported &&
             (listening ? (
-              <Button type="button" variant="destructive" className="min-h-12 flex-1 rounded-xl font-bold" onClick={stop}>
+              <Button
+                type="button"
+                variant="destructive"
+                className="min-h-12 flex-1 rounded-xl font-bold"
+                onClick={stop}
+              >
                 <Square className="mr-1.5 size-4" /> {t("app.products.voiceStop")}
               </Button>
             ) : (
@@ -184,7 +249,7 @@ export function NewProductForm({
         )}
       </div>
 
-      <div className="dashboard-summary-card rounded-2xl p-4 shadow-lg sm:p-5">
+      <div className="dashboard-summary-card rounded-2xl p-4 text-primary-foreground shadow-lg sm:p-5">
         <div className="flex gap-2">
           <button
             type="button"
@@ -209,66 +274,65 @@ export function NewProductForm({
         </div>
 
         <label className="mt-4 block">
-          <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-white/75">
+          <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-white/80">
             {t("app.products.nameSection")} *
           </span>
           <Input
             className={cn(
-              "min-h-12 border-0 bg-white/10 text-lg font-bold text-primary-foreground placeholder:text-white/40",
-              fieldErrors.name && "ring-2 ring-red-300",
+              "min-h-12 border-0 bg-white text-base font-bold text-foreground placeholder:text-muted-foreground",
+              fieldErrors.name && "ring-2 ring-red-400",
             )}
             value={name}
             onChange={(e) => {
               setName(e.target.value);
               if (fieldErrors.name) setFieldErrors((f) => ({ ...f, name: undefined }));
+              if (formError) setFormError(null);
             }}
             placeholder={t("app.products.namePlaceholder")}
             autoComplete="off"
             autoFocus
+            name="productName"
+            required
           />
-          {fieldErrors.name && <p className="mt-1 text-xs font-semibold text-red-100">{fieldErrors.name}</p>}
-          <p className="mt-1 text-xs text-white/65">{t("app.products.nameHint")}</p>
+          {fieldErrors.name && (
+            <p className="mt-1 text-xs font-semibold text-red-100">{fieldErrors.name}</p>
+          )}
+          <p className="mt-1.5 text-xs text-white/75">{t("app.products.nameHint")}</p>
         </label>
       </div>
 
       <FormSection
         title={kind === "service" ? t("app.products.serviceCostSection") : t("app.products.pricingSection")}
         hint={
-          kind === "service"
-            ? t("app.products.serviceCostHint")
-            : t("app.products.pricingHintFull")
+          kind === "service" ? t("app.products.serviceCostHint") : t("app.products.pricingHintFull")
         }
       >
-        <Input
-          className={cn("min-h-12 rounded-xl", fieldErrors.costPrice && "ring-2 ring-destructive")}
-          inputMode="decimal"
-          value={costPrice}
-          onChange={(e) => {
-            setCostPrice(e.target.value);
-            if (fieldErrors.costPrice) setFieldErrors((f) => ({ ...f, costPrice: undefined }));
-          }}
-          placeholder={
-            kind === "service"
-              ? t("app.products.serviceCostPlaceholder")
-              : t("app.products.costPricePlaceholder")
-          }
-        />
-        {fieldErrors.costPrice && (
-          <p className="mt-1 text-xs font-semibold text-destructive">{fieldErrors.costPrice}</p>
-        )}
-        <Input
-          className={cn("mt-3 min-h-12 rounded-xl", fieldErrors.salePrice && "ring-2 ring-destructive")}
-          inputMode="decimal"
-          value={salePrice}
-          onChange={(e) => {
-            setSalePrice(e.target.value);
-            if (fieldErrors.salePrice) setFieldErrors((f) => ({ ...f, salePrice: undefined }));
-          }}
-          placeholder={t("app.products.salePricePlaceholder")}
-        />
-        {fieldErrors.salePrice && (
-          <p className="mt-1 text-xs font-semibold text-destructive">{fieldErrors.salePrice}</p>
-        )}
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            {kind === "service" ? t("app.products.serviceCostPlaceholder") : t("app.products.costPricePlaceholder")}
+          </span>
+          <Input
+            className="min-h-12 rounded-xl bg-background"
+            inputMode="decimal"
+            value={costPrice}
+            onChange={(e) => setCostPrice(e.target.value)}
+            placeholder="e.g. 12000 or 12k"
+            name="costPrice"
+          />
+        </label>
+        <label className="mt-3 block">
+          <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+            {t("app.products.salePricePlaceholder")}
+          </span>
+          <Input
+            className="min-h-12 rounded-xl bg-background"
+            inputMode="decimal"
+            value={salePrice}
+            onChange={(e) => setSalePrice(e.target.value)}
+            placeholder="e.g. 15000 or ₦15,000"
+            name="salePrice"
+          />
+        </label>
         <p className="mt-2 text-xs text-muted-foreground">{t("app.products.priceFormatHint")}</p>
         {previewProfit !== null && Number.isFinite(previewProfit) && (
           <p
@@ -277,44 +341,40 @@ export function NewProductForm({
               previewProfit >= 0 ? "text-emerald-700" : "text-red-700",
             )}
           >
-            {previewProfit >= 0
-              ? t("app.products.profitPerUnit")
-              : t("app.products.lossPerUnit")}
-            : {formatNgn(Math.abs(previewProfit))}
+            {previewProfit >= 0 ? t("app.products.profitPerUnit") : t("app.products.lossPerUnit")}:{" "}
+            {formatNgn(Math.abs(previewProfit))}
           </p>
         )}
       </FormSection>
 
       {kind === "goods" && (
         <FormSection title={t("app.products.stockSection")} hint={t("app.products.stockHint")}>
-          <Input
-            className={cn("min-h-12 rounded-xl", fieldErrors.initialStock && "ring-2 ring-destructive")}
-            inputMode="decimal"
-            value={initialStock}
-            onChange={(e) => {
-              setInitialStock(e.target.value);
-              if (fieldErrors.initialStock) setFieldErrors((f) => ({ ...f, initialStock: undefined }));
-            }}
-            placeholder={t("app.products.initialStockPlaceholder")}
-          />
-          {fieldErrors.initialStock && (
-            <p className="mt-1 text-xs font-semibold text-destructive">{fieldErrors.initialStock}</p>
-          )}
-          <Input
-            className={cn(
-              "mt-3 min-h-12 rounded-xl",
-              fieldErrors.lowStockThreshold && "ring-2 ring-destructive",
-            )}
-            inputMode="decimal"
-            value={lowThreshold}
-            onChange={(e) => {
-              setLowThreshold(e.target.value);
-              if (fieldErrors.lowStockThreshold) {
-                setFieldErrors((f) => ({ ...f, lowStockThreshold: undefined }));
-              }
-            }}
-            placeholder={t("app.products.lowStockPlaceholder")}
-          />
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              {t("app.products.initialStockPlaceholder")}
+            </span>
+            <Input
+              className="min-h-12 rounded-xl bg-background"
+              inputMode="decimal"
+              value={initialStock}
+              onChange={(e) => setInitialStock(e.target.value)}
+              placeholder="0"
+              name="initialStock"
+            />
+          </label>
+          <label className="mt-3 block">
+            <span className="mb-1 block text-xs font-semibold text-muted-foreground">
+              {t("app.products.lowStockPlaceholder")}
+            </span>
+            <Input
+              className="min-h-12 rounded-xl bg-background"
+              inputMode="decimal"
+              value={lowThreshold}
+              onChange={(e) => setLowThreshold(e.target.value)}
+              placeholder="5"
+              name="lowStockThreshold"
+            />
+          </label>
         </FormSection>
       )}
 
@@ -350,26 +410,33 @@ export function NewProductForm({
 
       <FormSection title={t("app.products.notesSection")} hint={t("app.products.notesHint")}>
         <Input
-          className="min-h-12 rounded-xl"
+          className="min-h-12 rounded-xl bg-background"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder={t("app.products.notesPlaceholder")}
+          name="notes"
         />
       </FormSection>
 
-      <div className="fixed inset-x-0 bottom-[4.25rem] z-30 border-t border-border bg-background/95 p-3 backdrop-blur-sm sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
-        <Button
-          type="button"
-          className="min-h-12 w-full rounded-xl bg-teal-700 text-base font-bold shadow-md hover:bg-teal-800"
-          disabled={saving || !name.trim()}
-          onClick={() => void submit()}
-        >
-          {saving ? t("app.products.saving") : t("app.products.add")}
-        </Button>
-        <p className="mt-2 text-center text-[11px] text-muted-foreground sm:mt-3">
-          {t("app.products.saveHint")}
-        </p>
-      </div>
-    </div>
+      {formError && (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {formError}
+        </div>
+      )}
+
+      <Button
+        type="submit"
+        className="min-h-12 w-full rounded-xl bg-teal-700 text-base font-bold shadow-md hover:bg-teal-800"
+        disabled={saving || !name.trim()}
+      >
+        {saving ? t("app.products.saving") : t("app.products.add")}
+      </Button>
+      <p className="text-center text-xs text-muted-foreground">{t("app.products.saveHint")}</p>
+      <p className="text-center text-xs">
+        <Link to="/app/products" className="font-semibold text-primary underline-offset-2 hover:underline">
+          {t("app.common.back")} → {t("app.products.title")}
+        </Link>
+      </p>
+    </form>
   );
 }

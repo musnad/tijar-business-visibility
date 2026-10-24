@@ -792,5 +792,10 @@
  "app.dashboard.scanSoon": "Meghee Nyochaa akwụkwọ iji see foto akwụkwọ nnata, wee lelee tupu ichekwa.",
  "app.products.priceFormatHint": "Ị nwere ike dee 15000, 15,000, ₦15000, ma ọ bụ 15k.",
  "app.products.photoSection": "Foto (nhọrọ)",
- "app.products.saveHint": "Aha zuru ezu ịchekwa. Tinye ọnụahịa na ngwaahịa mgbe ị nwere ha."
+ "app.products.saveHint": "Aha zuru ezu ịchekwa. Tinye ọnụahịa na ngwaahịa mgbe ị nwere ha.",
+ "app.products.nameRequired": "Tinye aha ngwaahịa ka e chekwaa.",
+ "app.products.ignoredBadPrice": "Ọnụahịa ahụ adịghị anya — echekwara n'enweghị ya. Ị nwere ike dezie ma emechaa.",
+ "app.products.ignoredBadStock": "Ọnụ ọgụgụ ngwaahịa adịghị anya — echekwara n'enweghị ngwaahịa mbụ.",
+ "app.products.needBusinessHint": "Mechaa ịtọlite ụlọ ahịa gị mbụ, ka ị nwee ike tinye ngwaahịa.",
+ "app.products.setupBusiness": "Tọlite azụmahịa m"
 }

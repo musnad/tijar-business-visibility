@@ -792,5 +792,10 @@
  "app.dashboard.scanSoon": "Fungua Changanua Hati kupiga picha ya risiti, kisha kagua kabla ya kuhifadhi.",
  "app.products.priceFormatHint": "Unaweza kuandika 15000, 15,000, ₦15000, au 15k.",
  "app.products.photoSection": "Picha (si lazima)",
- "app.products.saveHint": "Jina linatosha kuhifadhi. Ongeza bei na stock unapokuwa nazo."
+ "app.products.saveHint": "Jina linatosha kuhifadhi. Ongeza bei na stock unapokuwa nazo.",
+ "app.products.nameRequired": "Weka jina la bidhaa ili kuhifadhi.",
+ "app.products.ignoredBadPrice": "Bei haikuwa wazi — imehifadhiwa bila hiyo. Unaweza kuhariri baadaye.",
+ "app.products.ignoredBadStock": "Nambari ya stock haikuwa wazi — imehifadhiwa bila stock ya kufungua.",
+ "app.products.needBusinessHint": "Kamilisha kuweka duka lako kwanza, kisha unaweza kuongeza bidhaa.",
+ "app.products.setupBusiness": "Weka biashara yangu"
 }

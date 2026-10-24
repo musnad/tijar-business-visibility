@@ -792,5 +792,10 @@
  "app.dashboard.scanSoon": "Ṣí Scan Document láti ya àwòrán ìwé ìgbàwọlé, lẹ́yìn náà ṣàyẹ̀wò kí o tó fi pamọ́.",
  "app.products.priceFormatHint": "O le tẹ 15000, 15,000, ₦15000, tàbí 15k.",
  "app.products.photoSection": "Àwòrán (kò pọn dandan)",
- "app.products.saveHint": "Orúkọ tó láti fi pamọ́. Fi owó àti ọjà kún un nígbà tí o bá ní."
+ "app.products.saveHint": "Orúkọ tó láti fi pamọ́. Fi owó àti ọjà kún un nígbà tí o bá ní.",
+ "app.products.nameRequired": "Tẹ orúkọ ọjà láti fi pamọ́.",
+ "app.products.ignoredBadPrice": "Iye owó kò yé — a fi pamọ́ láìsí rẹ̀. O le ṣàtúnṣe nígbà mìíràn.",
+ "app.products.ignoredBadStock": "Nọ́mbà ọjà kò yé — a fi pamọ́ láìsí ọjà ìbẹ̀rẹ̀.",
+ "app.products.needBusinessHint": "Parí ṣíṣètò ilé ìtajà rẹ kọ́kọ́, kí o tó le fi ọjà kún un.",
+ "app.products.setupBusiness": "Ṣètò iṣòwò mi"
 }

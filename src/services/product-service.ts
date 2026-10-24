@@ -147,15 +147,26 @@ export async function createProduct(
       "initial",
       "Opening stock",
     );
-    if (moveErr) {
-      // Product exists; stock can be fixed later — don't lose the product.
-      return {
-        product,
-        error: `Product saved, but opening stock failed: ${mapProductError(moveErr)}`,
-      };
+    if (!moveErr) {
+      const refreshed = await getProduct(product.id);
+      return { product: refreshed.product ?? product, error: null };
     }
-    const refreshed = await getProduct(product.id);
-    return { product: refreshed.product ?? product, error: null };
+
+    // Fallback: set stock directly so the product still shows the right count.
+    const { error: stockErr } = await supabase
+      .from("products")
+      .update({ stock_quantity: input.initialStock })
+      .eq("id", product.id);
+    if (!stockErr) {
+      const refreshed = await getProduct(product.id);
+      return { product: refreshed.product ?? product, error: null };
+    }
+
+    // Product row exists — never fail the whole add because of stock.
+    return {
+      product,
+      error: `Product saved, but opening stock failed: ${mapProductError(moveErr)}`,
+    };
   }
 
   return { product, error: null };

@@ -792,5 +792,10 @@
  "app.dashboard.scanSoon": "Buɗe Zana takarda don ɗaukar hoton rasiti, sa'an nan ka duba kafin ajiyewa.",
  "app.products.priceFormatHint": "Kana iya rubuta 15000, 15,000, ₦15000, ko 15k.",
  "app.products.photoSection": "Hoto (na zaɓi)",
- "app.products.saveHint": "Suna ya isa don ajiyewa. Ƙara farashi da stock idan kana dasu."
+ "app.products.saveHint": "Suna ya isa don ajiyewa. Ƙara farashi da stock idan kana dasu.",
+ "app.products.nameRequired": "Shigar da sunan samfur don ajiyewa.",
+ "app.products.ignoredBadPrice": "Farashin bai bayyana ba — an ajiye ba tare da shi ba. Za ka iya gyarawa daga baya.",
+ "app.products.ignoredBadStock": "Adadin stock bai bayyana ba — an ajiye ba tare da buɗaɗɗen stock ba.",
+ "app.products.needBusinessHint": "Kammala saitin kantin ka tukuna, sa'an nan ka iya ƙara samfura.",
+ "app.products.setupBusiness": "Saita kasuwancina"
 }

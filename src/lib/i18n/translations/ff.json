@@ -1127,5 +1127,10 @@
  "app.dashboard.scanSoon": "Uddit Skan dokimaa ngam ñamndude foto risuu, caggal ɗum ƴeewu hade danndude.",
  "app.products.priceFormatHint": "A waawi winndude 15000, 15,000, ₦15000, walla 15k.",
  "app.products.photoSection": "Natal (suɓaande)",
- "app.products.saveHint": "Innde ɗum yonii danndude. Ɓeydu njoɓdi e stock so a heɓii ɗum."
+ "app.products.saveHint": "Innde ɗum yonii danndude. Ɓeydu njoɓdi e stock so a heɓii ɗum.",
+ "app.products.nameRequired": "Naatnu innde geɗe ngam danndude.",
+ "app.products.ignoredBadPrice": "Njoɓdi ndii laaɓaani — danndaama tawa ɗum. A waawi waylude ɗoon e ɗoon.",
+ "app.products.ignoredBadStock": "Limngal stock ngal laaɓaani — danndaama tawa stock udditgol.",
+ "app.products.needBusinessHint": "Timmin saatingol duɗal maa gadal, caggal ɗum a waawi ɓeydude geɗe.",
+ "app.products.setupBusiness": "Saa't njulaagu am"
 }
