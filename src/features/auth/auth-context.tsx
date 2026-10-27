@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const env = await ensureSupabasePublicEnv();
       if (cancelled) return;
       if (env) {
+        // Reuses the global singleton — never creates a second GoTrueClient.
         primeSupabaseBrowserClient(env);
         setConfigured(true);
       }
