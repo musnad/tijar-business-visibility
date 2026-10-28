@@ -20,6 +20,7 @@ import { Route as ShopCartRouteImport } from './routes/shop/cart'
 import { Route as ShopCheckoutRouteImport } from './routes/shop/checkout'
 import { Route as ShopFavoritesRouteImport } from './routes/shop/favorites'
 import { Route as ShopNearbyRouteImport } from './routes/shop/nearby'
+import { Route as ShopBusinessApplyRouteImport } from './routes/shop/business-apply'
 import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
 import { Route as ShopProfileRouteImport } from './routes/shop/profile'
 import { Route as ShopOrdersOrderIdRouteImport } from './routes/shop/orders.$orderId'
@@ -126,6 +127,11 @@ const ShopFavoritesRoute = ShopFavoritesRouteImport.update({
 const ShopNearbyRoute = ShopNearbyRouteImport.update({
   id: '/nearby',
   path: '/nearby',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopBusinessApplyRoute = ShopBusinessApplyRouteImport.update({
+  id: '/business-apply',
+  path: '/business-apply',
   getParentRoute: () => ShopRoute,
 } as any)
 const ShopOrdersRoute = ShopOrdersRouteImport.update({
@@ -396,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/favorites': typeof ShopFavoritesRoute
   '/shop/nearby': typeof ShopNearbyRoute
+  '/shop/business-apply': typeof ShopBusinessApplyRoute
   '/shop/orders': typeof ShopOrdersRoute
   '/shop/profile': typeof ShopProfileRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
@@ -459,6 +466,7 @@ export interface FileRoutesByTo {
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/favorites': typeof ShopFavoritesRoute
   '/shop/nearby': typeof ShopNearbyRoute
+  '/shop/business-apply': typeof ShopBusinessApplyRoute
   '/shop/orders': typeof ShopOrdersRoute
   '/shop/profile': typeof ShopProfileRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
@@ -522,6 +530,7 @@ export interface FileRoutesById {
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/favorites': typeof ShopFavoritesRoute
   '/shop/nearby': typeof ShopNearbyRoute
+  '/shop/business-apply': typeof ShopBusinessApplyRoute
   '/shop/orders': typeof ShopOrdersRoute
   '/shop/profile': typeof ShopProfileRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
@@ -588,6 +597,7 @@ export interface FileRouteTypes {
     | '/shop/checkout'
     | '/shop/favorites'
     | '/shop/nearby'
+    | '/shop/business-apply'
     | '/shop/orders'
     | '/shop/profile'
     | '/shop/orders/$orderId'
@@ -651,6 +661,7 @@ export interface FileRouteTypes {
     | '/shop/checkout'
     | '/shop/favorites'
     | '/shop/nearby'
+    | '/shop/business-apply'
     | '/shop/orders'
     | '/shop/profile'
     | '/shop/orders/$orderId'
@@ -713,6 +724,7 @@ export interface FileRouteTypes {
     | '/shop/checkout'
     | '/shop/favorites'
     | '/shop/nearby'
+    | '/shop/business-apply'
     | '/shop/orders'
     | '/shop/profile'
     | '/shop/orders/$orderId'
@@ -772,6 +784,7 @@ interface ShopRouteChildren {
   ShopCheckoutRoute: typeof ShopCheckoutRoute
   ShopFavoritesRoute: typeof ShopFavoritesRoute
   ShopNearbyRoute: typeof ShopNearbyRoute
+  ShopBusinessApplyRoute: typeof ShopBusinessApplyRoute
   ShopOrdersRoute: typeof ShopOrdersRoute
   ShopProfileRoute: typeof ShopProfileRoute
   ShopOrdersOrderIdRoute: typeof ShopOrdersOrderIdRoute
@@ -783,6 +796,7 @@ const ShopRouteChildren: ShopRouteChildren = {
   ShopCheckoutRoute: ShopCheckoutRoute,
   ShopFavoritesRoute: ShopFavoritesRoute,
   ShopNearbyRoute: ShopNearbyRoute,
+  ShopBusinessApplyRoute: ShopBusinessApplyRoute,
   ShopOrdersRoute: ShopOrdersRoute,
   ShopProfileRoute: ShopProfileRoute,
   ShopOrdersOrderIdRoute: ShopOrdersOrderIdRoute,
@@ -893,6 +907,13 @@ declare module '@tanstack/react-router' {
       path: '/nearby'
       fullPath: '/shop/nearby'
       preLoaderRoute: typeof ShopNearbyRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/business-apply': {
+      id: '/shop/business-apply'
+      path: '/business-apply'
+      fullPath: '/shop/business-apply'
+      preLoaderRoute: typeof ShopBusinessApplyRouteImport
       parentRoute: typeof ShopRoute
     }
     '/shop/orders': {

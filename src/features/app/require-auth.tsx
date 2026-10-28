@@ -1,11 +1,12 @@
 "use client";
 
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/auth-context";
 import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
 import { resolveAppEntry } from "@/features/auth/route-guards";
+import { canUseBusinessMode, isCustomerOnly } from "@/lib/account-mode";
 
 export function RequireAuth({
   children,
@@ -16,6 +17,7 @@ export function RequireAuth({
 }) {
   const { loading, session, profile, configured, configLoading } = useAuth();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     if (loading) return;
@@ -27,10 +29,23 @@ export function RequireAuth({
       return;
     }
 
+    // Customers never land on the business dashboard — apply from profile first.
+    if (
+      profile &&
+      isCustomerOnly(profile) &&
+      !canUseBusinessMode(profile) &&
+      pathname.startsWith("/app") &&
+      !pathname.startsWith("/app/login") &&
+      !pathname.startsWith("/app/register")
+    ) {
+      void navigate({ to: "/shop/business-apply" });
+      return;
+    }
+
     if (requireOnboardingComplete && profile?.onboarding_status !== "completed") {
       void navigate({ to: "/app/onboarding" });
     }
-  }, [loading, session, profile, configured, requireOnboardingComplete, navigate]);
+  }, [loading, session, profile, configured, requireOnboardingComplete, navigate, pathname]);
 
   if (configLoading) {
     return (

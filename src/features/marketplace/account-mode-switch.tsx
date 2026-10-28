@@ -20,8 +20,8 @@ export function AccountModeSwitch({ className }: { className?: string }) {
 
   async function switchTo(mode: "customer" | "business") {
     if (mode === "business" && !hasBusiness) {
-      void navigate({ to: "/shop/profile" });
-      toast.message("Request a business account from your profile — admin approval required.");
+      void navigate({ to: "/shop/business-apply" });
+      toast.message("Complete your business details — admin approval is required first.");
       return;
     }
     const { error } = await setActiveMode(profile!.id, mode);

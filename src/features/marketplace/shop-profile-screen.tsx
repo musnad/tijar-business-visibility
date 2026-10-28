@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ChevronRight,
+  Clock3,
   Heart,
   LogOut,
   MapPin,
@@ -11,11 +12,8 @@ import {
   Store,
   ShoppingCart,
 } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
 import { OrderTrackTimeline } from "@/features/marketplace/order-track-timeline";
@@ -25,8 +23,8 @@ import { canUseBusinessMode, isCustomerOnly, profileAccountMode } from "@/lib/ac
 import {
   countFavoriteProducts,
   fetchCart,
+  fetchMyBusinessUpgradeRequest,
   fetchMyOrders,
-  requestBusinessUpgrade,
 } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import {
@@ -48,10 +46,6 @@ function statusBadgeClass(status: string): string {
 export function ShopProfileScreen() {
   const { profile, session, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  const [showUpgrade, setShowUpgrade] = useState(false);
-  const [bizName, setBizName] = useState("");
-  const [location, setLocation] = useState("");
-  const [busy, setBusy] = useState(false);
 
   const ordersQuery = useQuery({
     queryKey: ["marketplace-orders"],
@@ -73,6 +67,16 @@ export function ShopProfileScreen() {
     queryKey: ["marketplace-fav-count", profile?.id],
     enabled: Boolean(profile?.id),
     queryFn: async () => countFavoriteProducts(profile!.id),
+  });
+
+  const upgradeQuery = useQuery({
+    queryKey: ["business-upgrade-request", profile?.id],
+    enabled: Boolean(profile?.id) && !canUseBusinessMode(profile),
+    queryFn: async () => {
+      const res = await fetchMyBusinessUpgradeRequest(profile!.id);
+      if (res.error) throw new Error(res.error);
+      return res.request;
+    },
   });
 
   if (!session || !profile) {
@@ -98,26 +102,9 @@ export function ShopProfileScreen() {
   const cartCount = cartQuery.data?.reduce((n, i) => n + Number(i.quantity), 0) ?? 0;
   const favCount = favCountQuery.data ?? 0;
   const firstName = profile.full_name?.trim().split(/\s+/)[0] || "there";
-
-  async function requestUpgrade() {
-    if (!bizName.trim()) {
-      toast.error("Enter your business name");
-      return;
-    }
-    setBusy(true);
-    const { error } = await requestBusinessUpgrade({
-      profileId: profile!.id,
-      businessName: bizName,
-      location,
-      ...(profile!.phone ? { phone: profile!.phone } : {}),
-    });
-    setBusy(false);
-    if (error) toast.error(error);
-    else {
-      toast.success("Upgrade request submitted — waiting for admin approval.");
-      setShowUpgrade(false);
-    }
-  }
+  const upgrade = upgradeQuery.data;
+  const showBusinessApply =
+    (isCustomerOnly(profile) || mode === "customer") && !canUseBusinessMode(profile);
 
   return (
     <MarketplaceShell cartCount={cartCount}>
@@ -270,10 +257,10 @@ export function ShopProfileScreen() {
       <section className="mt-5 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-bold">Account mode</p>
+            <p className="text-sm font-bold">Shopping account</p>
             <p className="text-xs capitalize text-muted-foreground">{mode}</p>
           </div>
-          <AccountModeSwitch />
+          {canUseBusinessMode(profile) ? <AccountModeSwitch /> : null}
         </div>
         {canUseBusinessMode(profile) && (
           <Button variant="outline" className="mt-3 w-full justify-start rounded-xl" asChild>
@@ -284,56 +271,38 @@ export function ShopProfileScreen() {
         )}
       </section>
 
-      {(isCustomerOnly(profile) || mode === "customer") && !canUseBusinessMode(profile) && (
+      {showBusinessApply && (
         <section className="mt-4">
-          {!showUpgrade ? (
-            <button
-              type="button"
-              className="w-full rounded-2xl border border-dashed border-border bg-card px-4 py-3 text-left text-sm"
-              onClick={() => setShowUpgrade(true)}
-            >
-              <span className="font-bold">Want to sell on TIJAR?</span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">
-                Request a business account — tap to continue
-              </span>
-            </button>
-          ) : (
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-              <h2 className="font-extrabold">Sell as a business</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Same login for shopping. Admin approval required.
+          {upgrade?.status === "pending" ? (
+            <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
+              <p className="flex items-center gap-2 text-sm font-extrabold text-primary">
+                <Clock3 className="size-4" /> Business account pending
               </p>
-              <Input
-                className="mt-3 min-h-11 rounded-xl"
-                placeholder="Business name"
-                value={bizName}
-                onChange={(e) => setBizName(e.target.value)}
-              />
-              <Input
-                className="mt-2 min-h-11 rounded-xl"
-                placeholder="Location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              />
-              <div className="mt-3 flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="min-h-11 flex-1 rounded-xl"
-                  onClick={() => setShowUpgrade(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  className="min-h-11 flex-1 rounded-xl font-bold"
-                  disabled={busy}
-                  onClick={() => void requestUpgrade()}
-                >
-                  Submit
-                </Button>
-              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your application for <strong>{upgrade.business_name}</strong> is with admin for
+                approval. You stay on the shopping app until then.
+              </p>
+              <Button variant="outline" className="mt-3 w-full rounded-xl font-bold" asChild>
+                <Link to="/shop/business-apply">View application</Link>
+              </Button>
             </div>
+          ) : (
+            <Link
+              to="/shop/business-apply"
+              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30"
+            >
+              <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Store className="size-6" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <p className="font-extrabold">Business account</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Add shop details, location & photo — then request admin approval. Not a dashboard
+                  yet.
+                </p>
+              </span>
+              <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+            </Link>
           )}
         </section>
       )}

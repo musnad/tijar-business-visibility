@@ -423,19 +423,111 @@ export async function countFavoriteProducts(profileId: string): Promise<number> 
   return count ?? 0;
 }
 
+export type BusinessUpgradeRequest = {
+  id: string;
+  profile_id: string;
+  business_name: string;
+  location: string | null;
+  phone: string | null;
+  note: string | null;
+  description: string | null;
+  category_id: string | null;
+  shop_image_url: string | null;
+  whatsapp: string | null;
+  state: string | null;
+  city: string | null;
+  street: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  public_location_label: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+};
+
+export async function fetchMyBusinessUpgradeRequest(profileId: string): Promise<{
+  request: BusinessUpgradeRequest | null;
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("business_upgrade_requests")
+    .select("*")
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return { request: null, error: error.message };
+  return { request: (data as BusinessUpgradeRequest | null) ?? null, error: null };
+}
+
+export async function uploadUpgradeShopImage(
+  profileId: string,
+  file: File,
+): Promise<{ publicUrl: string | null; error: string | null }> {
+  if (!file.type.startsWith("image/")) {
+    return { publicUrl: null, error: "Use a JPG, PNG, WEBP, or GIF photo." };
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return { publicUrl: null, error: "Photo is too large. Use an image under 5 MB." };
+  }
+  const supabase = getSupabaseBrowserClient();
+  const extRaw = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const ext = ["jpg", "jpeg", "png", "webp", "gif"].includes(extRaw)
+    ? extRaw === "jpeg"
+      ? "jpg"
+      : extRaw
+    : "jpg";
+  const path = `${profileId}/shop.${ext}`;
+  const { error } = await supabase.storage.from("upgrade-shop-images").upload(path, file, {
+    upsert: true,
+    contentType: file.type || `image/${ext === "jpg" ? "jpeg" : ext}`,
+  });
+  if (error) {
+    if (error.message.toLowerCase().includes("bucket not found")) {
+      return {
+        publicUrl: null,
+        error: "Shop image storage is not set up yet. Apply migration 000015 in Supabase.",
+      };
+    }
+    return { publicUrl: null, error: error.message };
+  }
+  const { data } = supabase.storage.from("upgrade-shop-images").getPublicUrl(path);
+  return { publicUrl: data.publicUrl, error: null };
+}
+
 export async function requestBusinessUpgrade(input: {
   profileId: string;
   businessName: string;
-  location?: string;
-  phone?: string;
+  description: string;
+  categoryId: string;
+  location: string;
+  street: string;
+  city: string;
+  state: string;
+  phone: string;
+  whatsapp?: string;
+  shopImageUrl: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  publicLocationLabel?: string;
   note?: string;
 }): Promise<{ error: string | null }> {
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase.from("business_upgrade_requests").insert({
     profile_id: input.profileId,
     business_name: input.businessName.trim(),
-    location: input.location?.trim() || null,
-    phone: input.phone?.trim() || null,
+    description: input.description.trim(),
+    category_id: input.categoryId,
+    location: input.location.trim(),
+    street: input.street.trim(),
+    city: input.city.trim(),
+    state: input.state.trim(),
+    phone: input.phone.trim(),
+    whatsapp: input.whatsapp?.trim() || null,
+    shop_image_url: input.shopImageUrl,
+    latitude: input.latitude ?? null,
+    longitude: input.longitude ?? null,
+    public_location_label: input.publicLocationLabel?.trim() || null,
     note: input.note?.trim() || null,
     status: "pending",
   });
