@@ -90,11 +90,12 @@ export function CheckoutScreen() {
       return;
     }
 
-    // Development / unconfigured provider: clearly labeled TEST payment
     for (const order of placed.orders) {
       const paid = await completeTestPayment(order.id);
       if (paid.error) {
-        toast.message(`Order ${order.order_number} created — payment pending (test mode failed: ${paid.error})`);
+        toast.message(
+          `Order ${order.order_number} created — payment pending (test mode failed: ${paid.error})`,
+        );
       }
     }
 
@@ -108,8 +109,8 @@ export function CheckoutScreen() {
   if (!profile) {
     return (
       <MarketplaceShell>
-        <p className="text-center">
-          <Link to="/login" className="font-bold text-teal-800">
+        <p className="text-center text-sm">
+          <Link to="/login" className="font-bold text-primary">
             Sign in
           </Link>{" "}
           to checkout.
@@ -121,11 +122,12 @@ export function CheckoutScreen() {
   return (
     <MarketplaceShell cartCount={items.reduce((n, i) => n + Number(i.quantity), 0)}>
       <h1 className="text-xl font-extrabold">Checkout</h1>
-      <p className="mt-1 text-xs text-amber-800">
-        Payment is in <strong>TEST MODE</strong> until Paystack/Flutterwave is configured. This is not a real charge.
+      <p className="mt-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        Payment is in <strong>TEST MODE</strong> until Paystack/Flutterwave is configured. This is
+        not a real charge.
       </p>
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-4">
+      <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <p className="text-sm font-bold">Delivery method</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <Button
@@ -148,18 +150,48 @@ export function CheckoutScreen() {
       </section>
 
       {fulfilment === "seller_delivery" && (
-        <section className="mt-4 space-y-2 rounded-2xl border border-border bg-white p-4">
+        <section className="mt-4 space-y-2 rounded-2xl border border-border bg-card p-4 shadow-sm">
           <p className="text-sm font-bold">Delivery address</p>
-          <Input placeholder="Full name" value={addr.full_name} onChange={(e) => setAddr({ ...addr, full_name: e.target.value })} />
-          <Input placeholder="Phone" value={addr.phone} onChange={(e) => setAddr({ ...addr, phone: e.target.value })} />
-          <Input placeholder="State" value={addr.state} onChange={(e) => setAddr({ ...addr, state: e.target.value })} />
-          <Input placeholder="City / town" value={addr.city} onChange={(e) => setAddr({ ...addr, city: e.target.value })} />
-          <Input placeholder="LGA" value={addr.lga} onChange={(e) => setAddr({ ...addr, lga: e.target.value })} />
-          <Input placeholder="Street address" value={addr.street} onChange={(e) => setAddr({ ...addr, street: e.target.value })} />
+          <Input
+            placeholder="Full name"
+            value={addr.full_name}
+            onChange={(e) => setAddr({ ...addr, full_name: e.target.value })}
+            className="min-h-11 rounded-xl"
+          />
+          <Input
+            placeholder="Phone"
+            value={addr.phone}
+            onChange={(e) => setAddr({ ...addr, phone: e.target.value })}
+            className="min-h-11 rounded-xl"
+          />
+          <Input
+            placeholder="State"
+            value={addr.state}
+            onChange={(e) => setAddr({ ...addr, state: e.target.value })}
+            className="min-h-11 rounded-xl"
+          />
+          <Input
+            placeholder="City / town"
+            value={addr.city}
+            onChange={(e) => setAddr({ ...addr, city: e.target.value })}
+            className="min-h-11 rounded-xl"
+          />
+          <Input
+            placeholder="LGA"
+            value={addr.lga}
+            onChange={(e) => setAddr({ ...addr, lga: e.target.value })}
+            className="min-h-11 rounded-xl"
+          />
+          <Input
+            placeholder="Street address"
+            value={addr.street}
+            onChange={(e) => setAddr({ ...addr, street: e.target.value })}
+            className="min-h-11 rounded-xl"
+          />
         </section>
       )}
 
-      <section className="mt-4 rounded-2xl border border-border bg-white p-4">
+      <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <p className="text-sm font-bold">Order review</p>
         <ul className="mt-2 space-y-1 text-sm">
           {items.map((i) => (
@@ -167,16 +199,18 @@ export function CheckoutScreen() {
               <span className="truncate">
                 {i.product_name} × {i.quantity}
               </span>
-              <span className="font-semibold">{formatNgn(Number(i.quantity) * Number(i.unit_price))}</span>
+              <span className="font-semibold">
+                {formatNgn(Number(i.quantity) * Number(i.unit_price))}
+              </span>
             </li>
           ))}
         </ul>
         <div className="mt-3 flex justify-between border-t border-border pt-3 font-extrabold">
           <span>Total</span>
-          <span>{formatNgn(subtotal)}</span>
+          <span className="text-primary">{formatNgn(subtotal)}</span>
         </div>
         <Input
-          className="mt-3"
+          className="mt-3 min-h-11 rounded-xl"
           placeholder="Note to sellers (optional)"
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -185,7 +219,7 @@ export function CheckoutScreen() {
 
       <Button
         type="button"
-        className="mt-4 min-h-12 w-full rounded-xl bg-teal-700 font-bold hover:bg-teal-800"
+        className="mt-4 min-h-12 w-full rounded-xl font-bold"
         disabled={busy || items.length === 0}
         onClick={() => void pay()}
       >

@@ -3,19 +3,15 @@
 import { Link } from "@tanstack/react-router";
 import { ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/auth-context";
 import { addToCart } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import type { PublicProduct } from "@/types/database";
-import { useQueryClient } from "@tanstack/react-query";
 
-export function ProductCard({
-  product,
-}: {
-  product: PublicProduct & { business_name?: string; business_slug?: string };
-}) {
+export function ProductCard({ product }: { product: PublicProduct }) {
   const { profile, session } = useAuth();
   const queryClient = useQueryClient();
 
@@ -49,7 +45,7 @@ export function ProductCard({
     <Link
       to="/shop/p/$productId"
       params={{ productId: product.id }}
-      className="group overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition hover:shadow-md"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:border-primary/30"
     >
       <div className="aspect-square bg-muted">
         {product.image_url ? (
@@ -59,16 +55,23 @@ export function ProductCard({
           <div className="flex size-full items-center justify-center text-xs text-muted-foreground">No photo</div>
         )}
       </div>
-      <div className="p-2.5">
-        <p className="line-clamp-2 text-sm font-bold leading-snug">{product.name}</p>
-        <p className="mt-1 text-sm font-extrabold text-teal-800">
+      <div className="flex flex-1 flex-col p-2.5">
+        <p className="line-clamp-2 text-sm font-bold leading-snug text-foreground">{product.name}</p>
+        <p className="mt-1 text-sm font-extrabold text-primary">
           {product.sale_price != null ? formatNgn(Number(product.sale_price)) : "Ask seller"}
         </p>
-        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{product.business_name ?? "TIJAR shop"}</p>
+        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+          {product.business_name ?? "TIJAR shop"}
+        </p>
+        {product.category_name ? (
+          <p className="mt-0.5 truncate text-[10px] font-medium text-muted-foreground/80">
+            {product.category_name}
+          </p>
+        ) : null}
         <Button
           type="button"
           size="sm"
-          className="mt-2 h-8 w-full rounded-xl text-xs font-bold"
+          className="mt-auto h-8 w-full rounded-xl text-xs font-bold"
           onClick={(e) => void quickAdd(e)}
         >
           <ShoppingCart className="mr-1 size-3.5" /> Add

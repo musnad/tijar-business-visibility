@@ -111,6 +111,8 @@ export type Business = {
   moderation_status: ListingModerationStatus;
   moderation_notes: string | null;
   published_at: string | null;
+  /** Informal micro-traders / artisans — Marketplace lists these only. */
+  is_informal?: boolean;
   created_at?: string;
 };
 
@@ -132,6 +134,7 @@ export type PublicBusiness = {
   opening_hours: Record<string, string>;
   is_verified: boolean;
   verification_status: string;
+  is_informal?: boolean;
   distance_km?: number | null;
   product_names?: string[];
 };
@@ -146,6 +149,11 @@ export type PublicProduct = {
   unit: string;
   image_url: string | null;
   is_available: boolean;
+  is_informal?: boolean;
+  business_name?: string | null;
+  business_slug?: string | null;
+  business_logo_url?: string | null;
+  category_name?: string | null;
 };
 
 export type BusinessEnquiry = {

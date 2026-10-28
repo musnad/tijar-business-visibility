@@ -33,6 +33,7 @@ export function PublishBusinessForm({ business }: { business: Business }) {
   };
   const [slug, setSlug] = useState(business.public_slug ?? slugifyBusinessName(business.business_name));
   const [published, setPublished] = useState(business.is_published);
+  const [isInformal, setIsInformal] = useState(business.is_informal !== false);
   const [phone, setPhone] = useState(business.public_phone ?? "");
   const [whatsapp, setWhatsapp] = useState(business.public_whatsapp ?? "");
   const [lat, setLat] = useState<string>(business.latitude?.toString() ?? "");
@@ -117,6 +118,7 @@ export function PublishBusinessForm({ business }: { business: Business }) {
       longitude: lngNum,
       publicLocationLabel: locationLabel,
       locationApproved: approved,
+      isInformal,
     });
     setSaving(false);
     if (error) toast.error(error);
@@ -139,6 +141,22 @@ export function PublishBusinessForm({ business }: { business: Business }) {
       <label className="flex items-center gap-3 rounded-2xl border border-border p-4">
         <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} className="size-5" />
         <span><strong>{t("app.publish.publishTitle")}</strong><br /><span className="text-sm text-muted-foreground">{t("app.publish.publishSubtitle")}</span></span>
+      </label>
+
+      <label className="flex items-center gap-3 rounded-2xl border border-border p-4">
+        <input
+          type="checkbox"
+          checked={isInformal}
+          onChange={(e) => setIsInformal(e.target.checked)}
+          className="size-5"
+        />
+        <span>
+          <strong>Informal business (Marketplace)</strong>
+          <br />
+          <span className="text-sm text-muted-foreground">
+            Only informal shops list products on TIJAR Marketplace. Uncheck if this is a formal registered business.
+          </span>
+        </span>
       </label>
 
       <div>

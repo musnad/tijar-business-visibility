@@ -124,6 +124,8 @@ export type UpdateListingInput = {
   longitude: number | null;
   publicLocationLabel?: string;
   locationApproved: boolean;
+  /** When true, products appear on TIJAR Marketplace (informal sellers only). */
+  isInformal?: boolean;
 };
 
 export async function updateBusinessListing(
@@ -131,20 +133,24 @@ export async function updateBusinessListing(
   input: UpdateListingInput,
 ): Promise<{ business: Business | null; error: string | null }> {
   const supabase = getSupabaseBrowserClient();
+  const patch: Record<string, unknown> = {
+    public_slug: input.publicSlug.trim() || null,
+    is_published: input.isPublished,
+    public_phone: input.publicPhone?.trim() || null,
+    public_whatsapp: input.publicWhatsapp?.trim() || null,
+    opening_hours: input.openingHours,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    public_location_label: input.publicLocationLabel?.trim() || null,
+    location_approved: input.locationApproved,
+    published_at: input.isPublished ? new Date().toISOString() : null,
+  };
+  if (typeof input.isInformal === "boolean") {
+    patch.is_informal = input.isInformal;
+  }
   const { data, error } = await supabase
     .from("businesses")
-    .update({
-      public_slug: input.publicSlug.trim() || null,
-      is_published: input.isPublished,
-      public_phone: input.publicPhone?.trim() || null,
-      public_whatsapp: input.publicWhatsapp?.trim() || null,
-      opening_hours: input.openingHours,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      public_location_label: input.publicLocationLabel?.trim() || null,
-      location_approved: input.locationApproved,
-      published_at: input.isPublished ? new Date().toISOString() : null,
-    })
+    .update(patch)
     .eq("id", businessId)
     .select("*")
     .single();

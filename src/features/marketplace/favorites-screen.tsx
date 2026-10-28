@@ -14,13 +14,13 @@ export function FavoritesScreen() {
       <h1 className="text-xl font-extrabold">Favorites</h1>
       {!session ? (
         <p className="mt-4 text-sm">
-          <Link to="/login" className="font-bold text-teal-800">
+          <Link to="/login" className="font-bold text-primary">
             Sign in
           </Link>{" "}
           to save products.
         </p>
       ) : (
-        <div className="mt-4 rounded-2xl border border-dashed border-border bg-white p-6 text-center">
+        <div className="mt-4 rounded-2xl border border-dashed border-border bg-card p-6 text-center">
           <p className="text-sm text-muted-foreground">
             Tap the heart on a product to save it. Favorites sync to your TIJAR account.
           </p>

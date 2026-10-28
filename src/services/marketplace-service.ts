@@ -7,65 +7,114 @@ import type {
   PublicProduct,
 } from "@/types/database";
 
+const MARKETPLACE_PRODUCT_SELECT =
+  "id, business_id, name, kind, description, sale_price, unit, image_url, is_available, is_informal, business_name, business_slug, business_logo_url, category_name";
+
+const MARKETPLACE_PRODUCT_SELECT_LEGACY =
+  "id, business_id, name, kind, description, sale_price, unit, image_url, is_available";
+
 export async function fetchMarketplaceProducts(limit = 120): Promise<{
-  data: (PublicProduct & { business_name?: string; business_slug?: string })[];
+  data: PublicProduct[];
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("public_business_products")
-    .select("id, business_id, name, kind, description, sale_price, unit, image_url, is_available")
+    .select(MARKETPLACE_PRODUCT_SELECT)
     .eq("is_available", true)
     .order("name")
     .limit(limit);
-  if (error) return { data: [], error: error.message };
 
-  const { data: listings } = await supabase
-    .from("public_business_listings")
-    .select("id, slug, business_name")
-    .limit(300);
-  const byId = new Map((listings ?? []).map((b) => [b.id as string, b]));
+  // Fallback before informal marketplace migration is applied.
+  if (error) {
+    const legacy = await supabase
+      .from("public_business_products")
+      .select(MARKETPLACE_PRODUCT_SELECT_LEGACY)
+      .eq("is_available", true)
+      .order("name")
+      .limit(limit);
+    if (legacy.error) return { data: [], error: legacy.error.message };
+    data = legacy.data;
+    error = null;
+
+    const { data: listings } = await supabase
+      .from("public_business_listings")
+      .select("id, slug, business_name, is_informal")
+      .limit(400);
+    const byId = new Map((listings ?? []).map((b) => [b.id as string, b]));
+    return {
+      data: (data ?? [])
+        .map((p) => {
+          const b = byId.get(p.business_id as string);
+          return {
+            ...(p as PublicProduct),
+            business_name: (b?.business_name as string) ?? undefined,
+            business_slug: (b?.slug as string) ?? undefined,
+            is_informal: (b?.is_informal as boolean | undefined) ?? true,
+          };
+        })
+        .filter((p) => p.is_informal !== false),
+      error: null,
+    };
+  }
 
   return {
-    data: (data ?? []).map((p) => {
-      const b = byId.get(p.business_id as string);
-      return {
-        ...(p as PublicProduct),
-        business_name: (b?.business_name as string) ?? undefined,
-        business_slug: (b?.slug as string) ?? undefined,
-      };
-    }),
+    data: ((data ?? []) as PublicProduct[]).filter((p) => p.is_informal !== false),
     error: null,
   };
 }
 
 export async function fetchMarketplaceProduct(productId: string): Promise<{
-  product: (PublicProduct & { business_name?: string; business_slug?: string }) | null;
+  product: PublicProduct | null;
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("public_business_products")
-    .select("id, business_id, name, kind, description, sale_price, unit, image_url, is_available")
+    .select(MARKETPLACE_PRODUCT_SELECT)
     .eq("id", productId)
     .maybeSingle();
+
+  if (error) {
+    const legacy = await supabase
+      .from("public_business_products")
+      .select(MARKETPLACE_PRODUCT_SELECT_LEGACY)
+      .eq("id", productId)
+      .maybeSingle();
+    if (legacy.error) return { product: null, error: legacy.error.message };
+    data = legacy.data;
+    error = null;
+  }
+
   if (error) return { product: null, error: error.message };
   if (!data) return { product: null, error: null };
 
-  const { data: listing } = await supabase
-    .from("public_business_listings")
-    .select("id, slug, business_name, public_phone, public_whatsapp, location_text, is_verified")
-    .eq("id", data.business_id)
-    .maybeSingle();
+  const product = data as PublicProduct;
+  if (product.is_informal === false) {
+    return { product: null, error: "This product is not available on the informal marketplace." };
+  }
 
-  return {
-    product: {
-      ...(data as PublicProduct),
-      business_name: (listing?.business_name as string) ?? undefined,
-      business_slug: (listing?.slug as string) ?? undefined,
-    },
-    error: null,
-  };
+  if (!product.business_name || !product.business_slug) {
+    const { data: listing } = await supabase
+      .from("public_business_listings")
+      .select("id, slug, business_name, is_informal")
+      .eq("id", product.business_id)
+      .maybeSingle();
+    if (listing?.is_informal === false) {
+      return { product: null, error: "This product is not available on the informal marketplace." };
+    }
+    return {
+      product: {
+        ...product,
+        business_name: (listing?.business_name as string) ?? product.business_name,
+        business_slug: (listing?.slug as string) ?? product.business_slug,
+        is_informal: (listing?.is_informal as boolean | undefined) ?? product.is_informal ?? true,
+      },
+      error: null,
+    };
+  }
+
+  return { product, error: null };
 }
 
 async function getOrCreateActiveCart(profileId: string): Promise<{ cartId: string | null; error: string | null }> {

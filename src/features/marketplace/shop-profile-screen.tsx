@@ -23,7 +23,7 @@ export function ShopProfileScreen() {
   if (!session || !profile) {
     return (
       <MarketplaceShell>
-        <div className="rounded-2xl border border-border bg-white p-6 text-center">
+        <div className="rounded-2xl border border-border bg-card p-6 text-center">
           <p className="font-bold">Sign in to manage your profile</p>
           <Button className="mt-4 rounded-xl font-bold" asChild>
             <Link to="/login">Sign in</Link>
@@ -54,13 +54,15 @@ export function ShopProfileScreen() {
 
   return (
     <MarketplaceShell>
-      <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
-        <p className="text-xs font-bold uppercase text-muted-foreground">Customer profile</p>
+      <div className="dashboard-summary-card rounded-2xl p-5 text-primary-foreground shadow-lg">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-white/70">
+          Customer profile
+        </p>
         <h1 className="mt-1 text-xl font-extrabold">{profile.full_name || "TIJAR shopper"}</h1>
-        <p className="text-sm text-muted-foreground">{profile.email}</p>
-        <p className="mt-2 text-xs font-semibold capitalize text-teal-800">Account: {mode}</p>
+        <p className="mt-1 text-sm text-white/80">{profile.email}</p>
+        <p className="mt-2 text-xs font-semibold capitalize text-white/90">Account: {mode}</p>
         <div className="mt-4">
-          <AccountModeSwitch />
+          <AccountModeSwitch className="border-white/20 bg-white/10" />
         </div>
       </div>
 
@@ -82,19 +84,20 @@ export function ShopProfileScreen() {
       </div>
 
       {(isCustomerOnly(profile) || mode === "customer") && (
-        <section className="mt-6 rounded-2xl border border-border bg-white p-4">
+        <section className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
           <h2 className="font-extrabold">Upgrade to business</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sell on TIJAR after admin approval. You keep the same login for shopping.
+            Sell on TIJAR Marketplace as an informal business after admin approval. You keep the
+            same login for shopping.
           </p>
           <Input
-            className="mt-3"
+            className="mt-3 min-h-11 rounded-xl"
             placeholder="Business name"
             value={bizName}
             onChange={(e) => setBizName(e.target.value)}
           />
           <Input
-            className="mt-2"
+            className="mt-2 min-h-11 rounded-xl"
             placeholder="Location"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
