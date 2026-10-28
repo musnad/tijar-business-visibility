@@ -4,8 +4,15 @@ import type {
   CustomerAddress,
   MarketplaceOrder,
   MarketplaceOrderItem,
+  PublicBusiness,
   PublicProduct,
 } from "@/types/database";
+import { haversineKm } from "@/utils/discover";
+
+export type NearbyMarketplaceShop = PublicBusiness & {
+  distance_km: number;
+  products: PublicProduct[];
+};
 
 const MARKETPLACE_PRODUCT_SELECT =
   "id, business_id, name, kind, description, sale_price, unit, image_url, is_available, is_informal, business_name, business_slug, business_logo_url, category_name";
@@ -62,6 +69,61 @@ export async function fetchMarketplaceProducts(limit = 120): Promise<{
     data: ((data ?? []) as PublicProduct[]).filter((p) => p.is_informal !== false),
     error: null,
   };
+}
+
+/** Informal shops with products near a map centre — for purchase discovery. */
+export async function fetchNearbyMarketplaceShops(input: {
+  lat: number;
+  lng: number;
+  radiusKm?: number;
+  limit?: number;
+}): Promise<{ shops: NearbyMarketplaceShop[]; error: string | null }> {
+  const radiusKm = input.radiusKm ?? 25;
+  const centre = { lat: input.lat, lng: input.lng };
+
+  const [productsRes, listingsRes] = await Promise.all([
+    fetchMarketplaceProducts(200),
+    (async () => {
+      const supabase = getSupabaseBrowserClient();
+      return supabase
+        .from("public_business_listings")
+        .select(
+          "id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status, is_informal",
+        )
+        .limit(400);
+    })(),
+  ]);
+
+  if (productsRes.error) return { shops: [], error: productsRes.error };
+  if (listingsRes.error) return { shops: [], error: listingsRes.error.message };
+
+  const productsByBiz = new Map<string, PublicProduct[]>();
+  for (const p of productsRes.data) {
+    const list = productsByBiz.get(p.business_id) ?? [];
+    list.push(p);
+    productsByBiz.set(p.business_id, list);
+  }
+
+  const shops: NearbyMarketplaceShop[] = [];
+  for (const row of listingsRes.data ?? []) {
+    const listing = row as PublicBusiness;
+    if (listing.is_informal === false) continue;
+    if (!productsByBiz.has(listing.id)) continue;
+    if (typeof listing.latitude !== "number" || typeof listing.longitude !== "number") continue;
+    const distance_km = haversineKm(centre, {
+      lat: listing.latitude,
+      lng: listing.longitude,
+    });
+    if (distance_km > radiusKm) continue;
+    shops.push({
+      ...listing,
+      distance_km,
+      products: productsByBiz.get(listing.id) ?? [],
+    });
+  }
+
+  shops.sort((a, b) => a.distance_km - b.distance_km);
+  return { shops: shops.slice(0, input.limit ?? 40), error: null };
 }
 
 export async function fetchMarketplaceProduct(productId: string): Promise<{

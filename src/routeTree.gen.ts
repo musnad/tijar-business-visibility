@@ -19,6 +19,7 @@ import { Route as ShopRouteImport } from './routes/shop'
 import { Route as ShopCartRouteImport } from './routes/shop/cart'
 import { Route as ShopCheckoutRouteImport } from './routes/shop/checkout'
 import { Route as ShopFavoritesRouteImport } from './routes/shop/favorites'
+import { Route as ShopNearbyRouteImport } from './routes/shop/nearby'
 import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
 import { Route as ShopProfileRouteImport } from './routes/shop/profile'
 import { Route as ShopOrdersOrderIdRouteImport } from './routes/shop/orders.$orderId'
@@ -120,6 +121,11 @@ const ShopCheckoutRoute = ShopCheckoutRouteImport.update({
 const ShopFavoritesRoute = ShopFavoritesRouteImport.update({
   id: '/favorites',
   path: '/favorites',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopNearbyRoute = ShopNearbyRouteImport.update({
+  id: '/nearby',
+  path: '/nearby',
   getParentRoute: () => ShopRoute,
 } as any)
 const ShopOrdersRoute = ShopOrdersRouteImport.update({
@@ -389,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/shop/cart': typeof ShopCartRoute
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/nearby': typeof ShopNearbyRoute
   '/shop/orders': typeof ShopOrdersRoute
   '/shop/profile': typeof ShopProfileRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
@@ -451,6 +458,7 @@ export interface FileRoutesByTo {
   '/shop/cart': typeof ShopCartRoute
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/nearby': typeof ShopNearbyRoute
   '/shop/orders': typeof ShopOrdersRoute
   '/shop/profile': typeof ShopProfileRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
@@ -513,6 +521,7 @@ export interface FileRoutesById {
   '/shop/cart': typeof ShopCartRoute
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/nearby': typeof ShopNearbyRoute
   '/shop/orders': typeof ShopOrdersRoute
   '/shop/profile': typeof ShopProfileRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
@@ -578,6 +587,7 @@ export interface FileRouteTypes {
     | '/shop/cart'
     | '/shop/checkout'
     | '/shop/favorites'
+    | '/shop/nearby'
     | '/shop/orders'
     | '/shop/profile'
     | '/shop/orders/$orderId'
@@ -640,6 +650,7 @@ export interface FileRouteTypes {
     | '/shop/cart'
     | '/shop/checkout'
     | '/shop/favorites'
+    | '/shop/nearby'
     | '/shop/orders'
     | '/shop/profile'
     | '/shop/orders/$orderId'
@@ -701,6 +712,7 @@ export interface FileRouteTypes {
     | '/shop/cart'
     | '/shop/checkout'
     | '/shop/favorites'
+    | '/shop/nearby'
     | '/shop/orders'
     | '/shop/profile'
     | '/shop/orders/$orderId'
@@ -759,6 +771,7 @@ interface ShopRouteChildren {
   ShopCartRoute: typeof ShopCartRoute
   ShopCheckoutRoute: typeof ShopCheckoutRoute
   ShopFavoritesRoute: typeof ShopFavoritesRoute
+  ShopNearbyRoute: typeof ShopNearbyRoute
   ShopOrdersRoute: typeof ShopOrdersRoute
   ShopProfileRoute: typeof ShopProfileRoute
   ShopOrdersOrderIdRoute: typeof ShopOrdersOrderIdRoute
@@ -769,6 +782,7 @@ const ShopRouteChildren: ShopRouteChildren = {
   ShopCartRoute: ShopCartRoute,
   ShopCheckoutRoute: ShopCheckoutRoute,
   ShopFavoritesRoute: ShopFavoritesRoute,
+  ShopNearbyRoute: ShopNearbyRoute,
   ShopOrdersRoute: ShopOrdersRoute,
   ShopProfileRoute: ShopProfileRoute,
   ShopOrdersOrderIdRoute: ShopOrdersOrderIdRoute,
@@ -872,6 +886,13 @@ declare module '@tanstack/react-router' {
       path: '/favorites'
       fullPath: '/shop/favorites'
       preLoaderRoute: typeof ShopFavoritesRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/nearby': {
+      id: '/shop/nearby'
+      path: '/nearby'
+      fullPath: '/shop/nearby'
+      preLoaderRoute: typeof ShopNearbyRouteImport
       parentRoute: typeof ShopRoute
     }
     '/shop/orders': {

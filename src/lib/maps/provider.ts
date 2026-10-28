@@ -1,10 +1,10 @@
 /**
  * Maps provider adapter.
  *
- * Default provider: OpenStreetMap services (no API key required), chosen
- * because the project has no maps credentials. Used for owner geocoding
- * (Nominatim) and external "Directions" links only — Tijar does not embed
- * a map view (removed by product decision, Oct 2026).
+ * Default provider: OpenStreetMap (no API key). Used for:
+ * - Owner geocoding (Nominatim)
+ * - Embedded nearby marketplace map tiles (Leaflet)
+ * - External "Directions" links
  *
  * To switch providers (e.g. Google Maps), implement this interface and set
  * VITE_MAP_PROVIDER=google + VITE_GOOGLE_MAPS_API_KEY (browser key must be

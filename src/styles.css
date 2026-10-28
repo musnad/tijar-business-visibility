@@ -1053,6 +1053,18 @@ html.tijar-android-webview .app-bottom-nav {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
 }
 
+/* Leaflet map — mobile touch + avoid iOS text zoom conflicts */
+.leaflet-container {
+  font: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.leaflet-control-attribution {
+  font-size: 10px !important;
+  max-width: 70%;
+}
+
 /* Web auth (distinct from native app login UI) */
 .web-auth-brand-gradient {
   background: linear-gradient(145deg, #001b3a 0%, #003556 45%, #00a896 100%);

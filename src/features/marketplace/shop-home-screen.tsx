@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Search, Store } from "lucide-react";
+import { MapPin, Search, Store } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -92,20 +92,31 @@ export function ShopHomeScreen() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search products or shops…"
-            className="min-h-11 rounded-xl border-0 bg-background pl-9 text-foreground shadow-sm"
+            className="min-h-11 rounded-xl border-0 bg-background pl-9 text-base text-foreground shadow-sm"
             aria-label="Search marketplace"
           />
         </div>
+        <Button
+          className="mt-3 min-h-11 w-full rounded-xl border-0 bg-white/15 font-bold text-white hover:bg-white/25"
+          asChild
+        >
+          <Link to="/shop/nearby">
+            <MapPin className="mr-1.5 size-4" /> Discover nearby products on map
+          </Link>
+        </Button>
       </section>
 
       <section className="mt-5">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-extrabold">Categories</h2>
-          <Link to="/discover" className="inline-flex items-center gap-1 text-xs font-bold text-primary">
-            <Store className="size-3.5" /> Find shops
+          <Link
+            to="/shop/nearby"
+            className="inline-flex items-center gap-1 text-xs font-bold text-primary"
+          >
+            <Store className="size-3.5" /> Near me
           </Link>
         </div>
-        <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        <div className="mt-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {CATEGORY_CARDS.map((c) => {
             const active = categoryFilter === c.key;
             return (

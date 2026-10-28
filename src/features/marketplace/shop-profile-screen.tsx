@@ -6,8 +6,8 @@ import {
   ChevronRight,
   Heart,
   LogOut,
+  MapPin,
   Package,
-  ShoppingBag,
   Store,
   ShoppingCart,
 } from "lucide-react";
@@ -254,15 +254,15 @@ export function ShopProfileScreen() {
           </span>
         </Link>
         <Link
-          to="/shop"
+          to="/shop/nearby"
           className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
         >
           <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <ShoppingBag className="size-5" />
+            <MapPin className="size-5" />
           </span>
           <span>
-            <p className="text-sm font-bold">Shop</p>
-            <p className="text-[11px] text-muted-foreground">Browse products</p>
+            <p className="text-sm font-bold">Near me</p>
+            <p className="text-[11px] text-muted-foreground">Map & buy</p>
           </span>
         </Link>
       </section>

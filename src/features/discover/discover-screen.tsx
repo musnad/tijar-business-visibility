@@ -95,11 +95,16 @@ export function DiscoverScreen() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-extrabold sm:text-3xl">{t("app.discover.title")}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t("app.discover.subtitle")}
-      </p>
+    <div className="mx-auto w-full max-w-lg px-4 py-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-w-6xl sm:px-6 sm:py-8">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-extrabold sm:text-3xl">{t("app.discover.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("app.discover.subtitle")}</p>
+        </div>
+        <Button size="sm" className="mt-0.5 shrink-0 rounded-xl font-bold" asChild>
+          <Link to="/shop/nearby">Map</Link>
+        </Button>
+      </div>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
@@ -115,7 +120,7 @@ export function DiscoverScreen() {
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          className="min-h-11 rounded-xl border border-input bg-background px-3 text-sm"
+          className="min-h-11 w-full rounded-xl border border-input bg-background px-3 text-sm sm:w-auto"
           aria-label={t("app.discover.categoryAriaLabel")}
         >
           <option value="">{t("app.discover.allCategories")}</option>
@@ -126,7 +131,7 @@ export function DiscoverScreen() {
         <select
           value={searchLang}
           onChange={(e) => { setSearchLang(e.target.value as NkenneLanguage); setTranslatedQuery(null); setSearchNote(""); }}
-          className="min-h-11 rounded-xl border border-input bg-background px-3 text-sm"
+          className="min-h-11 w-full rounded-xl border border-input bg-background px-3 text-sm sm:w-auto"
           aria-label={t("app.discover.searchLanguageAriaLabel")}
         >
           {NKENNE_LANGUAGES.map((l) => (
@@ -141,8 +146,8 @@ export function DiscoverScreen() {
       </div>
       {searchNote && <p className="mt-2 text-xs text-muted-foreground">{searchNote}</p>}
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" className="min-h-10 rounded-xl" onClick={useMyLocation}>
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
+        <Button type="button" variant="outline" className="min-h-10 shrink-0 rounded-xl" onClick={useMyLocation}>
           <MapPin className="mr-1.5 size-4" /> {t("app.discover.nearMe")}
         </Button>
         <select
@@ -195,11 +200,10 @@ export function DiscoverScreen() {
         <p className="mt-5 text-sm text-muted-foreground">{t(results.length === 1 ? "app.discover.shopFound" : "app.discover.shopsFound").replace("{count}", String(results.length))}</p>
       )}
 
-      {(
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {results.map((b) => (
             <li key={b.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              <Link to="/b/$slug" params={{ slug: b.slug }} className="block p-4">
+              <Link to="/b/$slug" params={{ slug: b.slug }} className="block p-4 active:bg-muted/30">
                 <div className="flex items-start gap-3">
                   {b.logo_url ? (
                     <img src={b.logo_url} alt="" loading="lazy" className="size-12 rounded-xl object-cover" />
@@ -213,26 +217,33 @@ export function DiscoverScreen() {
                     </p>
                     <p className="text-xs text-muted-foreground">{b.category_name ?? t("app.discover.defaultCategory")}</p>
                     <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                      <MapPin className="size-3.5" />
-                      {b.public_location_label ?? b.location_text ?? t("app.discover.areaOnShopPage")}
-                      {b.distance_km != null && <> · {formatDistance(b.distance_km)}</>}
+                      <MapPin className="size-3.5 shrink-0" />
+                      <span className="truncate">
+                        {b.public_location_label ?? b.location_text ?? t("app.discover.areaOnShopPage")}
+                        {b.distance_km != null && <> · {formatDistance(b.distance_km)}</>}
+                      </span>
                     </p>
                   </div>
                 </div>
                 {b.description && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{b.description}</p>}
               </Link>
-              <div className="flex gap-2 border-t border-border px-4 py-2.5">
+              <div className="flex flex-wrap gap-3 border-t border-border px-4 py-2.5">
                 {b.public_phone && (
-                  <a href={`tel:${b.public_phone}`} className="flex items-center gap-1 text-xs font-semibold text-primary"><Phone className="size-3.5" /> {t("app.discover.call")}</a>
+                  <a href={`tel:${b.public_phone}`} className="flex min-h-10 items-center gap-1 text-xs font-semibold text-primary"><Phone className="size-3.5" /> {t("app.discover.call")}</a>
                 )}
                 {b.public_whatsapp && (
-                  <a href={`https://wa.me/${b.public_whatsapp.replace(/[^0-9]/g, "")}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs font-semibold text-primary"><MessageCircle className="size-3.5" /> WhatsApp</a>
+                  <a href={`https://wa.me/${b.public_whatsapp.replace(/[^0-9]/g, "")}`} target="_blank" rel="noreferrer" className="flex min-h-10 items-center gap-1 text-xs font-semibold text-primary"><MessageCircle className="size-3.5" /> WhatsApp</a>
                 )}
+                <Link
+                  to="/shop/nearby"
+                  className="ml-auto flex min-h-10 items-center gap-1 text-xs font-bold text-primary"
+                >
+                  Buy nearby
+                </Link>
               </div>
             </li>
           ))}
         </ul>
-      )}
 
       {listingsQuery.data && results.length === 0 && (
         <div className="mt-8 rounded-2xl border border-dashed border-border p-6 text-center">

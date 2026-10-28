@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Heart, Home, Package, ShoppingCart, UserRound } from "lucide-react";
+import { Home, MapPin, Package, ShoppingCart, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { TijarLogo } from "@/components/brand-logo";
@@ -25,11 +25,11 @@ function MarketplaceTopBar() {
   return (
     <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 pb-3">
       <Link
-        to="/discover"
-        className="flex size-10 items-center justify-center rounded-full border border-border bg-card text-[10px] font-bold text-muted-foreground"
-        aria-label="Discover shops"
+        to="/shop/nearby"
+        className="flex size-10 items-center justify-center rounded-full border border-border bg-card text-primary"
+        aria-label="Nearby products map"
       >
-        Map
+        <MapPin className="size-5" />
       </Link>
 
       <div className="flex justify-center px-1">
@@ -65,16 +65,19 @@ export function MarketplaceShell({
   children,
   cartCount = 0,
   hideTopBar = false,
+  mapLayout = false,
 }: {
   children: ReactNode;
   cartCount?: number;
   hideTopBar?: boolean;
+  /** Tighter padding for full-bleed map screens on mobile. */
+  mapLayout?: boolean;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const tabs = [
     { to: "/shop", label: "Home", icon: Home, exact: true },
-    { to: "/shop/favorites", label: "Saved", icon: Heart },
+    { to: "/shop/nearby", label: "Near", icon: MapPin },
     { to: "/shop/cart", label: "Cart", icon: ShoppingCart, badge: cartCount },
     { to: "/shop/orders", label: "Orders", icon: Package },
     { to: "/shop/profile", label: "Me", icon: UserRound },
@@ -82,13 +85,18 @@ export function MarketplaceShell({
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <main className="mx-auto w-full max-w-lg flex-1 px-4 pb-4 pt-3 sm:px-5">
+      <main
+        className={cn(
+          "mx-auto w-full max-w-lg flex-1 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5",
+          mapLayout ? "px-3 pb-2" : "px-4 pb-4",
+        )}
+      >
         {!hideTopBar && <MarketplaceTopBar />}
         {children}
       </main>
 
-      <nav className="app-bottom-nav sticky bottom-0 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-sm">
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0 px-2">
+      <nav className="app-bottom-nav sticky bottom-0 z-40 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-sm">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0 px-1 sm:px-2">
           {tabs.map((tab) => {
             const active =
               "exact" in tab && tab.exact
@@ -100,7 +108,7 @@ export function MarketplaceShell({
                 key={tab.to}
                 to={tab.to}
                 className={cn(
-                  "app-tab relative flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 text-[10px] font-semibold",
+                  "app-tab relative flex min-h-[3.5rem] touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-semibold",
                   active ? "app-tab-active text-primary" : "text-muted-foreground",
                 )}
               >
