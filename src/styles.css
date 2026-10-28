@@ -666,6 +666,18 @@
   );
 }
 
+/* Marketplace home hero — deep teal market atmosphere */
+.marketplace-hero {
+  background:
+    radial-gradient(ellipse 90% 80% at 100% 0%, oklch(0.48 0.1 165 / 0.55), transparent 55%),
+    linear-gradient(
+      145deg,
+      oklch(0.28 0.055 210) 0%,
+      oklch(0.34 0.07 190) 42%,
+      oklch(0.4 0.09 165) 100%
+    );
+}
+
 .dashboard-expense-card {
   background: linear-gradient(
     135deg,
