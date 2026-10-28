@@ -14,7 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
 import { SiteFooter, SiteHeader } from "../components/site-shell";
-import { AuthProvider } from "@/features/auth/auth-context";
+import { AuthProvider, useAuth } from "@/features/auth/auth-context";
 import { SitePreferencesProvider, useTranslation } from "../lib/i18n/context";
 import { enMessages } from "../lib/i18n/messages/en";
 
@@ -140,31 +140,50 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** Paths that use their own chrome (dashboard / shop / auth) — never show marketing header/footer. */
+function isAppChromePath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/app") ||
+    pathname.startsWith("/shop") ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname.startsWith("/login/") ||
+    pathname.startsWith("/register/")
+  );
+}
+
+function RootLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { session } = useAuth();
+
+  // Logged-in users on product surfaces only see app/shop UI — no marketing nav/footer.
+  const isLoggedInProductSurface =
+    Boolean(session) &&
+    (pathname.startsWith("/discover") ||
+      pathname.startsWith("/translate") ||
+      pathname.startsWith("/b/"));
+
+  const showMarketingShell = !isAppChromePath(pathname) && !isLoggedInProductSurface;
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {showMarketingShell && <SiteHeader />}
+      <main id="main-content">
+        <Outlet />
+      </main>
+      {showMarketingShell && <SiteFooter />}
+    </div>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const { isAppRoute, isWebAuthRoute } = useRouterState({
-    select: (s) => {
-      const path = s.location.pathname;
-      return {
-        isAppRoute: path.startsWith("/app"),
-        isWebAuthRoute: path === "/login" || path === "/register",
-      };
-    },
-  });
-
-  const showMarketingShell = !isAppRoute && !isWebAuthRoute;
 
   return (
     <QueryClientProvider client={queryClient}>
       <SitePreferencesProvider>
         <AuthProvider>
-          <div className="min-h-screen bg-background text-foreground">
-            {showMarketingShell && <SiteHeader />}
-            <main id="main-content">
-              <Outlet />
-            </main>
-            {showMarketingShell && <SiteFooter />}
-          </div>
+          <RootLayout />
           <Toaster richColors position="top-center" />
         </AuthProvider>
       </SitePreferencesProvider>
