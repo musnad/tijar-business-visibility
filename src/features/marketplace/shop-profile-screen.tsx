@@ -45,7 +45,7 @@ export function ShopProfileScreen() {
       profileId: profile!.id,
       businessName: bizName,
       location,
-      phone: profile!.phone ?? undefined,
+      ...(profile!.phone ? { phone: profile!.phone } : {}),
     });
     setBusy(false);
     if (error) toast.error(error);

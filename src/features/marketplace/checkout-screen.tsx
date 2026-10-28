@@ -78,11 +78,12 @@ export function CheckoutScreen() {
       addressId = list.data.find((a) => a.is_default)?.id ?? list.data[0]?.id ?? null;
     }
 
+    const buyerPhone = addr.phone.trim() || profile.phone?.trim() || "";
     const placed = await placeOrders({
       fulfilment,
       addressId,
       buyerNote: note,
-      buyerPhone: addr.phone || profile.phone || undefined,
+      ...(buyerPhone ? { buyerPhone } : {}),
     });
     if (placed.error || placed.orders.length === 0) {
       toast.error(placed.error ?? "Could not place order");
