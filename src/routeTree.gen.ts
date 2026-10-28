@@ -57,6 +57,7 @@ import { Route as AppLearnLessonIdRouteImport } from './routes/app/learn/$lesson
 import { Route as AppOnboardingVoiceRouteImport } from './routes/app/onboarding/voice'
 import { Route as AppProductsAdjustRouteImport } from './routes/app/products/adjust'
 import { Route as AppProductsNewRouteImport } from './routes/app/products/new'
+import { Route as AppProductsScanShopRouteImport } from './routes/app/products/scan-shop'
 import { Route as AppProfileEditRouteImport } from './routes/app/profile/edit'
 import { Route as AppProfileSettingsRouteImport } from './routes/app/profile/settings'
 import { Route as AppCustomersCreditNewRouteImport } from './routes/app/customers/credit/new'
@@ -301,6 +302,11 @@ const AppProductsNewRoute = AppProductsNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AppProductsRoute,
 } as any)
+const AppProductsScanShopRoute = AppProductsScanShopRouteImport.update({
+  id: '/scan-shop',
+  path: '/scan-shop',
+  getParentRoute: () => AppProductsRoute,
+} as any)
 const AppProfileEditRoute = AppProfileEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -364,6 +370,7 @@ export interface FileRoutesByFullPath {
   '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
   '/app/products/adjust': typeof AppProductsAdjustRoute
   '/app/products/new': typeof AppProductsNewRoute
+  '/app/products/scan-shop': typeof AppProductsScanShopRoute
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
   '/app/customers/': typeof AppCustomersIndexRoute
@@ -414,6 +421,7 @@ export interface FileRoutesByTo {
   '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
   '/app/products/adjust': typeof AppProductsAdjustRoute
   '/app/products/new': typeof AppProductsNewRoute
+  '/app/products/scan-shop': typeof AppProductsScanShopRoute
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
   '/app/customers': typeof AppCustomersIndexRoute
@@ -468,6 +476,7 @@ export interface FileRoutesById {
   '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
   '/app/products/adjust': typeof AppProductsAdjustRoute
   '/app/products/new': typeof AppProductsNewRoute
+  '/app/products/scan-shop': typeof AppProductsScanShopRoute
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
   '/app/customers/': typeof AppCustomersIndexRoute
@@ -523,6 +532,7 @@ export interface FileRouteTypes {
     | '/app/onboarding/voice'
     | '/app/products/adjust'
     | '/app/products/new'
+    | '/app/products/scan-shop'
     | '/app/profile/edit'
     | '/app/profile/settings'
     | '/app/customers/'
@@ -573,6 +583,7 @@ export interface FileRouteTypes {
     | '/app/onboarding/voice'
     | '/app/products/adjust'
     | '/app/products/new'
+    | '/app/products/scan-shop'
     | '/app/profile/edit'
     | '/app/profile/settings'
     | '/app/customers'
@@ -626,6 +637,7 @@ export interface FileRouteTypes {
     | '/app/onboarding/voice'
     | '/app/products/adjust'
     | '/app/products/new'
+    | '/app/products/scan-shop'
     | '/app/profile/edit'
     | '/app/profile/settings'
     | '/app/customers/'
@@ -994,6 +1006,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsNewRouteImport
       parentRoute: typeof AppProductsRoute
     }
+    '/app/products/scan-shop': {
+      id: '/app/products/scan-shop'
+      path: '/scan-shop'
+      fullPath: '/app/products/scan-shop'
+      preLoaderRoute: typeof AppProductsScanShopRouteImport
+      parentRoute: typeof AppProductsRoute
+    }
     '/app/profile/edit': {
       id: '/app/profile/edit'
       path: '/edit'
@@ -1076,11 +1095,13 @@ const AppOnboardingRouteWithChildren = AppOnboardingRoute._addFileChildren(
 interface AppProductsRouteChildren {
   AppProductsAdjustRoute: typeof AppProductsAdjustRoute
   AppProductsNewRoute: typeof AppProductsNewRoute
+  AppProductsScanShopRoute: typeof AppProductsScanShopRoute
 }
 
 const AppProductsRouteChildren: AppProductsRouteChildren = {
   AppProductsAdjustRoute: AppProductsAdjustRoute,
   AppProductsNewRoute: AppProductsNewRoute,
+  AppProductsScanShopRoute: AppProductsScanShopRoute,
 }
 
 const AppProductsRouteWithChildren = AppProductsRoute._addFileChildren(

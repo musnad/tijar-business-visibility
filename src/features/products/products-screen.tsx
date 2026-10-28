@@ -42,9 +42,14 @@ export function ProductsScreen({ businessId }: { businessId: string }) {
         title={t("app.products.title")}
         subtitle={t("app.products.subtitle")}
         action={
-          <Button className="min-h-10 rounded-xl font-bold" asChild>
-            <Link to="/app/products/new">{t("app.products.newFab")}</Link>
-          </Button>
+          <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center">
+            <Button variant="outline" className="min-h-10 rounded-xl font-bold" asChild>
+              <Link to="/app/products/scan-shop">{t("app.shopScan.shortCta")}</Link>
+            </Button>
+            <Button className="min-h-10 rounded-xl font-bold" asChild>
+              <Link to="/app/products/new">{t("app.products.newFab")}</Link>
+            </Button>
+          </div>
         }
       />
 
