@@ -124,8 +124,8 @@ export type PublicBusiness = {
   description: string | null;
   location_text: string | null;
   public_location_label: string | null;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   logo_url: string | null;
   category_id: string | null;
   category_name: string | null;

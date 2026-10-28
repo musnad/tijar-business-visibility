@@ -14,6 +14,14 @@ export type NearbyMarketplaceShop = PublicBusiness & {
   products: PublicProduct[];
 };
 
+export type MarketplaceShop = PublicBusiness & {
+  product_count: number;
+  product_names: string[];
+};
+
+const MARKETPLACE_SHOP_SELECT =
+  "id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status, is_informal";
+
 const MARKETPLACE_PRODUCT_SELECT =
   "id, business_id, name, kind, description, sale_price, unit, image_url, is_available, is_informal, business_name, business_slug, business_logo_url, category_name";
 
@@ -67,6 +75,62 @@ export async function fetchMarketplaceProducts(limit = 120): Promise<{
 
   return {
     data: ((data ?? []) as PublicProduct[]).filter((p) => p.is_informal !== false),
+    error: null,
+  };
+}
+
+/** Published informal businesses for marketplace landing — includes shops without products. */
+export async function fetchMarketplaceShops(limit = 200): Promise<{
+  shops: MarketplaceShop[];
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  let { data, error } = await supabase
+    .from("public_marketplace_businesses")
+    .select(MARKETPLACE_SHOP_SELECT)
+    .order("business_name")
+    .limit(limit);
+
+  if (error) {
+    const fallback = await supabase
+      .from("public_business_listings")
+      .select(MARKETPLACE_SHOP_SELECT)
+      .order("business_name")
+      .limit(limit);
+    if (fallback.error) {
+      const legacy = await supabase
+        .from("public_business_listings")
+        .select(
+          "id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status",
+        )
+        .order("business_name")
+        .limit(limit);
+      if (legacy.error) return { shops: [], error: legacy.error.message };
+      data = legacy.data;
+    } else {
+      data = fallback.data;
+    }
+    error = null;
+  }
+
+  const rows = ((data ?? []) as PublicBusiness[]).filter((b) => b.is_informal !== false);
+  const { data: productRows } = await supabase
+    .from("public_business_products")
+    .select("business_id, name")
+    .limit(2000);
+
+  const namesByBiz = new Map<string, string[]>();
+  for (const row of productRows ?? []) {
+    const list = namesByBiz.get(row.business_id as string) ?? [];
+    list.push(row.name as string);
+    namesByBiz.set(row.business_id as string, list);
+  }
+
+  return {
+    shops: rows.map((b) => {
+      const names = namesByBiz.get(b.id) ?? [];
+      return { ...b, product_names: names, product_count: names.length };
+    }),
     error: null,
   };
 }

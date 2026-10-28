@@ -18,19 +18,21 @@ function initials(name: string): string {
   return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
 }
 
-function MarketplaceTopBar() {
+function MarketplaceTopBar({ leftSlot }: { leftSlot?: ReactNode }) {
   const { profile, session } = useAuth();
   const name = profile?.full_name ?? "";
 
   return (
     <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 pb-3">
-      <Link
-        to="/shop/nearby"
-        className="flex size-10 items-center justify-center rounded-full border border-border bg-card text-primary"
-        aria-label="Nearby products map"
-      >
-        <MapPin className="size-5" />
-      </Link>
+      {leftSlot ?? (
+        <Link
+          to="/shop/nearby"
+          className="flex size-10 items-center justify-center rounded-full border border-border bg-card text-primary"
+          aria-label="Nearby products map"
+        >
+          <MapPin className="size-5" />
+        </Link>
+      )}
 
       <div className="flex justify-center px-1">
         <Link to="/shop" className="block max-w-[140px]">
@@ -66,12 +68,14 @@ export function MarketplaceShell({
   cartCount = 0,
   hideTopBar = false,
   mapLayout = false,
+  leftSlot,
 }: {
   children: ReactNode;
   cartCount?: number;
   hideTopBar?: boolean;
   /** Tighter padding for full-bleed map screens on mobile. */
   mapLayout?: boolean;
+  leftSlot?: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -91,7 +95,7 @@ export function MarketplaceShell({
           mapLayout ? "px-3 pb-2" : "px-4 pb-4",
         )}
       >
-        {!hideTopBar && <MarketplaceTopBar />}
+        {!hideTopBar && <MarketplaceTopBar leftSlot={leftSlot} />}
         {children}
       </main>
 

@@ -17,7 +17,7 @@ import {
   Wrench,
 } from "lucide-react";
 
-import type { PublicProduct } from "@/types/database";
+import type { PublicBusiness, PublicProduct } from "@/types/database";
 
 export type MarketplaceSector = {
   key: string;
@@ -177,6 +177,39 @@ export function countBySector(products: PublicProduct[]): Map<string, number> {
   for (const product of products) {
     const sector = resolveProductSector(product);
     if (sector) counts.set(sector.key, (counts.get(sector.key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export function matchesShopSector(
+  shop: PublicBusiness & { product_names?: string[] },
+  key: string,
+): boolean {
+  const sector = MARKETPLACE_SECTORS.find((s) => s.key === key);
+  if (!sector) return true;
+  const hay = [
+    shop.business_name,
+    shop.description ?? "",
+    shop.category_name ?? "",
+    ...(shop.product_names ?? []),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return sector.words.some((w) => hay.includes(w));
+}
+
+export function countShopsBySector(
+  shops: Array<PublicBusiness & { product_names?: string[] }>,
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const sector of MARKETPLACE_SECTORS) counts.set(sector.key, 0);
+  for (const shop of shops) {
+    for (const sector of MARKETPLACE_SECTORS) {
+      if (matchesShopSector(shop, sector.key)) {
+        counts.set(sector.key, (counts.get(sector.key) ?? 0) + 1);
+        break;
+      }
+    }
   }
   return counts;
 }

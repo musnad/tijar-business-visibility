@@ -74,13 +74,15 @@ export function NearbyScreen() {
 
   const pins = useMemo(
     () =>
-      shops.map((s) => ({
-        id: s.id,
-        lat: s.latitude,
-        lng: s.longitude,
-        label: s.business_name,
-        subtitle: String(s.products.length),
-      })),
+      shops
+        .filter((s) => typeof s.latitude === "number" && typeof s.longitude === "number")
+        .map((s) => ({
+          id: s.id,
+          lat: s.latitude as number,
+          lng: s.longitude as number,
+          label: s.business_name,
+          subtitle: String(s.products.length),
+        })),
     [shops],
   );
 
