@@ -326,6 +326,41 @@ export async function toggleFavoriteProduct(
   return { favorited: true, error: error?.message ?? null };
 }
 
+export async function fetchFavoriteProducts(profileId: string): Promise<{
+  products: PublicProduct[];
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data: favs, error } = await supabase
+    .from("marketplace_favorites")
+    .select("product_id")
+    .eq("profile_id", profileId)
+    .not("product_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(60);
+  if (error) return { products: [], error: error.message };
+  const ids = (favs ?? []).map((f) => f.product_id as string).filter(Boolean);
+  if (ids.length === 0) return { products: [], error: null };
+
+  const catalog = await fetchMarketplaceProducts(200);
+  if (catalog.error) return { products: [], error: catalog.error };
+  const byId = new Map(catalog.data.map((p) => [p.id, p]));
+  return {
+    products: ids.map((id) => byId.get(id)).filter((p): p is PublicProduct => Boolean(p)),
+    error: null,
+  };
+}
+
+export async function countFavoriteProducts(profileId: string): Promise<number> {
+  const supabase = getSupabaseBrowserClient();
+  const { count } = await supabase
+    .from("marketplace_favorites")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", profileId)
+    .not("product_id", "is", null);
+  return count ?? 0;
+}
+
 export async function requestBusinessUpgrade(input: {
   profileId: string;
   businessName: string;
