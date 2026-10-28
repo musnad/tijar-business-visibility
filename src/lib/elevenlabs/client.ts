@@ -10,11 +10,30 @@ import { readEnvString } from "@/lib/supabase/runtime-env";
 const DEFAULT_BASE = "https://api.elevenlabs.io/v1";
 
 export function readElevenLabsApiKey(): string | null {
-  return sanitizeSecret(readEnvString("ELEVENLABS_API_KEY") ?? process.env.ELEVENLABS_API_KEY);
+  const fromReader = readEnvString("ELEVENLABS_API_KEY");
+  const fromProcess =
+    typeof process !== "undefined" && process.env?.ELEVENLABS_API_KEY
+      ? process.env.ELEVENLABS_API_KEY
+      : undefined;
+  return sanitizeSecret(fromReader ?? fromProcess);
 }
 
 export function isElevenLabsConfigured(): boolean {
   return Boolean(readElevenLabsApiKey());
+}
+
+/** Safe fingerprint for health checks — never the full secret. */
+export function elevenLabsKeyFingerprint(apiKey: string | null = readElevenLabsApiKey()): {
+  present: boolean;
+  formatOk: boolean;
+  length: number;
+  hint: string | null;
+} {
+  if (!apiKey) return { present: false, formatOk: false, length: 0, hint: null };
+  const formatOk = apiKey.startsWith("sk_") && apiKey.length >= 20;
+  const hint =
+    apiKey.length >= 8 ? `${apiKey.slice(0, 4)}…${apiKey.slice(-4)}` : `${apiKey.slice(0, 2)}…`;
+  return { present: true, formatOk, length: apiKey.length, hint };
 }
 
 export async function elevenLabsCloneVoice(input: {
