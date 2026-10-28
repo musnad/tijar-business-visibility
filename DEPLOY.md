@@ -28,6 +28,8 @@ Copy from `.env.example` → set in hosting UI (Vercel, Railway, Render, etc.).
    | `VITE_SUPABASE_ANON_KEY` | Same anon/publishable key as local |
    | `VITE_PUBLIC_APP_URL` | `https://tijar-two.vercel.app` |
    | `VITE_APP_ENV` | `production` |
+   | `OPENAI_API_KEY` | `sk-…` from OpenAI (server-only; powers translate + voice AI) |
+   | `NKENNEAI_API_KEY` | optional fallback for NKENNE African speech/text |
 
 3. **Deployments** → ⋮ on latest → **Redeploy** (must rebuild so Vite picks up `VITE_*`).
 

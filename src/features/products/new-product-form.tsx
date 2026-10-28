@@ -185,16 +185,20 @@ export function NewProductForm({
       }
 
       if (product && imageFile) {
-        const uploaded = await uploadProductImage(businessId, product.id, imageFile);
-        if (uploaded.publicUrl) {
-          await updateProductImageUrl(product.id, uploaded.publicUrl);
-        } else if (uploaded.error) {
-          toast.message(uploaded.error);
+        try {
+          const uploaded = await uploadProductImage(businessId, product.id, imageFile);
+          if (uploaded.publicUrl) {
+            await updateProductImageUrl(product.id, uploaded.publicUrl);
+          } else if (uploaded.error) {
+            toast.message(uploaded.error);
+          }
+        } catch {
+          toast.message(t("app.products.photoHint"));
         }
       }
 
       if (!product) {
-        const msg = t("app.errors.saveFailed");
+        const msg = error || t("app.errors.saveFailed");
         setFormError(msg);
         toast.error(msg);
         return;

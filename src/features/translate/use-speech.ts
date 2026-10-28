@@ -3,19 +3,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { isNkenneLanguage } from "@/lib/nkenne/languages";
+import { isOpenAiLanguage } from "@/lib/openai/languages";
 
-/** BCP-47 codes for browser speech engines (distinct from NKENNE API names). */
+/** BCP-47 codes for browser speech engines (distinct from API language names). */
 export const SPEECH_LOCALES: Record<string, string> = {
   English: "en-NG",
   Hausa: "ha-NG",
+  Igbo: "ig-NG",
   Swahili: "sw-KE",
   Yoruba: "yo-NG",
   "Nigerian Pidgin": "en-NG",
+  Arabic: "ar-SA",
+  Fulfulde: "ff-NG",
 };
 
-/** Languages NKENNE Speech Studio can speak / hear (browser used as fallback). */
+/**
+ * Languages the server can speak / hear via OpenAI (primary) or NKENNE
+ * (fallback). Browser Web Speech is used when the server call fails.
+ */
 export function nkenneSpeechLanguage(languageName: string): boolean {
-  return isNkenneLanguage(languageName);
+  return isNkenneLanguage(languageName) || isOpenAiLanguage(languageName);
 }
 
 /** Fallback chain when a device lacks the exact locale (common on Android). */

@@ -1,5 +1,6 @@
 import type { ProductFormInput, StockAdjustInput } from "@/features/products/schemas";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { ensureOwnerMembership } from "@/services/business-service";
 import type { Product, ProductKind, StockMovementReason } from "@/types/database";
 
 export async function listProducts(businessId: string): Promise<{
@@ -78,6 +79,22 @@ export async function createProduct(
   const kind = (input.kind ?? "goods") as ProductKind;
   const name = input.name.trim();
   if (name.length < 1) return { product: null, error: "Enter a product name." };
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    const refreshed = await supabase.auth.refreshSession();
+    if (!refreshed.data.session) {
+      return {
+        product: null,
+        error: "Your session expired. Sign in again, then add the product.",
+      };
+    }
+  }
+
+  // Heal missing owner membership — otherwise products RLS blocks the insert.
+  await ensureOwnerMembership(businessId, profileId);
 
   const fullPayload: ProductInsert = {
     business_id: businessId,

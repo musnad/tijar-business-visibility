@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+import {
+  isOpenAiConfigured,
+  isOpenAiLanguage,
+  openaiTranslate,
+  OpenAiError,
+  type OpenAiClientConfig,
+} from "@/lib/openai/client";
+
 import { getCachedTranslation, setCachedTranslation, translationCacheKey } from "./cache";
 import { nkenneTranslate, NkenneError, readNkenneConfig, type NkenneClientConfig } from "./client";
 import { checkLanguagePair, isNkenneLanguage, resolveTranslationPath } from "./languages";
@@ -31,6 +39,9 @@ export type TranslateResult =
 
 export type TranslateDeps = {
   clientConfig?: NkenneClientConfig;
+  openAiConfig?: OpenAiClientConfig;
+  /** Force skip OpenAI (tests / explicit NKENNE-only). */
+  preferNkenne?: boolean;
   rateLimitKey?: string;
   rateLimit?: number;
 };
@@ -62,9 +73,19 @@ export async function translateBatch(
   return { ok: true, translations };
 }
 
+function shouldUseOpenAi(deps: TranslateDeps): boolean {
+  if (deps.preferNkenne) return false;
+  // Explicit OpenAI config (including tests with mocked fetch).
+  if (deps.openAiConfig?.apiKey) return true;
+  // Explicit NKENNE clientConfig means NKENNE-only (unit tests / forced path).
+  if (deps.clientConfig) return false;
+  return isOpenAiConfigured();
+}
+
 /**
  * Orchestrates validation -> language-pair rules -> cache -> rate limit ->
- * provider. Original text is never mutated or logged.
+ * provider (OpenAI first when configured, else NKENNEAi).
+ * Original text is never mutated or logged.
  */
 export async function translateText(
   rawInput: unknown,
@@ -81,16 +102,28 @@ export async function translateText(
   }
   const { text, fromLanguage, toLanguage } = parsed.data;
 
-  if (!isNkenneLanguage(fromLanguage) || !isNkenneLanguage(toLanguage)) {
-    const pair = checkLanguagePair(fromLanguage, toLanguage);
-    if (!pair.ok) return { ok: false, status: 400, code: pair.code, message: pair.message };
-  }
   if (fromLanguage === toLanguage) {
     return { ok: false, status: 400, code: "SAME_LANGUAGE", message: "Source and target language are the same." };
   }
-  const path = resolveTranslationPath(fromLanguage, toLanguage);
-  if (!path) {
-    return { ok: false, status: 400, code: "UNSUPPORTED_PAIR", message: `Cannot translate ${fromLanguage} to ${toLanguage}.` };
+
+  const useOpenAi = shouldUseOpenAi(deps);
+  const openAiPair =
+    useOpenAi && isOpenAiLanguage(fromLanguage) && isOpenAiLanguage(toLanguage);
+
+  if (!openAiPair) {
+    if (!isNkenneLanguage(fromLanguage) || !isNkenneLanguage(toLanguage)) {
+      const pair = checkLanguagePair(fromLanguage, toLanguage);
+      if (!pair.ok) return { ok: false, status: 400, code: pair.code, message: pair.message };
+    }
+    const path = resolveTranslationPath(fromLanguage, toLanguage);
+    if (!path) {
+      return {
+        ok: false,
+        status: 400,
+        code: "UNSUPPORTED_PAIR",
+        message: `Cannot translate ${fromLanguage} to ${toLanguage}.`,
+      };
+    }
   }
 
   const cacheKey = translationCacheKey(text, fromLanguage, toLanguage);
@@ -109,6 +142,38 @@ export async function translateText(
         message: `Too many translation requests. Try again in ${limit.retryAfterSeconds}s.`,
       };
     }
+  }
+
+  // 1) ChatGPT / OpenAI when configured (covers Hausa, Igbo, Arabic, Fulfulde, etc.)
+  if (openAiPair) {
+    try {
+      const translated = await openaiTranslate(deps.openAiConfig ?? {}, {
+        text,
+        fromLanguage,
+        toLanguage,
+      });
+      setCachedTranslation(cacheKey, translated);
+      return { ok: true, translatedText: translated, cached: false, fromLanguage, toLanguage };
+    } catch (err) {
+      // Fall through to NKENNE when the pair is also supported there.
+      if (!isNkenneLanguage(fromLanguage) || !isNkenneLanguage(toLanguage)) {
+        if (err instanceof OpenAiError) {
+          return { ok: false, status: err.status, code: err.code, message: err.message };
+        }
+        return { ok: false, status: 502, code: "PROVIDER_ERROR", message: "Translation failed. Please try again." };
+      }
+    }
+  }
+
+  // 2) NKENNEAi (documented African language pairs)
+  const path = resolveTranslationPath(fromLanguage, toLanguage);
+  if (!path) {
+    return {
+      ok: false,
+      status: 400,
+      code: "UNSUPPORTED_PAIR",
+      message: `Cannot translate ${fromLanguage} to ${toLanguage}.`,
+    };
   }
 
   const env = readNkenneConfig();

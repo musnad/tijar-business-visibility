@@ -19,6 +19,33 @@ export async function listBusinessCategories(): Promise<{
   return { data: (data ?? []) as BusinessCategory[], error: null };
 }
 
+/**
+ * Ensure the signed-in owner has a business_members row.
+ * Product/stock RLS requires membership; businesses select also allows owner_id,
+ * so users could open Add Product but inserts failed with RLS.
+ */
+export async function ensureOwnerMembership(
+  businessId: string,
+  profileId: string,
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.from("business_members").upsert(
+    {
+      business_id: businessId,
+      profile_id: profileId,
+      role: "owner",
+    },
+    { onConflict: "business_id,profile_id", ignoreDuplicates: true },
+  );
+  if (!error) return { error: null };
+  // Unique race / already member — fine.
+  const m = error.message.toLowerCase();
+  if (m.includes("duplicate") || m.includes("unique") || m.includes("already")) {
+    return { error: null };
+  }
+  return { error: error.message };
+}
+
 export async function fetchPrimaryBusiness(profileId: string): Promise<{
   business: Business | null;
   dna: BusinessDna | null;
@@ -40,6 +67,9 @@ export async function fetchPrimaryBusiness(profileId: string): Promise<{
   if (!business) {
     return { business: null, dna: null, error: null };
   }
+
+  // Best-effort heal so product/stock policies work for owners.
+  await ensureOwnerMembership(business.id, profileId);
 
   const { data: dna, error: dnaError } = await supabase
     .from("business_dna")

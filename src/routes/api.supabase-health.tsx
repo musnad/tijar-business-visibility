@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { nkenneKeyFingerprint, readNkenneConfig } from "@/lib/nkenne/client";
 import { checkRateLimit } from "@/lib/nkenne/rate-limit";
+import { openaiKeyFingerprint, readOpenAiConfig } from "@/lib/openai/client";
 import {
   fetchBusinessCategoriesServer,
   isSupabaseEnvPresent,
@@ -19,6 +20,8 @@ export const Route = createFileRoute("/api/supabase-health")({
         // Presence / length / masked hint only — never the full secret.
         const nkenne = readNkenneConfig();
         const finger = nkenneKeyFingerprint(nkenne.apiKey);
+        const openai = readOpenAiConfig();
+        const openaiFinger = openaiKeyFingerprint(openai.apiKey);
 
         let nkenneProbe: { ok: boolean; providerStatus: number | null; message: string } | null = null;
         const wantsProbe = new URL(request.url).searchParams.get("nkenne") === "1";
@@ -70,6 +73,10 @@ export const Route = createFileRoute("/api/supabase-health")({
               NKENNEAI_API_KEY_FORMAT_OK: finger.formatOk,
               NKENNEAI_API_KEY_LENGTH: finger.length,
               NKENNEAI_API_KEY_HINT: finger.hint,
+              OPENAI_API_KEY: openaiFinger.present,
+              OPENAI_API_KEY_FORMAT_OK: openaiFinger.formatOk,
+              OPENAI_API_KEY_LENGTH: openaiFinger.length,
+              OPENAI_API_KEY_HINT: openaiFinger.hint,
             },
             nkenneProbe,
           },
