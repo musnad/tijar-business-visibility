@@ -207,8 +207,13 @@ export function isSpeakingNow(): boolean {
   return window.speechSynthesis.speaking || window.speechSynthesis.pending;
 }
 
-/** Play NKENNE TTS via server proxy. Returns false if unavailable. */
-async function speakViaNkenne(text: string, languageName: string, rate?: number): Promise<boolean> {
+/** Play server TTS (OpenAI / personal clone / NKENNE) via /api/speak. */
+async function speakViaNkenne(
+  text: string,
+  languageName: string,
+  rate?: number,
+  voiceOpts?: { voice?: string | null; customVoiceId?: string | null },
+): Promise<boolean> {
   if (typeof window === "undefined" || !nkenneSpeechLanguage(languageName)) return false;
   let res: Response;
   try {
@@ -219,6 +224,8 @@ async function speakViaNkenne(text: string, languageName: string, rate?: number)
         text: text.slice(0, 1000),
         language: languageName,
         speakingRate: rate ?? 1,
+        ...(voiceOpts?.voice ? { voice: voiceOpts.voice } : {}),
+        ...(voiceOpts?.customVoiceId ? { customVoiceId: voiceOpts.customVoiceId } : {}),
       }),
     });
   } catch {
@@ -268,10 +275,14 @@ export type SpeakOptions = {
   rate?: number;
   pitch?: number;
   volume?: number;
+  /** OpenAI stock voice override */
+  voice?: string;
+  /** Personal clone id (ElevenLabs) */
+  customVoiceId?: string;
 };
 
 /**
- * Speak text aloud. Prefers NKENNE Speech Studio TTS for supported languages,
+ * Speak text aloud. Prefers server TTS (personal clone → OpenAI → NKENNE),
  * then falls back to the device speech engine.
  */
 export async function speakText(
@@ -284,11 +295,24 @@ export async function speakText(
 
   stopSpeaking();
 
-  // NKENNE natural voices for English / Yoruba / Swahili / Pidgin.
   if (nkenneSpeechLanguage(languageName)) {
     const nkenneRate =
       options.rate !== undefined ? Math.min(2, Math.max(0.5, options.rate)) : 1;
-    const ok = await speakViaNkenne(cleaned, languageName, nkenneRate);
+    // Lazy import avoids circular deps with personal-voice helpers.
+    let prefs: { preferredTtsVoice: string | null; customVoiceId: string | null } = {
+      preferredTtsVoice: null,
+      customVoiceId: null,
+    };
+    try {
+      const mod = await import("@/lib/voice/personal-voice");
+      prefs = mod.readPersonalVoicePrefs();
+    } catch {
+      /* ignore */
+    }
+    const ok = await speakViaNkenne(cleaned, languageName, nkenneRate, {
+      voice: options.voice ?? prefs.preferredTtsVoice,
+      customVoiceId: options.customVoiceId ?? prefs.customVoiceId,
+    });
     if (ok) return true;
   }
 
@@ -342,7 +366,7 @@ export async function speakText(
 
 const MAX_RECORD_MS = 60_000;
 /** Auto-stop for NKENNE fallback recording when the user does not tap Stop. */
-const NKENNE_AUTO_STOP_MS = 8_000;
+const NKENNE_AUTO_STOP_MS = 15_000;
 
 function pickRecorderMime(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
@@ -749,7 +773,24 @@ export function useSpeechRecognition() {
       stopSpeaking();
 
       try {
-        // 1) Browser first when available — instant end-of-speech for short answers.
+        const preferServerStt =
+          nkenneSpeechLanguage(languageName) &&
+          languageName !== "English" &&
+          canRecordAudio();
+
+        // African languages: MediaRecorder → server STT first (browser ASR is often missing).
+        if (preferServerStt) {
+          try {
+            return await listenNkenne(languageName, isSecure);
+          } catch (err) {
+            const code = (err as Error & { code?: string }).code;
+            if (code === "aborted" || code === "not-allowed" || code === "service-not-allowed") {
+              throw err;
+            }
+            // Fall through to browser ASR if available.
+          }
+        }
+
         if (getRecognitionCtor()) {
           try {
             return await listenBrowser(languageName, isSecure);
@@ -758,12 +799,11 @@ export function useSpeechRecognition() {
             if (code === "aborted" || code === "not-allowed" || code === "service-not-allowed") {
               throw err;
             }
-            // African languages often lack browser ASR — try NKENNE next.
             if (!nkenneSpeechLanguage(languageName) || !canRecordAudio()) throw err;
           }
         }
 
-        // 2) NKENNE STT via MediaRecorder (tap Stop or wait ~8s).
+        // English / fallback: server STT via MediaRecorder (tap Stop or wait ~8s).
         if (nkenneSpeechLanguage(languageName) && canRecordAudio()) {
           return await listenNkenne(languageName, isSecure);
         }

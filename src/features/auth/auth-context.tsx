@@ -98,6 +98,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshProfile();
   }, [session, refreshProfile]);
 
+  // Keep local TTS prefs in sync so speakText uses the shopkeeper's voice.
+  useEffect(() => {
+    if (!profile) return;
+    void import("@/lib/voice/personal-voice").then(({ writePersonalVoicePrefs }) => {
+      writePersonalVoicePrefs({
+        preferredTtsVoice: profile.preferred_tts_voice ?? null,
+        customVoiceId: profile.custom_voice_id ?? null,
+        voiceSamplePath: profile.voice_sample_path ?? null,
+      });
+    });
+  }, [profile]);
+
   const value = useMemo(
     () => ({
       configured,

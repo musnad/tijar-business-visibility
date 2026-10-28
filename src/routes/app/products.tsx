@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useChildMatches } from "@tanstack/react-router";
 
 import { AppShell } from "@/features/app/app-shell";
 import { RequireAuth } from "@/features/app/require-auth";
@@ -24,6 +24,12 @@ function ProductsPageContent() {
   const { profile } = useAuth();
   const { data, isLoading } = usePrimaryBusiness(profile?.id);
   const business = data?.business;
+  // /app/products/new | scan-shop | adjust are child routes — render them via Outlet.
+  const childMatches = useChildMatches();
+
+  if (childMatches.length > 0) {
+    return <Outlet />;
+  }
 
   return (
     <AppShell fab="product">

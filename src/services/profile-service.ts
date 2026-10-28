@@ -39,6 +39,10 @@ export async function updateProfile(
       | "onboarding_status"
       | "avatar_url"
       | "bio"
+      | "preferred_tts_voice"
+      | "voice_sample_path"
+      | "custom_voice_id"
+      | "voice_enrolled_at"
     >
   >,
 ) {

@@ -10,6 +10,13 @@ export type Profile = {
   bio: string | null;
   preferred_language: string;
   onboarding_status: OnboardingStatus;
+  /** OpenAI TTS stock voice (nova, alloy, …). */
+  preferred_tts_voice?: string | null;
+  /** Storage path of enrolled voice sample. */
+  voice_sample_path?: string | null;
+  /** Provider clone id (e.g. ElevenLabs). */
+  custom_voice_id?: string | null;
+  voice_enrolled_at?: string | null;
   created_at: string;
   updated_at: string;
 };

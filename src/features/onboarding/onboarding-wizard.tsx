@@ -1,6 +1,7 @@
 "use client";
 
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { Mic } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -189,11 +190,16 @@ export function OnboardingWizard() {
           <>
             <h1 className="text-2xl font-extrabold">{t("app.onboarding.welcomeTitle")}</h1>
             <p className="mt-3 text-muted-foreground">{t("app.onboarding.welcomeBody")}</p>
-            <Button asChild className="mt-6 min-h-12 w-full rounded-2xl font-bold">
-              <Link to="/app/onboarding/voice">🎙 Use your voice instead</Link>
+            <Button
+              type="button"
+              className="mt-6 min-h-12 w-full rounded-2xl bg-teal-700 font-bold hover:bg-teal-800"
+              onClick={() => void navigate({ to: "/app/onboarding/voice" })}
+            >
+              <Mic className="mr-1.5 size-5" /> Use your voice instead
             </Button>
             <p className="mt-2 text-center text-xs text-muted-foreground">
-              Speak in English, Hausa, Swahili or Yoruba — TIJAR asks, you answer.
+              Speak in English, Hausa, Swahili or Yoruba — TIJAR asks, you answer. You can also save
+              your voice so TIJAR speaks back like you.
             </p>
           </>
         )}

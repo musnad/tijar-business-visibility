@@ -6,6 +6,7 @@
 
 import { z } from "zod";
 
+import { elevenLabsTts, isElevenLabsConfigured } from "@/lib/elevenlabs/client";
 import {
   isOpenAiConfigured,
   isOpenAiLanguage,
@@ -15,6 +16,7 @@ import {
   type OpenAiClientConfig,
   type OpenAiLanguage,
 } from "@/lib/openai/client";
+import { isOpenAiTtsVoice } from "@/lib/openai/voices";
 
 import { NkenneError, readNkenneConfig, type NkenneClientConfig } from "./client";
 import { isNkenneLanguage, type NkenneLanguage } from "./languages";
@@ -56,6 +58,10 @@ const speakSchema = z.object({
   language: z.string().trim().min(1).max(40),
   // Official TTS docs: speaking_rate range 0.5–2.0
   speakingRate: z.number().min(0.5).max(2).optional(),
+  /** OpenAI stock voice (nova, alloy, …). */
+  voice: z.string().trim().min(1).max(40).optional(),
+  /** ElevenLabs (or other) personal clone id. */
+  customVoiceId: z.string().trim().min(1).max(120).optional(),
 });
 
 export type SpeakDeps = {
@@ -115,13 +121,28 @@ export async function speakTextServer(raw: unknown, deps: SpeakDeps = {}): Promi
     }
   }
 
-  // 1) OpenAI TTS
+  // 1) Personal clone (ElevenLabs) when the user enrolled their voice
+  if (parsed.data.customVoiceId && isElevenLabsConfigured()) {
+    try {
+      const audio = await elevenLabsTts({
+        voiceId: parsed.data.customVoiceId,
+        text: parsed.data.text,
+      });
+      return { ok: true, audio, language: parsed.data.language };
+    } catch {
+      // Fall through to OpenAI / NKENNE
+    }
+  }
+
+  // 2) OpenAI TTS (stock or user-preferred voice)
   if (useOpenAi) {
     try {
+      const preferred = parsed.data.voice && isOpenAiTtsVoice(parsed.data.voice) ? parsed.data.voice : "nova";
       const audio = await openaiTts(deps.openAiConfig ?? {}, {
         text: parsed.data.text,
         language: parsed.data.language,
         speakingRate: parsed.data.speakingRate,
+        voice: preferred,
       });
       return { ok: true, audio, language: parsed.data.language };
     } catch (err) {

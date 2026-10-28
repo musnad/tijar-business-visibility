@@ -21,6 +21,7 @@ import {
   onboardingWizardSchema,
   type OnboardingWizardAnswers,
 } from "@/features/onboarding/schemas";
+import { VoiceEnrollCard } from "@/features/onboarding/voice-enroll-card";
 import { speakText, useSpeechRecognition } from "@/features/translate/use-speech";
 import { completeBusinessSetup, listBusinessCategories } from "@/services/business-service";
 import { updateProfile } from "@/services/profile-service";
@@ -65,6 +66,7 @@ export function VoiceOnboardingScreen() {
   const [textValue, setTextValue] = useState("");
   const [creating, setCreating] = useState(false);
   const [welcomed, setWelcomed] = useState(false);
+  const [phase, setPhase] = useState<"lang" | "enroll" | "qa">("lang");
   const { listen, stop, listening, supported } = useSpeechRecognition();
   const prompts = PROMPTS[lang];
   const spokenStepRef = useRef(-1);
@@ -246,7 +248,7 @@ export function VoiceOnboardingScreen() {
         <p className="mt-3 text-sm text-white/85">{t("app.voiceOnboarding.subtitle")}</p>
       </section>
 
-      {step === 0 && (
+      {phase === "lang" && (
         <section className="mt-4 rounded-3xl border border-border bg-card p-5 shadow-sm">
           <h2 className="font-extrabold">{t("app.voiceOnboarding.chooseLanguage")}</h2>
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -267,7 +269,12 @@ export function VoiceOnboardingScreen() {
           <Button
             type="button"
             className="mt-4 min-h-12 w-full rounded-2xl font-bold"
-            onClick={() => { setWelcomed(true); void speakText(prompts.welcome, lang); next(); }}
+            onClick={() => {
+              setWelcomed(true);
+              void speakText(prompts.welcome, lang);
+              setPhase(profile?.id ? "enroll" : "qa");
+              if (!profile?.id) next();
+            }}
           >
             <Volume2 className="mr-1.5 size-5" /> {t("app.voiceOnboarding.startWithVoice")}
           </Button>
@@ -275,7 +282,22 @@ export function VoiceOnboardingScreen() {
         </section>
       )}
 
-      {step >= 1 && step <= TOTAL_STEPS - 1 && (
+      {phase === "enroll" && profile?.id && (
+        <VoiceEnrollCard
+          profileId={profile.id}
+          lang={lang}
+          onDone={() => {
+            setPhase("qa");
+            next();
+          }}
+          onSkip={() => {
+            setPhase("qa");
+            next();
+          }}
+        />
+      )}
+
+      {phase === "qa" && step >= 1 && step <= TOTAL_STEPS - 1 && (
         <section className="mt-4 rounded-3xl border border-border bg-card p-5 shadow-sm">
           <div className="flex gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><Sparkles className="size-4" /></span>
@@ -301,7 +323,13 @@ export function VoiceOnboardingScreen() {
                 {listening ? <Square className="size-7" /> : <Mic className="size-8" />}
               </button>
             </div>
-            <p className="mt-3 text-sm font-semibold">{listening ? t("app.voiceOnboarding.listening") : supported ? t("app.voiceOnboarding.tapAndSpeak") : t("app.voiceOnboarding.voiceNotSupported")}</p>
+            <p className="mt-3 text-sm font-semibold">
+              {listening
+                ? "Listening… tap the red button when you finish"
+                : supported
+                  ? t("app.voiceOnboarding.tapAndSpeak")
+                  : t("app.voiceOnboarding.voiceNotSupported")}
+            </p>
             {heard && <p className="mt-2 w-full rounded-xl bg-muted/70 px-3 py-2 text-center text-sm"><span className="text-muted-foreground">{t("app.voiceOnboarding.youSaid")} </span>“{heard}”</p>}
           </div>
 
@@ -370,7 +398,7 @@ export function VoiceOnboardingScreen() {
         </section>
       )}
 
-      {step >= TOTAL_STEPS && (
+      {phase === "qa" && step >= TOTAL_STEPS && (
         <section className="mt-4 overflow-hidden rounded-3xl border-2 border-primary/50 bg-card shadow-lg">
           <div className="bg-primary/5 px-5 py-4">
             <p className="flex items-center gap-2 font-extrabold"><BadgeCheck className="size-5 text-primary" /> {t("app.voiceOnboarding.reviewTitle")}</p>

@@ -306,12 +306,19 @@ export type OpenAiTtsResult = { bytes: ArrayBuffer; contentType: string };
 /** Synthesize speech with OpenAI TTS (mp3). */
 export async function openaiTts(
   config: OpenAiClientConfig,
-  input: { text: string; language?: string; speakingRate?: number },
+  input: {
+    text: string;
+    language?: string;
+    speakingRate?: number;
+    /** OpenAI stock voice id (nova, alloy, …). */
+    voice?: string;
+  },
 ): Promise<OpenAiTtsResult> {
   const cleaned = input.text.replace(/\s+/g, " ").trim();
   if (!cleaned) throw new OpenAiError("BAD_REQUEST", "Text is required for speech.", 400);
 
   const resolved = resolveConfig(config);
+  const voice = (input.voice || "nova").trim() || "nova";
   const res = await fetchWithTimeout(
     resolved.fetchImpl,
     `${resolved.baseUrl}/audio/speech`,
@@ -325,7 +332,7 @@ export async function openaiTts(
       },
       body: JSON.stringify({
         model: resolved.ttsModel,
-        voice: "nova",
+        voice,
         input: cleaned.slice(0, 1000),
         response_format: "mp3",
         speed: Math.min(2, Math.max(0.5, input.speakingRate ?? 1)),

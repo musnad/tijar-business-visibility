@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useChildMatches, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { RequireAuth } from "@/features/app/require-auth";
@@ -20,6 +20,9 @@ function AppOnboardingPage() {
 function OnboardingGate() {
   const { profile } = useAuth();
   const navigate = useNavigate();
+  // Child routes (e.g. /app/onboarding/voice) must render via <Outlet />.
+  // Without this, "Use your voice" changes the URL but keeps showing the typed wizard.
+  const childMatches = useChildMatches();
 
   useEffect(() => {
     if (profile?.onboarding_status === "completed") {
@@ -29,6 +32,10 @@ function OnboardingGate() {
 
   if (profile?.onboarding_status === "completed") {
     return null;
+  }
+
+  if (childMatches.length > 0) {
+    return <Outlet />;
   }
 
   return <OnboardingWizard />;

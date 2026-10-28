@@ -24,6 +24,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TranslateRouteImport } from './routes/translate'
 import { Route as ApiPublicConfigRouteImport } from './routes/api.public-config'
 import { Route as ApiSpeakRouteImport } from './routes/api.speak'
+import { Route as ApiVoiceEnrollRouteImport } from './routes/api.voice-enroll'
 import { Route as ApiSupabaseHealthRouteImport } from './routes/api.supabase-health'
 import { Route as ApiTranslateRouteImport } from './routes/api.translate'
 import { Route as ApiTranslateBatchRouteImport } from './routes/api.translate-batch'
@@ -135,6 +136,11 @@ const ApiPublicConfigRoute = ApiPublicConfigRouteImport.update({
 const ApiSpeakRoute = ApiSpeakRouteImport.update({
   id: '/api/speak',
   path: '/api/speak',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVoiceEnrollRoute = ApiVoiceEnrollRouteImport.update({
+  id: '/api/voice-enroll',
+  path: '/api/voice-enroll',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSupabaseHealthRoute = ApiSupabaseHealthRouteImport.update({
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/app/learn': typeof AppLearnRouteRouteWithChildren
   '/api/public-config': typeof ApiPublicConfigRoute
   '/api/speak': typeof ApiSpeakRoute
+  '/api/voice-enroll': typeof ApiVoiceEnrollRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/translate-batch': typeof ApiTranslateBatchRoute
@@ -392,6 +399,7 @@ export interface FileRoutesByTo {
   '/translate': typeof TranslateRoute
   '/api/public-config': typeof ApiPublicConfigRoute
   '/api/speak': typeof ApiSpeakRoute
+  '/api/voice-enroll': typeof ApiVoiceEnrollRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/translate-batch': typeof ApiTranslateBatchRoute
@@ -447,6 +455,7 @@ export interface FileRoutesById {
   '/app/learn': typeof AppLearnRouteRouteWithChildren
   '/api/public-config': typeof ApiPublicConfigRoute
   '/api/speak': typeof ApiSpeakRoute
+  '/api/voice-enroll': typeof ApiVoiceEnrollRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/translate-batch': typeof ApiTranslateBatchRoute
@@ -503,6 +512,7 @@ export interface FileRouteTypes {
     | '/app/learn'
     | '/api/public-config'
     | '/api/speak'
+    | '/api/voice-enroll'
     | '/api/supabase-health'
     | '/api/translate'
     | '/api/translate-batch'
@@ -554,6 +564,7 @@ export interface FileRouteTypes {
     | '/translate'
     | '/api/public-config'
     | '/api/speak'
+    | '/api/voice-enroll'
     | '/api/supabase-health'
     | '/api/translate'
     | '/api/translate-batch'
@@ -608,6 +619,7 @@ export interface FileRouteTypes {
     | '/app/learn'
     | '/api/public-config'
     | '/api/speak'
+    | '/api/voice-enroll'
     | '/api/supabase-health'
     | '/api/translate'
     | '/api/translate-batch'
@@ -661,6 +673,7 @@ export interface RootRouteChildren {
   TranslateRoute: typeof TranslateRoute
   ApiPublicConfigRoute: typeof ApiPublicConfigRoute
   ApiSpeakRoute: typeof ApiSpeakRoute
+  ApiVoiceEnrollRoute: typeof ApiVoiceEnrollRoute
   ApiSupabaseHealthRoute: typeof ApiSupabaseHealthRoute
   ApiTranslateRoute: typeof ApiTranslateRoute
   ApiTranslateBatchRoute: typeof ApiTranslateBatchRoute
@@ -773,6 +786,13 @@ declare module '@tanstack/react-router' {
       path: '/api/speak'
       fullPath: '/api/speak'
       preLoaderRoute: typeof ApiSpeakRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/voice-enroll': {
+      id: '/api/voice-enroll'
+      path: '/api/voice-enroll'
+      fullPath: '/api/voice-enroll'
+      preLoaderRoute: typeof ApiVoiceEnrollRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/supabase-health': {
@@ -1186,6 +1206,7 @@ const rootRouteChildren: RootRouteChildren = {
   TranslateRoute: TranslateRoute,
   ApiPublicConfigRoute: ApiPublicConfigRoute,
   ApiSpeakRoute: ApiSpeakRoute,
+  ApiVoiceEnrollRoute: ApiVoiceEnrollRoute,
   ApiSupabaseHealthRoute: ApiSupabaseHealthRoute,
   ApiTranslateRoute: ApiTranslateRoute,
   ApiTranslateBatchRoute: ApiTranslateBatchRoute,
