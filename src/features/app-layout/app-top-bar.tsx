@@ -12,6 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { AppLanguageButton } from "@/features/app-layout/app-language-button";
+import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
 import { useAuth } from "@/features/auth/auth-context";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -74,6 +75,7 @@ export function AppTopBar() {
       </div>
 
       <div className="flex items-center justify-end gap-1.5">
+        <AccountModeSwitch className="hidden sm:inline-flex" />
         <AppLanguageButton />
         <button
           type="button"

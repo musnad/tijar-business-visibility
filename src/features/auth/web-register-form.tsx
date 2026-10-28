@@ -33,6 +33,7 @@ export function WebRegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [location, setLocation] = useState("");
+  const [accountMode, setAccountMode] = useState<"customer" | "business">("customer");
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -58,13 +59,14 @@ export function WebRegisterForm() {
       fullName: parsed.data.fullName,
       phone: parsed.data.phone,
       location: parsed.data.location,
+      accountMode,
     });
     setLoading(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    if (typeof window !== "undefined") {
+    if (accountMode === "business" && typeof window !== "undefined") {
       sessionStorage.setItem(
         "tijar-onboarding-prefill",
         JSON.stringify({
@@ -74,7 +76,7 @@ export function WebRegisterForm() {
       );
     }
     if (data.session) {
-      void navigate({ to: "/app/onboarding" });
+      void navigate({ to: accountMode === "customer" ? "/shop" : "/app/onboarding" });
       return;
     }
     toast.message(t("app.register.checkEmail"));
@@ -119,6 +121,35 @@ export function WebRegisterForm() {
       }
     >
       <form className="space-y-4" onSubmit={onSubmit}>
+        <div>
+          <p className="mb-2 text-sm font-semibold text-[#001B3A]">I want to…</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setAccountMode("customer")}
+              className={`min-h-14 rounded-2xl border px-3 text-left text-sm font-bold ${
+                accountMode === "customer"
+                  ? "border-[#00C853] bg-[#e8faf0] text-[#001B3A]"
+                  : "border-[#dce3eb] bg-white text-[#5a6578]"
+              }`}
+            >
+              Buy things
+              <span className="mt-0.5 block text-[11px] font-medium opacity-80">Shop marketplace</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountMode("business")}
+              className={`min-h-14 rounded-2xl border px-3 text-left text-sm font-bold ${
+                accountMode === "business"
+                  ? "border-[#00C853] bg-[#e8faf0] text-[#001B3A]"
+                  : "border-[#dce3eb] bg-white text-[#5a6578]"
+              }`}
+            >
+              Sell / run a shop
+              <span className="mt-0.5 block text-[11px] font-medium opacity-80">Business dashboard</span>
+            </button>
+          </div>
+        </div>
         <WebAuthField
           id="web-reg-name"
           label={t("app.register.fullName")}

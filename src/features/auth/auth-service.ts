@@ -8,9 +8,12 @@ export async function signUpWithEmail(input: {
   phone?: string;
   categoryId?: string;
   location?: string;
+  /** customer → marketplace; business → onboarding (default). */
+  accountMode?: "customer" | "business";
 }) {
   const supabase = getSupabaseBrowserClient();
-  const emailRedirect = absoluteAppUrl("/app/onboarding");
+  const mode = input.accountMode ?? "business";
+  const emailRedirect = absoluteAppUrl(mode === "customer" ? "/shop" : "/app/onboarding");
   return supabase.auth.signUp({
     email: input.email.trim(),
     password: input.password,
@@ -21,6 +24,7 @@ export async function signUpWithEmail(input: {
         phone: input.phone?.trim(),
         signup_category_id: input.categoryId,
         signup_location: input.location?.trim(),
+        account_mode: mode,
       },
     },
   });

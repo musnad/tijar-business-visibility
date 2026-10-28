@@ -29,6 +29,7 @@ export function SiteHeader() {
   const links = useMemo(
     () =>
       [
+        { labelKey: "nav.shop", to: "/shop" as const },
         { labelKey: "nav.discover", to: "/discover" as const },
         { labelKey: "nav.translator", to: "/translate" as const },
         { labelKey: "nav.howItWorks", to: "/how-it-works" as const },

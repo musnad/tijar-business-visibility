@@ -43,6 +43,8 @@ export async function updateProfile(
       | "voice_sample_path"
       | "custom_voice_id"
       | "voice_enrolled_at"
+      | "account_mode"
+      | "active_mode"
     >
   >,
 ) {

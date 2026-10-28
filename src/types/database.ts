@@ -1,4 +1,6 @@
 export type OnboardingStatus = "not_started" | "in_progress" | "completed";
+export type AccountMode = "customer" | "business" | "both";
+export type ActiveMode = "customer" | "business";
 
 export type Profile = {
   id: string;
@@ -10,6 +12,8 @@ export type Profile = {
   bio: string | null;
   preferred_language: string;
   onboarding_status: OnboardingStatus;
+  account_mode?: AccountMode;
+  active_mode?: ActiveMode;
   /** OpenAI TTS stock voice (nova, alloy, …). */
   preferred_tts_voice?: string | null;
   /** Storage path of enrolled voice sample. */
@@ -19,6 +23,60 @@ export type Profile = {
   voice_enrolled_at?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type CustomerAddress = {
+  id: string;
+  profile_id: string;
+  label: string;
+  full_name: string;
+  phone: string;
+  state: string;
+  city: string;
+  lga: string | null;
+  street: string;
+  instructions: string | null;
+  is_default: boolean;
+};
+
+export type CartItem = {
+  id: string;
+  cart_id: string;
+  business_id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  product_name: string;
+  unit: string;
+  image_url: string | null;
+};
+
+export type MarketplaceOrder = {
+  id: string;
+  order_number: string;
+  buyer_profile_id: string;
+  business_id: string;
+  status: string;
+  fulfilment: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+  currency: string;
+  buyer_phone: string | null;
+  buyer_note: string | null;
+  created_at: string;
+};
+
+export type MarketplaceOrderItem = {
+  id: string;
+  order_id: string;
+  product_id: string;
+  product_name: string;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  image_url: string | null;
 };
 
 export type BusinessCategory = {

@@ -15,6 +15,14 @@ import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as BusinessVisibilityRouteImport } from './routes/business-visibility'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as ShopRouteImport } from './routes/shop'
+import { Route as ShopCartRouteImport } from './routes/shop/cart'
+import { Route as ShopCheckoutRouteImport } from './routes/shop/checkout'
+import { Route as ShopFavoritesRouteImport } from './routes/shop/favorites'
+import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
+import { Route as ShopProfileRouteImport } from './routes/shop/profile'
+import { Route as ShopOrdersOrderIdRouteImport } from './routes/shop/orders.$orderId'
+import { Route as ShopPProductIdRouteImport } from './routes/shop/p.$productId'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as LoginRouteImport } from './routes/login'
@@ -92,6 +100,47 @@ const DiscoverRoute = DiscoverRouteImport.update({
   id: '/discover',
   path: '/discover',
   getParentRoute: () => rootRouteImport,
+} as any)
+
+const ShopRoute = ShopRouteImport.update({
+  id: '/shop',
+  path: '/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShopCartRoute = ShopCartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopCheckoutRoute = ShopCheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopFavoritesRoute = ShopFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopOrdersRoute = ShopOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopProfileRoute = ShopProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopOrdersOrderIdRoute = ShopOrdersOrderIdRouteImport.update({
+  id: '/orders/$orderId',
+  path: '/orders/$orderId',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopPProductIdRoute = ShopPProductIdRouteImport.update({
+  id: '/p/$productId',
+  path: '/p/$productId',
+  getParentRoute: () => ShopRoute,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
@@ -336,6 +385,14 @@ export interface FileRoutesByFullPath {
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/discover': typeof DiscoverRoute
+  '/shop': typeof ShopRouteWithChildren
+  '/shop/cart': typeof ShopCartRoute
+  '/shop/checkout': typeof ShopCheckoutRoute
+  '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/orders': typeof ShopOrdersRoute
+  '/shop/profile': typeof ShopProfileRoute
+  '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
+  '/shop/p/$productId': typeof ShopPProductIdRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
@@ -390,6 +447,14 @@ export interface FileRoutesByTo {
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/discover': typeof DiscoverRoute
+  '/shop': typeof ShopRouteWithChildren
+  '/shop/cart': typeof ShopCartRoute
+  '/shop/checkout': typeof ShopCheckoutRoute
+  '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/orders': typeof ShopOrdersRoute
+  '/shop/profile': typeof ShopProfileRoute
+  '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
+  '/shop/p/$productId': typeof ShopPProductIdRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
@@ -444,6 +509,14 @@ export interface FileRoutesById {
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/discover': typeof DiscoverRoute
+  '/shop': typeof ShopRouteWithChildren
+  '/shop/cart': typeof ShopCartRoute
+  '/shop/checkout': typeof ShopCheckoutRoute
+  '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/orders': typeof ShopOrdersRoute
+  '/shop/profile': typeof ShopProfileRoute
+  '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
+  '/shop/p/$productId': typeof ShopPProductIdRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
@@ -501,6 +574,14 @@ export interface FileRouteTypes {
     | '/business-visibility'
     | '/contact'
     | '/discover'
+    | '/shop'
+    | '/shop/cart'
+    | '/shop/checkout'
+    | '/shop/favorites'
+    | '/shop/orders'
+    | '/shop/profile'
+    | '/shop/orders/$orderId'
+    | '/shop/p/$productId'
     | '/how-it-works'
     | '/learn'
     | '/login'
@@ -555,6 +636,14 @@ export interface FileRouteTypes {
     | '/business-visibility'
     | '/contact'
     | '/discover'
+    | '/shop'
+    | '/shop/cart'
+    | '/shop/checkout'
+    | '/shop/favorites'
+    | '/shop/orders'
+    | '/shop/profile'
+    | '/shop/orders/$orderId'
+    | '/shop/p/$productId'
     | '/how-it-works'
     | '/learn'
     | '/login'
@@ -608,6 +697,14 @@ export interface FileRouteTypes {
     | '/business-visibility'
     | '/contact'
     | '/discover'
+    | '/shop'
+    | '/shop/cart'
+    | '/shop/checkout'
+    | '/shop/favorites'
+    | '/shop/orders'
+    | '/shop/profile'
+    | '/shop/orders/$orderId'
+    | '/shop/p/$productId'
     | '/how-it-works'
     | '/learn'
     | '/login'
@@ -657,6 +754,29 @@ export interface FileRouteTypes {
     | '/app/customers/credit/new'
   fileRoutesById: FileRoutesById
 }
+
+interface ShopRouteChildren {
+  ShopCartRoute: typeof ShopCartRoute
+  ShopCheckoutRoute: typeof ShopCheckoutRoute
+  ShopFavoritesRoute: typeof ShopFavoritesRoute
+  ShopOrdersRoute: typeof ShopOrdersRoute
+  ShopProfileRoute: typeof ShopProfileRoute
+  ShopOrdersOrderIdRoute: typeof ShopOrdersOrderIdRoute
+  ShopPProductIdRoute: typeof ShopPProductIdRoute
+}
+
+const ShopRouteChildren: ShopRouteChildren = {
+  ShopCartRoute: ShopCartRoute,
+  ShopCheckoutRoute: ShopCheckoutRoute,
+  ShopFavoritesRoute: ShopFavoritesRoute,
+  ShopOrdersRoute: ShopOrdersRoute,
+  ShopProfileRoute: ShopProfileRoute,
+  ShopOrdersOrderIdRoute: ShopOrdersOrderIdRoute,
+  ShopPProductIdRoute: ShopPProductIdRoute,
+}
+
+const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)
+
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
@@ -664,6 +784,7 @@ export interface RootRouteChildren {
   BusinessVisibilityRoute: typeof BusinessVisibilityRoute
   ContactRoute: typeof ContactRoute
   DiscoverRoute: typeof DiscoverRoute
+  ShopRoute: typeof ShopRouteWithChildren
   HowItWorksRoute: typeof HowItWorksRoute
   LearnRoute: typeof LearnRoute
   LoginRoute: typeof LoginRoute
@@ -724,6 +845,62 @@ declare module '@tanstack/react-router' {
       fullPath: '/discover'
       preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/shop': {
+      id: '/shop'
+      path: '/shop'
+      fullPath: '/shop'
+      preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shop/cart': {
+      id: '/shop/cart'
+      path: '/cart'
+      fullPath: '/shop/cart'
+      preLoaderRoute: typeof ShopCartRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/checkout': {
+      id: '/shop/checkout'
+      path: '/checkout'
+      fullPath: '/shop/checkout'
+      preLoaderRoute: typeof ShopCheckoutRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/favorites': {
+      id: '/shop/favorites'
+      path: '/favorites'
+      fullPath: '/shop/favorites'
+      preLoaderRoute: typeof ShopFavoritesRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/orders': {
+      id: '/shop/orders'
+      path: '/orders'
+      fullPath: '/shop/orders'
+      preLoaderRoute: typeof ShopOrdersRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/profile': {
+      id: '/shop/profile'
+      path: '/profile'
+      fullPath: '/shop/profile'
+      preLoaderRoute: typeof ShopProfileRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/orders/$orderId': {
+      id: '/shop/orders/$orderId'
+      path: '/orders/$orderId'
+      fullPath: '/shop/orders/$orderId'
+      preLoaderRoute: typeof ShopOrdersOrderIdRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/p/$productId': {
+      id: '/shop/p/$productId'
+      path: '/p/$productId'
+      fullPath: '/shop/p/$productId'
+      preLoaderRoute: typeof ShopPProductIdRouteImport
+      parentRoute: typeof ShopRoute
     }
     '/how-it-works': {
       id: '/how-it-works'
@@ -1197,6 +1374,7 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessVisibilityRoute: BusinessVisibilityRoute,
   ContactRoute: ContactRoute,
   DiscoverRoute: DiscoverRoute,
+  ShopRoute: ShopRouteWithChildren,
   HowItWorksRoute: HowItWorksRoute,
   LearnRoute: LearnRoute,
   LoginRoute: LoginRoute,
