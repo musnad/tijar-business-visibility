@@ -49,6 +49,8 @@ export type CartItem = {
   product_name: string;
   unit: string;
   image_url: string | null;
+  variant_id?: string | null;
+  variant_label?: string | null;
 };
 
 export type MarketplaceOrder = {
@@ -60,10 +62,12 @@ export type MarketplaceOrder = {
   fulfilment: string;
   subtotal: number;
   delivery_fee: number;
+  payment_fee?: number;
   total: number;
   currency: string;
   buyer_phone: string | null;
   buyer_note: string | null;
+  is_order_request?: boolean;
   created_at: string;
 };
 
@@ -77,6 +81,8 @@ export type MarketplaceOrderItem = {
   unit_price: number;
   line_total: number;
   image_url: string | null;
+  variant_label?: string | null;
+  snapshot?: Record<string, unknown>;
 };
 
 export type BusinessCategory = {
@@ -97,6 +103,7 @@ export type Business = {
   description: string | null;
   location: string | null;
   logo_url: string | null;
+  cover_image_url?: string | null;
   islamic_mode_enabled: boolean;
   verification_status: string;
   public_slug: string | null;
@@ -127,6 +134,7 @@ export type PublicBusiness = {
   latitude: number | null;
   longitude: number | null;
   logo_url: string | null;
+  cover_image_url?: string | null;
   category_id: string | null;
   category_name: string | null;
   public_phone: string | null;
@@ -148,7 +156,14 @@ export type PublicProduct = {
   sale_price: number | null;
   unit: string;
   image_url: string | null;
+  extra_image_urls?: string[];
+  video_url?: string | null;
+  attributes?: Record<string, string> | null;
+  variants?: unknown;
+  currency?: string;
   is_available: boolean;
+  created_at?: string;
+  updated_at?: string;
   is_informal?: boolean;
   business_name?: string | null;
   business_slug?: string | null;
@@ -159,11 +174,23 @@ export type PublicProduct = {
 export type BusinessEnquiry = {
   id: string;
   business_id: string;
+  profile_id?: string | null;
+  product_id?: string | null;
   customer_name: string;
   customer_phone: string | null;
   message: string;
   is_read: boolean;
+  seller_reply?: string | null;
+  replied_at?: string | null;
   created_at: string;
+};
+
+export type NotificationPreferences = {
+  profile_id: string;
+  order_updates: boolean;
+  enquiry_replies: boolean;
+  followed_shops: boolean;
+  marketing: boolean;
 };
 
 export type BusinessDna = {
@@ -242,7 +269,15 @@ export type Product = {
   stock_quantity: number;
   low_stock_threshold: number;
   is_active: boolean;
+  is_published?: boolean;
   image_url: string | null;
+  extra_image_urls?: string[];
+  video_url?: string | null;
+  description?: string | null;
+  attributes?: Record<string, string>;
+  variants?: unknown;
+  currency?: string;
+  catalogue_category?: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

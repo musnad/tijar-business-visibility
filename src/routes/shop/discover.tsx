@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { ShopHomeScreen } from "@/features/marketplace/shop-home-screen";
+import { ShopDiscoverScreen } from "@/features/marketplace/shop-discover-screen";
 
 export const Route = createFileRoute("/shop/discover")({
-  component: ShopHomeScreen,
+  component: ShopDiscoverScreen,
 });

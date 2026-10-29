@@ -14,6 +14,9 @@ export async function invalidateBusinessQueries(
     queryClient.invalidateQueries({ queryKey: ["period-analytics", businessId] }),
     queryClient.invalidateQueries({ queryKey: ["business-health", businessId] }),
     queryClient.invalidateQueries({ queryKey: ["products-dashboard", businessId] }),
+    queryClient.invalidateQueries({ queryKey: ["marketplace-products-browse"] }),
+    queryClient.invalidateQueries({ queryKey: ["marketplace-shops"] }),
+    queryClient.invalidateQueries({ queryKey: ["for-you-listings"] }),
     queryClient.invalidateQueries({ queryKey: ["learn-mission"] }),
   ]);
 }

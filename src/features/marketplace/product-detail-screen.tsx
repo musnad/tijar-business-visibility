@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
+import { parseVariantList } from "@/lib/catalogue/variants";
 import {
   addToCart,
   fetchCart,
@@ -22,6 +23,7 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [qty, setQty] = useState(1);
+  const [variantId, setVariantId] = useState<string>("");
 
   const productQuery = useQuery({
     queryKey: ["marketplace-product", productId],
@@ -39,6 +41,10 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
   });
 
   const product = productQuery.data;
+  const variants = parseVariantList(product?.variants);
+  const selectedVariant = variants.find((v) => v.id === variantId) ?? variants[0] ?? null;
+  const livePrice =
+    product?.sale_price == null ? null : Number(product.sale_price) + (selectedVariant?.price_delta ?? 0);
   const cartCount = cartQuery.data?.reduce((n, i) => n + Number(i.quantity), 0) ?? 0;
 
   async function requireAuth() {
@@ -52,8 +58,8 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
 
   async function add(buyNow = false) {
     if (!(await requireAuth()) || !product || !profile) return;
-    if (product.sale_price == null) {
-      toast.message("This product has no price yet.");
+    if (livePrice == null) {
+      toast.message("This product has no price yet. Send an enquiry from the storefront.");
       return;
     }
     const { error } = await addToCart(profile.id, {
@@ -61,9 +67,11 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
       productId: product.id,
       productName: product.name,
       unit: product.unit,
-      unitPrice: Number(product.sale_price),
+      unitPrice: livePrice,
       quantity: qty,
       imageUrl: product.image_url,
+      variantId: selectedVariant?.id,
+      variantLabel: selectedVariant?.label,
     });
     if (error) {
       toast.error(error);
@@ -103,14 +111,31 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
             <div className="p-4">
               <h1 className="text-xl font-extrabold leading-tight">{product.name}</h1>
               <p className="mt-1 text-2xl font-extrabold text-primary">
-                {product.sale_price != null ? formatNgn(Number(product.sale_price)) : "Ask seller"}
+                {livePrice != null ? formatNgn(livePrice) : "Ask seller"}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {product.is_available ? "In stock" : "Unavailable"} · {product.unit}
                 {product.category_name ? ` · ${product.category_name}` : ""}
+                {product.currency ? ` · ${product.currency}` : ""}
               </p>
               {product.description && (
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{product.description}</p>
+              )}
+              {variants.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {variants.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${
+                        (selectedVariant?.id ?? "") === v.id ? "bg-primary text-primary-foreground" : "bg-muted"
+                      }`}
+                      onClick={() => setVariantId(v.id)}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           </div>

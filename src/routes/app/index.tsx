@@ -11,7 +11,9 @@ import { DashboardQuickActions } from "@/features/dashboard/quick-actions";
 import { HealthInsightsCard } from "@/features/dashboard/health-insights-card";
 import { DashboardRecentTransactions } from "@/features/dashboard/recent-transactions";
 import { DashboardSummaryCard } from "@/features/dashboard/summary-card";
+import { SellerCommerceCard } from "@/features/dashboard/seller-commerce-card";
 import { fetchBusinessHealthDashboard } from "@/services/business-health-service";
+import { loadSellerDashboard } from "@/services/seller-dashboard-service";
 import { useAuth } from "@/features/auth/auth-context";
 import { usePrimaryBusiness } from "@/hooks/use-primary-business";
 import { useTranslation } from "@/lib/i18n/context";
@@ -55,6 +57,12 @@ function AppHomeContent() {
     },
   });
 
+  const { data: sellerDash } = useQuery({
+    queryKey: ["seller-dashboard", business?.id],
+    enabled: Boolean(business?.id),
+    queryFn: async () => loadSellerDashboard(business!.id, business!),
+  });
+
   const { data: health } = useQuery({
     queryKey: ["business-health", business?.id],
     enabled: Boolean(business?.id),
@@ -86,6 +94,18 @@ function AppHomeContent() {
               supplierCreditTotal={health.supplierCreditTotal}
               customersOwingCount={health.customersOwingCount}
               suppliersOwingCount={health.suppliersOwingCount}
+            />
+          )}
+          {sellerDash && (
+            <SellerCommerceCard
+              business={business}
+              completeness={sellerDash.overview.completeness}
+              publishedProducts={sellerDash.overview.publishedProducts}
+              videoCounts={sellerDash.analytics.video_counts}
+              analytics={sellerDash.analytics}
+              analyticsReady={sellerDash.analyticsReady}
+              recentOrderCount={sellerDash.orders.length}
+              enquiryCount={sellerDash.enquiries.length}
             />
           )}
           <DashboardQuickActions />

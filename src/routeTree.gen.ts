@@ -35,9 +35,11 @@ import { Route as AppAssistantRouteImport } from './routes/app/assistant'
 import { Route as AppBusinessRouteImport } from './routes/app/business'
 import { Route as AppCustomersRouteRouteImport } from './routes/app/customers/route'
 import { Route as AppExpensesRouteImport } from './routes/app/expenses'
+import { Route as AppInboxRouteImport } from './routes/app/inbox'
 import { Route as AppLearnRouteRouteImport } from './routes/app/learn/route'
 import { Route as AppLoginRouteImport } from './routes/app/login'
 import { Route as AppOnboardingRouteImport } from './routes/app/onboarding'
+import { Route as AppOrdersRouteImport } from './routes/app/orders'
 import { Route as AppProductsRouteImport } from './routes/app/products'
 import { Route as AppProfileRouteImport } from './routes/app/profile'
 import { Route as AppRecordRouteImport } from './routes/app/record'
@@ -45,8 +47,11 @@ import { Route as AppRecordsRouteImport } from './routes/app/records'
 import { Route as AppRegisterRouteImport } from './routes/app/register'
 import { Route as AppSalesRouteImport } from './routes/app/sales'
 import { Route as AppScanRouteImport } from './routes/app/scan'
+import { Route as AppStudioRouteImport } from './routes/app/studio'
 import { Route as AppSuppliersRouteImport } from './routes/app/suppliers'
+import { Route as AppTeamRouteImport } from './routes/app/team'
 import { Route as AppTransactionsRouteImport } from './routes/app/transactions'
+import { Route as AppVideosRouteImport } from './routes/app/videos'
 import { Route as BSlugRouteImport } from './routes/b/$slug'
 import { Route as ShopIndexRouteImport } from './routes/shop/index'
 import { Route as ShopBrowseRouteImport } from './routes/shop/browse'
@@ -55,8 +60,11 @@ import { Route as ShopCartRouteImport } from './routes/shop/cart'
 import { Route as ShopCheckoutRouteImport } from './routes/shop/checkout'
 import { Route as ShopCreateRouteImport } from './routes/shop/create'
 import { Route as ShopDiscoverRouteImport } from './routes/shop/discover'
+import { Route as ShopEnquiriesRouteImport } from './routes/shop/enquiries'
 import { Route as ShopFavoritesRouteImport } from './routes/shop/favorites'
+import { Route as ShopFollowsRouteImport } from './routes/shop/follows'
 import { Route as ShopNearbyRouteImport } from './routes/shop/nearby'
+import { Route as ShopNotificationsRouteImport } from './routes/shop/notifications'
 import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
 import { Route as ShopProfileRouteImport } from './routes/shop/profile'
 import { Route as AppAdminIndexRouteImport } from './routes/app/admin/index'
@@ -69,11 +77,13 @@ import { Route as AppCustomersNewRouteImport } from './routes/app/customers/new'
 import { Route as AppLearnIndexRouteImport } from './routes/app/learn/index'
 import { Route as AppLearnLessonIdRouteImport } from './routes/app/learn/$lessonId'
 import { Route as AppOnboardingVoiceRouteImport } from './routes/app/onboarding/voice'
+import { Route as AppProductsProductIdRouteImport } from './routes/app/products/$productId'
 import { Route as AppProductsAdjustRouteImport } from './routes/app/products/adjust'
 import { Route as AppProductsNewRouteImport } from './routes/app/products/new'
 import { Route as AppProductsScanShopRouteImport } from './routes/app/products/scan-shop'
 import { Route as AppProfileEditRouteImport } from './routes/app/profile/edit'
 import { Route as AppProfileSettingsRouteImport } from './routes/app/profile/settings'
+import { Route as AppVideosNewRouteImport } from './routes/app/videos/new'
 import { Route as ShopOrdersOrderIdRouteImport } from './routes/shop/orders.$orderId'
 import { Route as ShopPProductIdRouteImport } from './routes/shop/p.$productId'
 import { Route as AppCustomersCreditNewRouteImport } from './routes/app/customers/credit/new'
@@ -208,6 +218,11 @@ const AppExpensesRoute = AppExpensesRouteImport.update({
   path: '/expenses',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppInboxRoute = AppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppLearnRouteRoute = AppLearnRouteRouteImport.update({
   id: '/learn',
   path: '/learn',
@@ -221,6 +236,11 @@ const AppLoginRoute = AppLoginRouteImport.update({
 const AppOnboardingRoute = AppOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppOrdersRoute = AppOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppProductsRoute = AppProductsRouteImport.update({
@@ -258,14 +278,29 @@ const AppScanRoute = AppScanRouteImport.update({
   path: '/scan',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppStudioRoute = AppStudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
   id: '/suppliers',
   path: '/suppliers',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppTransactionsRoute = AppTransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppVideosRoute = AppVideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const BSlugRoute = BSlugRouteImport.update({
@@ -308,14 +343,29 @@ const ShopDiscoverRoute = ShopDiscoverRouteImport.update({
   path: '/discover',
   getParentRoute: () => ShopRoute,
 } as any)
+const ShopEnquiriesRoute = ShopEnquiriesRouteImport.update({
+  id: '/enquiries',
+  path: '/enquiries',
+  getParentRoute: () => ShopRoute,
+} as any)
 const ShopFavoritesRoute = ShopFavoritesRouteImport.update({
   id: '/favorites',
   path: '/favorites',
   getParentRoute: () => ShopRoute,
 } as any)
+const ShopFollowsRoute = ShopFollowsRouteImport.update({
+  id: '/follows',
+  path: '/follows',
+  getParentRoute: () => ShopRoute,
+} as any)
 const ShopNearbyRoute = ShopNearbyRouteImport.update({
   id: '/nearby',
   path: '/nearby',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopNotificationsRoute = ShopNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => ShopRoute,
 } as any)
 const ShopOrdersRoute = ShopOrdersRouteImport.update({
@@ -378,6 +428,11 @@ const AppOnboardingVoiceRoute = AppOnboardingVoiceRouteImport.update({
   path: '/voice',
   getParentRoute: () => AppOnboardingRoute,
 } as any)
+const AppProductsProductIdRoute = AppProductsProductIdRouteImport.update({
+  id: '/$productId',
+  path: '/$productId',
+  getParentRoute: () => AppProductsRoute,
+} as any)
 const AppProductsAdjustRoute = AppProductsAdjustRouteImport.update({
   id: '/adjust',
   path: '/adjust',
@@ -402,6 +457,11 @@ const AppProfileSettingsRoute = AppProfileSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AppProfileRoute,
+} as any)
+const AppVideosNewRoute = AppVideosNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppVideosRoute,
 } as any)
 const ShopOrdersOrderIdRoute = ShopOrdersOrderIdRouteImport.update({
   id: '/$orderId',
@@ -446,8 +506,10 @@ export interface FileRoutesByFullPath {
   '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
+  '/app/inbox': typeof AppInboxRoute
   '/app/login': typeof AppLoginRoute
   '/app/onboarding': typeof AppOnboardingRouteWithChildren
+  '/app/orders': typeof AppOrdersRoute
   '/app/products': typeof AppProductsRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/record': typeof AppRecordRoute
@@ -455,8 +517,11 @@ export interface FileRoutesByFullPath {
   '/app/register': typeof AppRegisterRoute
   '/app/sales': typeof AppSalesRoute
   '/app/scan': typeof AppScanRoute
+  '/app/studio': typeof AppStudioRoute
   '/app/suppliers': typeof AppSuppliersRoute
+  '/app/team': typeof AppTeamRoute
   '/app/transactions': typeof AppTransactionsRoute
+  '/app/videos': typeof AppVideosRouteWithChildren
   '/b/$slug': typeof BSlugRoute
   '/shop/browse': typeof ShopBrowseRoute
   '/shop/business-apply': typeof ShopBusinessApplyRoute
@@ -464,8 +529,11 @@ export interface FileRoutesByFullPath {
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/create': typeof ShopCreateRoute
   '/shop/discover': typeof ShopDiscoverRoute
+  '/shop/enquiries': typeof ShopEnquiriesRoute
   '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/follows': typeof ShopFollowsRoute
   '/shop/nearby': typeof ShopNearbyRoute
+  '/shop/notifications': typeof ShopNotificationsRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
   '/shop/profile': typeof ShopProfileRoute
   '/app/': typeof AppIndexRoute
@@ -477,11 +545,13 @@ export interface FileRoutesByFullPath {
   '/app/customers/new': typeof AppCustomersNewRoute
   '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
   '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
+  '/app/products/$productId': typeof AppProductsProductIdRoute
   '/app/products/adjust': typeof AppProductsAdjustRoute
   '/app/products/new': typeof AppProductsNewRoute
   '/app/products/scan-shop': typeof AppProductsScanShopRoute
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
+  '/app/videos/new': typeof AppVideosNewRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
   '/shop/p/$productId': typeof ShopPProductIdRoute
   '/app/admin/': typeof AppAdminIndexRoute
@@ -512,8 +582,10 @@ export interface FileRoutesByTo {
   '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
+  '/app/inbox': typeof AppInboxRoute
   '/app/login': typeof AppLoginRoute
   '/app/onboarding': typeof AppOnboardingRouteWithChildren
+  '/app/orders': typeof AppOrdersRoute
   '/app/products': typeof AppProductsRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/record': typeof AppRecordRoute
@@ -521,8 +593,11 @@ export interface FileRoutesByTo {
   '/app/register': typeof AppRegisterRoute
   '/app/sales': typeof AppSalesRoute
   '/app/scan': typeof AppScanRoute
+  '/app/studio': typeof AppStudioRoute
   '/app/suppliers': typeof AppSuppliersRoute
+  '/app/team': typeof AppTeamRoute
   '/app/transactions': typeof AppTransactionsRoute
+  '/app/videos': typeof AppVideosRouteWithChildren
   '/b/$slug': typeof BSlugRoute
   '/shop/browse': typeof ShopBrowseRoute
   '/shop/business-apply': typeof ShopBusinessApplyRoute
@@ -530,8 +605,11 @@ export interface FileRoutesByTo {
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/create': typeof ShopCreateRoute
   '/shop/discover': typeof ShopDiscoverRoute
+  '/shop/enquiries': typeof ShopEnquiriesRoute
   '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/follows': typeof ShopFollowsRoute
   '/shop/nearby': typeof ShopNearbyRoute
+  '/shop/notifications': typeof ShopNotificationsRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
   '/shop/profile': typeof ShopProfileRoute
   '/app': typeof AppIndexRoute
@@ -543,11 +621,13 @@ export interface FileRoutesByTo {
   '/app/customers/new': typeof AppCustomersNewRoute
   '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
   '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
+  '/app/products/$productId': typeof AppProductsProductIdRoute
   '/app/products/adjust': typeof AppProductsAdjustRoute
   '/app/products/new': typeof AppProductsNewRoute
   '/app/products/scan-shop': typeof AppProductsScanShopRoute
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
+  '/app/videos/new': typeof AppVideosNewRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
   '/shop/p/$productId': typeof ShopPProductIdRoute
   '/app/admin': typeof AppAdminIndexRoute
@@ -583,8 +663,10 @@ export interface FileRoutesById {
   '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
+  '/app/inbox': typeof AppInboxRoute
   '/app/login': typeof AppLoginRoute
   '/app/onboarding': typeof AppOnboardingRouteWithChildren
+  '/app/orders': typeof AppOrdersRoute
   '/app/products': typeof AppProductsRouteWithChildren
   '/app/profile': typeof AppProfileRouteWithChildren
   '/app/record': typeof AppRecordRoute
@@ -592,8 +674,11 @@ export interface FileRoutesById {
   '/app/register': typeof AppRegisterRoute
   '/app/sales': typeof AppSalesRoute
   '/app/scan': typeof AppScanRoute
+  '/app/studio': typeof AppStudioRoute
   '/app/suppliers': typeof AppSuppliersRoute
+  '/app/team': typeof AppTeamRoute
   '/app/transactions': typeof AppTransactionsRoute
+  '/app/videos': typeof AppVideosRouteWithChildren
   '/b/$slug': typeof BSlugRoute
   '/shop/browse': typeof ShopBrowseRoute
   '/shop/business-apply': typeof ShopBusinessApplyRoute
@@ -601,8 +686,11 @@ export interface FileRoutesById {
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/create': typeof ShopCreateRoute
   '/shop/discover': typeof ShopDiscoverRoute
+  '/shop/enquiries': typeof ShopEnquiriesRoute
   '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/follows': typeof ShopFollowsRoute
   '/shop/nearby': typeof ShopNearbyRoute
+  '/shop/notifications': typeof ShopNotificationsRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
   '/shop/profile': typeof ShopProfileRoute
   '/app/': typeof AppIndexRoute
@@ -614,11 +702,13 @@ export interface FileRoutesById {
   '/app/customers/new': typeof AppCustomersNewRoute
   '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
   '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
+  '/app/products/$productId': typeof AppProductsProductIdRoute
   '/app/products/adjust': typeof AppProductsAdjustRoute
   '/app/products/new': typeof AppProductsNewRoute
   '/app/products/scan-shop': typeof AppProductsScanShopRoute
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
+  '/app/videos/new': typeof AppVideosNewRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
   '/shop/p/$productId': typeof ShopPProductIdRoute
   '/app/admin/': typeof AppAdminIndexRoute
@@ -655,8 +745,10 @@ export interface FileRouteTypes {
     | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
+    | '/app/inbox'
     | '/app/login'
     | '/app/onboarding'
+    | '/app/orders'
     | '/app/products'
     | '/app/profile'
     | '/app/record'
@@ -664,8 +756,11 @@ export interface FileRouteTypes {
     | '/app/register'
     | '/app/sales'
     | '/app/scan'
+    | '/app/studio'
     | '/app/suppliers'
+    | '/app/team'
     | '/app/transactions'
+    | '/app/videos'
     | '/b/$slug'
     | '/shop/browse'
     | '/shop/business-apply'
@@ -673,8 +768,11 @@ export interface FileRouteTypes {
     | '/shop/checkout'
     | '/shop/create'
     | '/shop/discover'
+    | '/shop/enquiries'
     | '/shop/favorites'
+    | '/shop/follows'
     | '/shop/nearby'
+    | '/shop/notifications'
     | '/shop/orders'
     | '/shop/profile'
     | '/app/'
@@ -686,11 +784,13 @@ export interface FileRouteTypes {
     | '/app/customers/new'
     | '/app/learn/$lessonId'
     | '/app/onboarding/voice'
+    | '/app/products/$productId'
     | '/app/products/adjust'
     | '/app/products/new'
     | '/app/products/scan-shop'
     | '/app/profile/edit'
     | '/app/profile/settings'
+    | '/app/videos/new'
     | '/shop/orders/$orderId'
     | '/shop/p/$productId'
     | '/app/admin/'
@@ -721,8 +821,10 @@ export interface FileRouteTypes {
     | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
+    | '/app/inbox'
     | '/app/login'
     | '/app/onboarding'
+    | '/app/orders'
     | '/app/products'
     | '/app/profile'
     | '/app/record'
@@ -730,8 +832,11 @@ export interface FileRouteTypes {
     | '/app/register'
     | '/app/sales'
     | '/app/scan'
+    | '/app/studio'
     | '/app/suppliers'
+    | '/app/team'
     | '/app/transactions'
+    | '/app/videos'
     | '/b/$slug'
     | '/shop/browse'
     | '/shop/business-apply'
@@ -739,8 +844,11 @@ export interface FileRouteTypes {
     | '/shop/checkout'
     | '/shop/create'
     | '/shop/discover'
+    | '/shop/enquiries'
     | '/shop/favorites'
+    | '/shop/follows'
     | '/shop/nearby'
+    | '/shop/notifications'
     | '/shop/orders'
     | '/shop/profile'
     | '/app'
@@ -752,11 +860,13 @@ export interface FileRouteTypes {
     | '/app/customers/new'
     | '/app/learn/$lessonId'
     | '/app/onboarding/voice'
+    | '/app/products/$productId'
     | '/app/products/adjust'
     | '/app/products/new'
     | '/app/products/scan-shop'
     | '/app/profile/edit'
     | '/app/profile/settings'
+    | '/app/videos/new'
     | '/shop/orders/$orderId'
     | '/shop/p/$productId'
     | '/app/admin'
@@ -791,8 +901,10 @@ export interface FileRouteTypes {
     | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
+    | '/app/inbox'
     | '/app/login'
     | '/app/onboarding'
+    | '/app/orders'
     | '/app/products'
     | '/app/profile'
     | '/app/record'
@@ -800,8 +912,11 @@ export interface FileRouteTypes {
     | '/app/register'
     | '/app/sales'
     | '/app/scan'
+    | '/app/studio'
     | '/app/suppliers'
+    | '/app/team'
     | '/app/transactions'
+    | '/app/videos'
     | '/b/$slug'
     | '/shop/browse'
     | '/shop/business-apply'
@@ -809,8 +924,11 @@ export interface FileRouteTypes {
     | '/shop/checkout'
     | '/shop/create'
     | '/shop/discover'
+    | '/shop/enquiries'
     | '/shop/favorites'
+    | '/shop/follows'
     | '/shop/nearby'
+    | '/shop/notifications'
     | '/shop/orders'
     | '/shop/profile'
     | '/app/'
@@ -822,11 +940,13 @@ export interface FileRouteTypes {
     | '/app/customers/new'
     | '/app/learn/$lessonId'
     | '/app/onboarding/voice'
+    | '/app/products/$productId'
     | '/app/products/adjust'
     | '/app/products/new'
     | '/app/products/scan-shop'
     | '/app/profile/edit'
     | '/app/profile/settings'
+    | '/app/videos/new'
     | '/shop/orders/$orderId'
     | '/shop/p/$productId'
     | '/app/admin/'
@@ -1044,6 +1164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExpensesRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/app/inbox': {
+      id: '/app/inbox'
+      path: '/inbox'
+      fullPath: '/app/inbox'
+      preLoaderRoute: typeof AppInboxRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/app/learn': {
       id: '/app/learn'
       path: '/learn'
@@ -1063,6 +1190,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/app/onboarding'
       preLoaderRoute: typeof AppOnboardingRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/orders': {
+      id: '/app/orders'
+      path: '/orders'
+      fullPath: '/app/orders'
+      preLoaderRoute: typeof AppOrdersRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/app/products': {
@@ -1114,6 +1248,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppScanRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/app/studio': {
+      id: '/app/studio'
+      path: '/studio'
+      fullPath: '/app/studio'
+      preLoaderRoute: typeof AppStudioRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/app/suppliers': {
       id: '/app/suppliers'
       path: '/suppliers'
@@ -1121,11 +1262,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSuppliersRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/app/team': {
+      id: '/app/team'
+      path: '/team'
+      fullPath: '/app/team'
+      preLoaderRoute: typeof AppTeamRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/app/transactions': {
       id: '/app/transactions'
       path: '/transactions'
       fullPath: '/app/transactions'
       preLoaderRoute: typeof AppTransactionsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/videos': {
+      id: '/app/videos'
+      path: '/videos'
+      fullPath: '/app/videos'
+      preLoaderRoute: typeof AppVideosRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/b/$slug': {
@@ -1184,6 +1339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopDiscoverRouteImport
       parentRoute: typeof ShopRoute
     }
+    '/shop/enquiries': {
+      id: '/shop/enquiries'
+      path: '/enquiries'
+      fullPath: '/shop/enquiries'
+      preLoaderRoute: typeof ShopEnquiriesRouteImport
+      parentRoute: typeof ShopRoute
+    }
     '/shop/favorites': {
       id: '/shop/favorites'
       path: '/favorites'
@@ -1191,11 +1353,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopFavoritesRouteImport
       parentRoute: typeof ShopRoute
     }
+    '/shop/follows': {
+      id: '/shop/follows'
+      path: '/follows'
+      fullPath: '/shop/follows'
+      preLoaderRoute: typeof ShopFollowsRouteImport
+      parentRoute: typeof ShopRoute
+    }
     '/shop/nearby': {
       id: '/shop/nearby'
       path: '/nearby'
       fullPath: '/shop/nearby'
       preLoaderRoute: typeof ShopNearbyRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/notifications': {
+      id: '/shop/notifications'
+      path: '/notifications'
+      fullPath: '/shop/notifications'
+      preLoaderRoute: typeof ShopNotificationsRouteImport
       parentRoute: typeof ShopRoute
     }
     '/shop/orders': {
@@ -1282,6 +1458,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOnboardingVoiceRouteImport
       parentRoute: typeof AppOnboardingRoute
     }
+    '/app/products/$productId': {
+      id: '/app/products/$productId'
+      path: '/$productId'
+      fullPath: '/app/products/$productId'
+      preLoaderRoute: typeof AppProductsProductIdRouteImport
+      parentRoute: typeof AppProductsRoute
+    }
     '/app/products/adjust': {
       id: '/app/products/adjust'
       path: '/adjust'
@@ -1316,6 +1499,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/profile/settings'
       preLoaderRoute: typeof AppProfileSettingsRouteImport
       parentRoute: typeof AppProfileRoute
+    }
+    '/app/videos/new': {
+      id: '/app/videos/new'
+      path: '/new'
+      fullPath: '/app/videos/new'
+      preLoaderRoute: typeof AppVideosNewRouteImport
+      parentRoute: typeof AppVideosRoute
     }
     '/shop/orders/$orderId': {
       id: '/shop/orders/$orderId'
@@ -1397,12 +1587,14 @@ const AppOnboardingRouteWithChildren = AppOnboardingRoute._addFileChildren(
 )
 
 interface AppProductsRouteChildren {
+  AppProductsProductIdRoute: typeof AppProductsProductIdRoute
   AppProductsAdjustRoute: typeof AppProductsAdjustRoute
   AppProductsNewRoute: typeof AppProductsNewRoute
   AppProductsScanShopRoute: typeof AppProductsScanShopRoute
 }
 
 const AppProductsRouteChildren: AppProductsRouteChildren = {
+  AppProductsProductIdRoute: AppProductsProductIdRoute,
   AppProductsAdjustRoute: AppProductsAdjustRoute,
   AppProductsNewRoute: AppProductsNewRoute,
   AppProductsScanShopRoute: AppProductsScanShopRoute,
@@ -1426,14 +1618,28 @@ const AppProfileRouteWithChildren = AppProfileRoute._addFileChildren(
   AppProfileRouteChildren,
 )
 
+interface AppVideosRouteChildren {
+  AppVideosNewRoute: typeof AppVideosNewRoute
+}
+
+const AppVideosRouteChildren: AppVideosRouteChildren = {
+  AppVideosNewRoute: AppVideosNewRoute,
+}
+
+const AppVideosRouteWithChildren = AppVideosRoute._addFileChildren(
+  AppVideosRouteChildren,
+)
+
 interface AppRouteRouteChildren {
   AppCustomersRouteRoute: typeof AppCustomersRouteRouteWithChildren
   AppLearnRouteRoute: typeof AppLearnRouteRouteWithChildren
   AppAssistantRoute: typeof AppAssistantRoute
   AppBusinessRoute: typeof AppBusinessRouteWithChildren
   AppExpensesRoute: typeof AppExpensesRoute
+  AppInboxRoute: typeof AppInboxRoute
   AppLoginRoute: typeof AppLoginRoute
   AppOnboardingRoute: typeof AppOnboardingRouteWithChildren
+  AppOrdersRoute: typeof AppOrdersRoute
   AppProductsRoute: typeof AppProductsRouteWithChildren
   AppProfileRoute: typeof AppProfileRouteWithChildren
   AppRecordRoute: typeof AppRecordRoute
@@ -1441,8 +1647,11 @@ interface AppRouteRouteChildren {
   AppRegisterRoute: typeof AppRegisterRoute
   AppSalesRoute: typeof AppSalesRoute
   AppScanRoute: typeof AppScanRoute
+  AppStudioRoute: typeof AppStudioRoute
   AppSuppliersRoute: typeof AppSuppliersRoute
+  AppTeamRoute: typeof AppTeamRoute
   AppTransactionsRoute: typeof AppTransactionsRoute
+  AppVideosRoute: typeof AppVideosRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
   AppAdminModerationRoute: typeof AppAdminModerationRoute
   AppAdminTranslateRoute: typeof AppAdminTranslateRoute
@@ -1455,8 +1664,10 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppAssistantRoute: AppAssistantRoute,
   AppBusinessRoute: AppBusinessRouteWithChildren,
   AppExpensesRoute: AppExpensesRoute,
+  AppInboxRoute: AppInboxRoute,
   AppLoginRoute: AppLoginRoute,
   AppOnboardingRoute: AppOnboardingRouteWithChildren,
+  AppOrdersRoute: AppOrdersRoute,
   AppProductsRoute: AppProductsRouteWithChildren,
   AppProfileRoute: AppProfileRouteWithChildren,
   AppRecordRoute: AppRecordRoute,
@@ -1464,8 +1675,11 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppRegisterRoute: AppRegisterRoute,
   AppSalesRoute: AppSalesRoute,
   AppScanRoute: AppScanRoute,
+  AppStudioRoute: AppStudioRoute,
   AppSuppliersRoute: AppSuppliersRoute,
+  AppTeamRoute: AppTeamRoute,
   AppTransactionsRoute: AppTransactionsRoute,
+  AppVideosRoute: AppVideosRouteWithChildren,
   AppIndexRoute: AppIndexRoute,
   AppAdminModerationRoute: AppAdminModerationRoute,
   AppAdminTranslateRoute: AppAdminTranslateRoute,
@@ -1495,8 +1709,11 @@ interface ShopRouteChildren {
   ShopCheckoutRoute: typeof ShopCheckoutRoute
   ShopCreateRoute: typeof ShopCreateRoute
   ShopDiscoverRoute: typeof ShopDiscoverRoute
+  ShopEnquiriesRoute: typeof ShopEnquiriesRoute
   ShopFavoritesRoute: typeof ShopFavoritesRoute
+  ShopFollowsRoute: typeof ShopFollowsRoute
   ShopNearbyRoute: typeof ShopNearbyRoute
+  ShopNotificationsRoute: typeof ShopNotificationsRoute
   ShopOrdersRoute: typeof ShopOrdersRouteWithChildren
   ShopProfileRoute: typeof ShopProfileRoute
   ShopIndexRoute: typeof ShopIndexRoute
@@ -1510,8 +1727,11 @@ const ShopRouteChildren: ShopRouteChildren = {
   ShopCheckoutRoute: ShopCheckoutRoute,
   ShopCreateRoute: ShopCreateRoute,
   ShopDiscoverRoute: ShopDiscoverRoute,
+  ShopEnquiriesRoute: ShopEnquiriesRoute,
   ShopFavoritesRoute: ShopFavoritesRoute,
+  ShopFollowsRoute: ShopFollowsRoute,
   ShopNearbyRoute: ShopNearbyRoute,
+  ShopNotificationsRoute: ShopNotificationsRoute,
   ShopOrdersRoute: ShopOrdersRouteWithChildren,
   ShopProfileRoute: ShopProfileRoute,
   ShopIndexRoute: ShopIndexRoute,
@@ -1547,3 +1767,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

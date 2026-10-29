@@ -24,7 +24,7 @@ const DELIVERY_STEPS: OrderTrackStep[] = [
 ];
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_payment: "Awaiting payment",
+  pending_payment: "Order request",
   paid: "Paid",
   confirmed: "Confirmed by seller",
   processing: "Being prepared",

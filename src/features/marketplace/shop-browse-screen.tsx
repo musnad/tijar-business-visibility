@@ -13,6 +13,9 @@ import { fetchCart, fetchMarketplaceProducts } from "@/services/marketplace-serv
 export function ShopBrowseScreen() {
   const { profile } = useAuth();
   const [q, setQ] = useState("");
+  const [availableOnly, setAvailableOnly] = useState(true);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
   const productsQuery = useQuery({
     queryKey: ["marketplace-products-browse"],
@@ -30,12 +33,20 @@ export function ShopBrowseScreen() {
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const all = productsQuery.data ?? [];
-    if (!needle) return all;
-    return all.filter((p) =>
-      [p.name, p.business_name, p.category_name, p.description].filter(Boolean).join(" ").toLowerCase().includes(needle),
-    );
-  }, [productsQuery.data, q]);
+    const min = minPrice ? Number(minPrice) : null;
+    const max = maxPrice ? Number(maxPrice) : null;
+    return (productsQuery.data ?? []).filter((p) => {
+      if (availableOnly && !p.is_available) return false;
+      if (min != null && (p.sale_price == null || Number(p.sale_price) < min)) return false;
+      if (max != null && (p.sale_price == null || Number(p.sale_price) > max)) return false;
+      if (!needle) return true;
+      return [p.name, p.business_name, p.category_name, p.description]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(needle);
+    });
+  }, [productsQuery.data, q, availableOnly, minPrice, maxPrice]);
 
   const cartCount = cartQuery.data?.reduce((n, i) => n + Number(i.quantity), 0) ?? 0;
 
@@ -46,6 +57,14 @@ export function ShopBrowseScreen() {
       <div className="relative mt-4">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products" className="h-11 rounded-2xl pl-9" />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Input value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Min ₦" className="h-10 w-24 rounded-xl" inputMode="numeric" />
+        <Input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Max ₦" className="h-10 w-24 rounded-xl" inputMode="numeric" />
+        <label className="flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm">
+          <input type="checkbox" checked={availableOnly} onChange={(e) => setAvailableOnly(e.target.checked)} />
+          Available
+        </label>
       </div>
       {productsQuery.isLoading && <p className="mt-6 text-sm text-muted-foreground">Loading products…</p>}
       {productsQuery.isError && <p className="mt-6 text-sm text-destructive">Could not load the catalogue.</p>}

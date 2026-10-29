@@ -81,8 +81,7 @@ export function ModerationScreen() {
     enabled: Boolean(profile?.id),
     queryFn: async () => fetchMyPlatformRoles(profile!.id),
   });
-  const isAdmin =
-    isTijarSuperAdminEmail(profile?.email) || (rolesQuery.data ?? []).includes("admin");
+  const isAdmin = (rolesQuery.data ?? []).includes("admin");
 
   const listingsQuery = useQuery({
     queryKey: ["moderation-listings"],

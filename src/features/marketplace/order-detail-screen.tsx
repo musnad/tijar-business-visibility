@@ -1,17 +1,19 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, MapPin, Phone } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { OrderTrackTimeline } from "@/features/marketplace/order-track-timeline";
-import { fetchOrderDetail } from "@/services/marketplace-service";
+import { fetchOrderDetail, transitionOrder } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import { formatOrderWhen, orderStatusLabel } from "@/utils/order-tracking";
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
+  const queryClient = useQueryClient();
   const detailQuery = useQuery({
     queryKey: ["marketplace-order", orderId],
     queryFn: async () => {
@@ -53,7 +55,11 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               Order tracking
             </p>
             <h1 className="mt-1 text-xl font-extrabold">{order.order_number}</h1>
-            <p className="mt-1 text-sm text-white/85">{orderStatusLabel(order.status)}</p>
+            <p className="mt-1 text-sm text-white/85">
+              {order.is_order_request !== false && order.status === "pending_payment"
+                ? "Order request — not paid"
+                : orderStatusLabel(order.status)}
+            </p>
             <p className="mt-3 text-2xl font-extrabold">{formatNgn(Number(order.total))}</p>
             <p className="mt-1 text-xs text-white/75">{formatOrderWhen(order.created_at)}</p>
           </div>
@@ -118,6 +124,10 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                 <span>Delivery</span>
                 <span>{formatNgn(Number(order.delivery_fee))}</span>
               </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Payment charges</span>
+                <span>{formatNgn(Number(order.payment_fee ?? 0))}</span>
+              </div>
               <div className="flex justify-between pt-1 text-base font-extrabold">
                 <span>Total</span>
                 <span className="text-primary">{formatNgn(Number(order.total))}</span>
@@ -125,6 +135,24 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             </div>
           </section>
 
+          {order.status === "pending_payment" && (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-12 w-full rounded-xl font-bold"
+              onClick={async () => {
+                const r = await transitionOrder(order.id, "cancelled");
+                if (r.error) toast.error(r.error);
+                else {
+                  toast.success("Request cancelled");
+                  await queryClient.invalidateQueries({ queryKey: ["marketplace-order", orderId] });
+                  await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
+                }
+              }}
+            >
+              Cancel request
+            </Button>
+          )}
           <Button className="min-h-12 w-full rounded-xl font-bold" asChild>
             <Link to="/shop">Continue shopping</Link>
           </Button>

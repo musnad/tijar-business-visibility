@@ -1,0 +1,71 @@
+import { describe, expect, it } from "vitest";
+
+import { catalogSuggestions, filterCatalogProducts, filterCatalogSellers } from "./discover-catalog";
+
+const products = [
+  {
+    id: "1",
+    name: "Rice 50kg",
+    kind: "goods" as const,
+    sale_price: 45000,
+    is_available: true,
+    category_name: "Foodstuff",
+    business_id: "b1",
+    business_name: "Aisha Foods",
+    attributes: { colour: "white" },
+  },
+  {
+    id: "2",
+    name: "Agbada sewing",
+    kind: "service" as const,
+    sale_price: 15000,
+    is_available: true,
+    category_name: "Fashion",
+    business_id: "b2",
+    business_name: "Kano Tailor",
+    attributes: { size: "L" },
+  },
+  {
+    id: "3",
+    name: "Palm oil",
+    kind: "goods" as const,
+    sale_price: 8000,
+    is_available: false,
+    category_name: "Foodstuff",
+    business_id: "b1",
+    business_name: "Aisha Foods",
+  },
+];
+
+describe("filterCatalogProducts", () => {
+  it("filters by kind, availability, price and query", () => {
+    expect(filterCatalogProducts(products, { kind: "goods", availableOnly: true })).toHaveLength(1);
+    expect(filterCatalogProducts(products, { minPrice: 10000, maxPrice: 20000 }).map((p) => p.id)).toEqual(["2"]);
+    expect(filterCatalogProducts(products, { query: "rice aisha" }).map((p) => p.id)).toEqual(["1"]);
+    expect(filterCatalogProducts(products, { attribute: "L" }).map((p) => p.id)).toEqual(["2"]);
+  });
+});
+
+describe("filterCatalogSellers", () => {
+  it("matches seller name, category and product names", () => {
+    const sellers = [
+      { id: "b1", slug: "aisha", business_name: "Aisha Foods", category_id: "c1", product_names: ["Rice 50kg"] },
+      { id: "b2", slug: "tailor", business_name: "Kano Tailor", category_id: "c2", product_names: ["Agbada"] },
+    ];
+    expect(filterCatalogSellers(sellers, "rice").map((s) => s.id)).toEqual(["b1"]);
+    expect(filterCatalogSellers(sellers, "", "c2").map((s) => s.id)).toEqual(["b2"]);
+  });
+});
+
+describe("catalogSuggestions", () => {
+  it("returns suggestions only from real catalogue rows", () => {
+    const s = catalogSuggestions({
+      query: "ri",
+      products,
+      sellers: [{ id: "b1", slug: "aisha", business_name: "Aisha Foods" }],
+      categories: ["Foodstuff", "Fashion"],
+    });
+    expect(s.some((x) => x.label === "Rice 50kg" && x.kind === "product")).toBe(true);
+    expect(s.every((x) => ["product", "service", "seller", "category"].includes(x.kind))).toBe(true);
+  });
+});

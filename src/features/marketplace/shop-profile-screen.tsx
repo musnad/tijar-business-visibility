@@ -242,6 +242,42 @@ export function ShopProfileScreen() {
           </span>
         </Link>
         <Link
+          to="/shop/follows"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
+        >
+          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Store className="size-5" />
+          </span>
+          <span>
+            <p className="text-sm font-bold">Following</p>
+            <p className="text-[11px] text-muted-foreground">Shops you follow</p>
+          </span>
+        </Link>
+        <Link
+          to="/shop/enquiries"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
+        >
+          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Package className="size-5" />
+          </span>
+          <span>
+            <p className="text-sm font-bold">Enquiries</p>
+            <p className="text-[11px] text-muted-foreground">Messages sent</p>
+          </span>
+        </Link>
+        <Link
+          to="/shop/notifications"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
+        >
+          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Clock3 className="size-5" />
+          </span>
+          <span>
+            <p className="text-sm font-bold">Alerts</p>
+            <p className="text-[11px] text-muted-foreground">Preferences</p>
+          </span>
+        </Link>
+        <Link
           to="/shop/nearby"
           className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
         >

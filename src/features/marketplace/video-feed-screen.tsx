@@ -29,7 +29,8 @@ import {
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils";
-import { addToCart, fetchCart, toggleFavoriteProduct } from "@/services/marketplace-service";
+import { addToCart, fetchCart, fetchMarketplaceProducts, toggleFavoriteProduct } from "@/services/marketplace-service";
+import { ProductCard } from "@/features/marketplace/product-card";
 import {
   blockProfile,
   fetchLiveProductsByIds,
@@ -94,7 +95,18 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
     staleTime: 20_000,
   });
 
+  const listingsQuery = useQuery({
+    queryKey: ["for-you-listings"],
+    queryFn: async () => {
+      const r = await fetchMarketplaceProducts(24);
+      if (r.error) throw new Error(r.error);
+      return r.data;
+    },
+    staleTime: 20_000,
+  });
+
   const videos = feedQuery.data ?? [];
+  const liveListings = listingsQuery.data ?? [];
   const productIds = useMemo(
     () => [...new Set(videos.flatMap((v) => v.product_ids ?? []))],
     [videos],
@@ -169,6 +181,7 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
 
   useEffect(() => {
     if (!activeId) return;
+    void recordFeedSignal(activeId, "impression");
     void recordFeedSignal(activeId, "view");
   }, [activeId]);
 
@@ -186,6 +199,23 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   return (
     <MarketplaceShell cartCount={cartCount} hideTopBar mapLayout>
       <div className="relative mx-auto w-full max-w-lg lg:max-w-md">
+        {videos.length > 0 && liveListings.length > 0 && (
+          <div className="mb-2 rounded-2xl bg-background px-1 py-2">
+            <div className="mb-1 flex items-center justify-between px-1">
+              <p className="text-xs font-extrabold uppercase tracking-wide">Just listed</p>
+              <Link to="/shop/discover" className="text-[11px] font-semibold text-primary">
+                Discover
+              </Link>
+            </div>
+            <ul className="flex gap-2 overflow-x-auto pb-1">
+              {liveListings.slice(0, 12).map((p) => (
+                <li key={p.id} className="w-36 shrink-0">
+                  <ProductCard product={p} compact />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {feedQuery.isLoading && (
           <div className="flex h-[calc(100dvh-4.25rem)] items-center justify-center rounded-[1.5rem] bg-muted">
             <p className="text-sm text-muted-foreground">Loading For You…</p>
@@ -199,15 +229,25 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
           </div>
         )}
         {!feedQuery.isLoading && !feedQuery.isError && videos.length === 0 && (
-          <div className="flex h-[calc(100dvh-4.25rem)] flex-col items-center justify-center gap-3 rounded-[1.5rem] border border-dashed p-6 text-center">
-            <ShoppingBag className="size-10 text-muted-foreground" />
-            <p className="font-extrabold">No published videos yet</p>
-            <p className="text-sm text-muted-foreground">
-              Sellers publish shopping videos from Create. Until then, browse shops on Discover.
+          <div className="flex max-h-[calc(100dvh-4.25rem)] flex-col overflow-y-auto rounded-[1.5rem] border border-dashed p-4">
+            <ShoppingBag className="mx-auto size-10 text-muted-foreground" />
+            <p className="mt-2 text-center font-extrabold">Live marketplace</p>
+            <p className="mt-1 text-center text-sm text-muted-foreground">
+              Priced products and services appear here as soon as a shop saves them. Videos show above when published.
             </p>
-            <Button asChild className="rounded-xl font-bold">
-              <Link to="/shop/discover">Open Discover</Link>
-            </Button>
+            {liveListings.length === 0 ? (
+              <Button asChild className="mx-auto mt-4 rounded-xl font-bold">
+                <Link to="/shop/discover">Open Discover</Link>
+              </Button>
+            ) : (
+              <ul className="mt-4 grid grid-cols-2 gap-2">
+                {liveListings.map((p) => (
+                  <li key={p.id}>
+                    <ProductCard product={p} compact />
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 

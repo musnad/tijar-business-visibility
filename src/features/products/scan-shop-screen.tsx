@@ -173,6 +173,8 @@ export function ScanShopScreen() {
         unit: it.unit || "piece",
         ...(sale != null ? { salePrice: sale } : {}),
         ...(cost != null ? { costPrice: cost } : {}),
+        initialStock: 1,
+        isPublished: sale != null,
         notes: categoryNote(it.category),
       });
       if (product) saved += 1;

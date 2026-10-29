@@ -1,9 +1,12 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { CheckoutQuote } from "@/lib/checkout/quote";
+import { isLivePaymentConfigured } from "@/lib/payments/adapter";
 import type {
   CartItem,
   CustomerAddress,
   MarketplaceOrder,
   MarketplaceOrderItem,
+  NotificationPreferences,
   PublicBusiness,
   PublicProduct,
 } from "@/types/database";
@@ -20,10 +23,10 @@ export type MarketplaceShop = PublicBusiness & {
 };
 
 const MARKETPLACE_SHOP_SELECT =
-  "id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status, is_informal";
+  "id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, cover_image_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status, is_informal";
 
 const MARKETPLACE_PRODUCT_SELECT =
-  "id, business_id, name, kind, description, sale_price, unit, image_url, is_available, is_informal, business_name, business_slug, business_logo_url, category_name";
+  "id, business_id, name, kind, description, sale_price, unit, image_url, extra_image_urls, video_url, attributes, variants, currency, is_available, created_at, updated_at, is_informal, business_name, business_slug, business_logo_url, category_name";
 
 const MARKETPLACE_PRODUCT_SELECT_LEGACY =
   "id, business_id, name, kind, description, sale_price, unit, image_url, is_available";
@@ -36,16 +39,23 @@ export async function fetchMarketplaceProducts(limit = 120): Promise<{
   let { data, error } = await supabase
     .from("public_business_products")
     .select(MARKETPLACE_PRODUCT_SELECT)
-    .eq("is_available", true)
-    .order("name")
+    .order("created_at", { ascending: false })
     .limit(limit);
+  if (error && /created_at/i.test(error.message)) {
+    const retry = await supabase
+      .from("public_business_products")
+      .select(MARKETPLACE_PRODUCT_SELECT)
+      .order("name")
+      .limit(limit);
+    data = retry.data;
+    error = retry.error;
+  }
 
   // Fallback before informal marketplace migration is applied.
   if (error) {
     const legacy = await supabase
       .from("public_business_products")
       .select(MARKETPLACE_PRODUCT_SELECT_LEGACY)
-      .eq("is_available", true)
       .order("name")
       .limit(limit);
     if (legacy.error) return { data: [], error: legacy.error.message };
@@ -58,23 +68,21 @@ export async function fetchMarketplaceProducts(limit = 120): Promise<{
       .limit(400);
     const byId = new Map((listings ?? []).map((b) => [b.id as string, b]));
     return {
-      data: (data ?? [])
-        .map((p) => {
-          const b = byId.get(p.business_id as string);
-          return {
-            ...(p as PublicProduct),
-            business_name: (b?.business_name as string) ?? undefined,
-            business_slug: (b?.slug as string) ?? undefined,
-            is_informal: (b?.is_informal as boolean | undefined) ?? true,
-          };
-        })
-        .filter((p) => p.is_informal !== false),
+      data: (data ?? []).map((p) => {
+        const b = byId.get(p.business_id as string);
+        return {
+          ...(p as PublicProduct),
+          business_name: (b?.business_name as string) ?? undefined,
+          business_slug: (b?.slug as string) ?? undefined,
+          is_informal: (b?.is_informal as boolean | undefined) ?? true,
+        };
+      }),
       error: null,
     };
   }
 
   return {
-    data: ((data ?? []) as PublicProduct[]).filter((p) => p.is_informal !== false),
+    data: (data ?? []) as PublicProduct[],
     error: null,
   };
 }
@@ -113,7 +121,7 @@ export async function fetchMarketplaceShops(limit = 200): Promise<{
     error = null;
   }
 
-  const rows = ((data ?? []) as PublicBusiness[]).filter((b) => b.is_informal !== false);
+  const rows = (data ?? []) as PublicBusiness[];
   const { data: productRows } = await supabase
     .from("public_business_products")
     .select("business_id, name")
@@ -288,13 +296,27 @@ export async function addToCart(
     unitPrice: number;
     quantity?: number;
     imageUrl?: string | null;
+    variantId?: string | null;
+    variantLabel?: string | null;
   },
 ): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const qty = input.quantity ?? 1;
+  const rpc = await supabase.rpc("add_marketplace_cart_item", {
+    p_product_id: input.productId,
+    p_quantity: qty,
+    p_variant_id: input.variantId ?? null,
+  });
+  if (!rpc.error) return { error: null };
+
   const { cartId, error: cartError } = await getOrCreateActiveCart(profileId);
   if (cartError || !cartId) return { error: cartError ?? "Could not open cart." };
 
-  const supabase = getSupabaseBrowserClient();
-  const qty = input.quantity ?? 1;
+  const live = await fetchMarketplaceProduct(input.productId);
+  if (live.error) return { error: live.error };
+  if (!live.product?.is_available) return { error: "This product is not available." };
+  if (live.product.sale_price == null) return { error: "This listing has no price — send an enquiry instead." };
+
   const { data: existing } = await supabase
     .from("cart_items")
     .select("id, quantity")
@@ -305,20 +327,26 @@ export async function addToCart(
   if (existing?.id) {
     const { error } = await supabase
       .from("cart_items")
-      .update({ quantity: Number(existing.quantity) + qty })
+      .update({
+        quantity: Number(existing.quantity) + qty,
+        unit_price: Number(live.product.sale_price),
+        product_name: live.product.name,
+      })
       .eq("id", existing.id);
     return { error: error?.message ?? null };
   }
 
   const { error } = await supabase.from("cart_items").insert({
     cart_id: cartId,
-    business_id: input.businessId,
+    business_id: live.product.business_id,
     product_id: input.productId,
     quantity: qty,
-    unit_price: input.unitPrice,
-    product_name: input.productName,
-    unit: input.unit,
-    image_url: input.imageUrl ?? null,
+    unit_price: Number(live.product.sale_price),
+    product_name: live.product.name,
+    unit: live.product.unit,
+    image_url: live.product.image_url ?? null,
+    variant_id: input.variantId ?? null,
+    variant_label: input.variantLabel ?? null,
   });
   return { error: error?.message ?? null };
 }
@@ -339,31 +367,71 @@ export async function removeCartItem(itemId: string): Promise<{ error: string | 
   return { error: error?.message ?? null };
 }
 
+export async function quoteCheckout(
+  fulfilment: "pickup" | "seller_delivery" | "third_party",
+): Promise<{ quote: CheckoutQuote | null; error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc("quote_marketplace_checkout", {
+    p_fulfilment: fulfilment,
+  });
+  if (error) return { quote: null, error: error.message };
+  return { quote: data as CheckoutQuote, error: null };
+}
+
 export async function placeOrders(input: {
   fulfilment?: "pickup" | "seller_delivery" | "third_party";
   addressId?: string | null;
   buyerNote?: string;
   buyerPhone?: string;
+  idempotencyKey: string;
 }): Promise<{ orders: MarketplaceOrder[]; error: string | null }> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc("place_marketplace_orders", {
+  const payload = {
     p_fulfilment: input.fulfilment ?? "pickup",
     p_address_id: input.addressId ?? null,
     p_buyer_note: input.buyerNote ?? null,
     p_buyer_phone: input.buyerPhone ?? null,
-  });
+    p_idempotency_key: input.idempotencyKey,
+  };
+  let { data, error } = await supabase.rpc("place_marketplace_orders", payload);
+  if (error && /p_idempotency_key|function.*place_marketplace_orders/i.test(error.message)) {
+    const legacy = await supabase.rpc("place_marketplace_orders", {
+      p_fulfilment: payload.p_fulfilment,
+      p_address_id: payload.p_address_id,
+      p_buyer_note: payload.p_buyer_note,
+      p_buyer_phone: payload.p_buyer_phone,
+    });
+    data = legacy.data;
+    error = legacy.error;
+  }
   if (error) return { orders: [], error: error.message };
   return { orders: (data ?? []) as MarketplaceOrder[], error: null };
 }
 
-export async function completeTestPayment(orderId: string): Promise<{
+export async function transitionOrder(
+  orderId: string,
+  nextStatus: string,
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.rpc("transition_marketplace_order", {
+    p_order_id: orderId,
+    p_new_status: nextStatus,
+  });
+  return { error: error?.message ?? null };
+}
+
+/** Kept for older screens. Always refuses to mark paid from the client. */
+export async function completeTestPayment(_orderId: string): Promise<{
   order: MarketplaceOrder | null;
   error: string | null;
 }> {
-  const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc("complete_test_payment", { p_order_id: orderId });
-  if (error) return { order: null, error: error.message };
-  return { order: data as MarketplaceOrder, error: null };
+  if (!isLivePaymentConfigured()) {
+    return {
+      order: null,
+      error: "Payment is not live. This stays an order request until Paystack or Flutterwave is connected.",
+    };
+  }
+  return { order: null, error: "Use the payment webhook — the app cannot mark an order paid." };
 }
 
 export async function fetchMyOrders(): Promise<{ orders: MarketplaceOrder[]; error: string | null }> {
@@ -604,5 +672,95 @@ export async function setActiveMode(
 ): Promise<{ error: string | null }> {
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase.from("profiles").update({ active_mode: mode }).eq("id", profileId);
+  return { error: error?.message ?? null };
+}
+
+export async function reportListing(input: {
+  reporterId: string;
+  businessId: string;
+  reason: "spam" | "scam" | "hate" | "wrong_info" | "other";
+  details?: string;
+}): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.from("listing_reports").insert({
+    reporter_id: input.reporterId,
+    business_id: input.businessId,
+    reason: input.reason,
+    details: input.details?.trim() || null,
+  });
+  if (error?.code === "23505") return { error: "You already reported this shop." };
+  return { error: error?.message ?? null };
+}
+
+export async function fetchMyEnquiries(profileId: string): Promise<{
+  enquiries: Array<{
+    id: string;
+    business_id: string;
+    message: string;
+    created_at: string;
+    customer_name: string;
+  }>;
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("business_enquiries")
+    .select("id, business_id, message, created_at, customer_name")
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: false })
+    .limit(80);
+  if (error) return { enquiries: [], error: error.message };
+  return { enquiries: data ?? [], error: null };
+}
+
+export async function fetchFollowedBusinesses(profileId: string): Promise<{
+  shops: PublicBusiness[];
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data: follows, error } = await supabase
+    .from("business_follows")
+    .select("business_id")
+    .eq("profile_id", profileId);
+  if (error) return { shops: [], error: error.message };
+  const ids = (follows ?? []).map((f) => f.business_id as string);
+  if (ids.length === 0) return { shops: [], error: null };
+  const { data, error: listError } = await supabase
+    .from("public_business_listings")
+    .select(MARKETPLACE_SHOP_SELECT)
+    .in("id", ids);
+  if (listError) return { shops: [], error: listError.message };
+  return { shops: (data ?? []) as PublicBusiness[], error: null };
+}
+
+export async function fetchNotificationPreferences(profileId: string): Promise<{
+  prefs: NotificationPreferences;
+  error: string | null;
+}> {
+  const fallback: NotificationPreferences = {
+    profile_id: profileId,
+    order_updates: true,
+    enquiry_replies: true,
+    followed_shops: true,
+    marketing: false,
+  };
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("notification_preferences")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  if (error) return { prefs: fallback, error: error.message };
+  return { prefs: (data as NotificationPreferences | null) ?? fallback, error: null };
+}
+
+export async function saveNotificationPreferences(
+  prefs: NotificationPreferences,
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.from("notification_preferences").upsert({
+    ...prefs,
+    updated_at: new Date().toISOString(),
+  });
   return { error: error?.message ?? null };
 }

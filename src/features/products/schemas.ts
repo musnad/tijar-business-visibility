@@ -60,6 +60,14 @@ export const productFormSchema = z.object({
   initialStock: optionalQtyFromString,
   lowStockThreshold: optionalQtyFromString,
   notes: z.string().max(500).optional(),
+  description: z.string().max(4000).optional(),
+  catalogueCategory: z.string().max(80).optional(),
+  colour: z.string().max(40).optional(),
+  size: z.string().max(40).optional(),
+  sizes: z.string().max(200).optional(),
+  colours: z.string().max(200).optional(),
+  videoUrl: z.string().max(500).optional(),
+  isPublished: z.boolean().optional(),
 });
 
 export type ProductFormInput = z.infer<typeof productFormSchema>;

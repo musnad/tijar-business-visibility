@@ -1,25 +1,36 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { PublicFeedVideo } from "@/services/video-feed-service";
 import type { Business, BusinessEnquiry, PublicBusiness, PublicProduct } from "@/types/database";
 
 const LISTING_COLUMNS =
+  "id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, cover_image_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status";
+
+const LISTING_COLUMNS_LEGACY =
   "id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status";
 
-/** All published listings (bounded; client filters/sorts). Falls back gracefully pre-migration. */
 export async function fetchPublishedBusinesses(limit = 200): Promise<{
   data: PublicBusiness[];
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("public_business_listings")
     .select(LISTING_COLUMNS)
     .order("business_name")
     .limit(limit);
+  if (error) {
+    const legacy = await supabase
+      .from("public_business_listings")
+      .select(LISTING_COLUMNS_LEGACY)
+      .order("business_name")
+      .limit(limit);
+    data = legacy.data;
+    error = legacy.error;
+  }
   if (error) return { data: [], error: error.message };
   return { data: (data ?? []) as PublicBusiness[], error: null };
 }
 
-/** PostGIS-backed nearby search (geography index). Used when a centre is known. */
 export async function fetchNearbyBusinesses(input: {
   lat: number;
   lng: number;
@@ -43,34 +54,62 @@ export async function fetchNearbyBusinesses(input: {
 export async function fetchStorefront(slug: string): Promise<{
   business: PublicBusiness | null;
   products: PublicProduct[];
+  videos: PublicFeedVideo[];
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("public_business_listings")
     .select(LISTING_COLUMNS)
     .eq("slug", slug)
     .maybeSingle();
-  if (error) return { business: null, products: [], error: error.message };
-  if (!data) return { business: null, products: [], error: null };
+  if (error) {
+    const legacy = await supabase
+      .from("public_business_listings")
+      .select(LISTING_COLUMNS_LEGACY)
+      .eq("slug", slug)
+      .maybeSingle();
+    data = legacy.data;
+    error = legacy.error;
+  }
+  if (error) return { business: null, products: [], videos: [], error: error.message };
+  if (!data) return { business: null, products: [], videos: [], error: null };
 
   const business = data as PublicBusiness;
-  const { data: products, error: pError } = await supabase
+  let productsRes = await supabase
     .from("public_business_products")
-    .select("id, business_id, name, kind, description, sale_price, unit, image_url, is_available")
+    .select(
+      "id, business_id, name, kind, description, sale_price, unit, image_url, extra_image_urls, video_url, attributes, variants, is_available, created_at, updated_at",
+    )
     .eq("business_id", business.id)
     .order("name");
-  if (pError) return { business, products: [], error: pError.message };
-  return { business, products: (products ?? []) as PublicProduct[], error: null };
+  if (productsRes.error) {
+    productsRes = await supabase
+      .from("public_business_products")
+      .select("id, business_id, name, kind, description, sale_price, unit, image_url, is_available")
+      .eq("business_id", business.id)
+      .order("name");
+  }
+  if (productsRes.error) return { business, products: [], videos: [], error: productsRes.error.message };
+
+  const { data: videos } = await supabase
+    .from("public_video_feed")
+    .select("*")
+    .eq("business_id", business.id)
+    .order("published_at", { ascending: false })
+    .limit(24);
+
+  return {
+    business,
+    products: (productsRes.data ?? []) as PublicProduct[],
+    videos: (videos ?? []) as PublicFeedVideo[],
+    error: null,
+  };
 }
 
-/** Product names per business, for keyword search ("rice", "agbada"). */
 export async function fetchListingProductNames(): Promise<Map<string, string[]>> {
   const supabase = getSupabaseBrowserClient();
-  const { data } = await supabase
-    .from("public_business_products")
-    .select("business_id, name")
-    .limit(1000);
+  const { data } = await supabase.from("public_business_products").select("business_id, name").limit(1000);
   const map = new Map<string, string[]>();
   for (const row of data ?? []) {
     const list = map.get(row.business_id as string) ?? [];
@@ -85,14 +124,19 @@ export async function submitEnquiry(input: {
   customerName: string;
   customerPhone?: string;
   message: string;
+  profileId?: string | null;
+  productId?: string | null;
 }): Promise<{ error: string | null }> {
   const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.from("business_enquiries").insert({
+  const row: Record<string, unknown> = {
     business_id: input.businessId,
     customer_name: input.customerName.trim(),
     customer_phone: input.customerPhone?.trim() || null,
     message: input.message.trim(),
-  });
+  };
+  if (input.profileId) row.profile_id = input.profileId;
+  if (input.productId) row.product_id = input.productId;
+  const { error } = await supabase.from("business_enquiries").insert(row);
   return { error: error?.message ?? null };
 }
 
@@ -110,9 +154,25 @@ export async function fetchBusinessEnquiries(
   return { data: (data ?? []) as BusinessEnquiry[], error: null };
 }
 
-// ---------------------------------------------------------------------------
-// Owner publishing
-// ---------------------------------------------------------------------------
+export async function replyToEnquiry(
+  enquiryId: string,
+  businessId: string,
+  reply: string,
+): Promise<{ error: string | null }> {
+  const text = reply.trim();
+  if (!text) return { error: "Write a reply first." };
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase
+    .from("business_enquiries")
+    .update({
+      seller_reply: text,
+      replied_at: new Date().toISOString(),
+      is_read: true,
+    })
+    .eq("id", enquiryId)
+    .eq("business_id", businessId);
+  return { error: error?.message ?? null };
+}
 
 export type UpdateListingInput = {
   publicSlug: string;
@@ -124,7 +184,6 @@ export type UpdateListingInput = {
   longitude: number | null;
   publicLocationLabel?: string;
   locationApproved: boolean;
-  /** When true, products appear on TIJAR Marketplace (informal sellers only). */
   isInformal?: boolean;
 };
 
@@ -169,10 +228,6 @@ export async function isSlugAvailable(slug: string, exceptBusinessId: string): P
   return (data ?? []).length === 0;
 }
 
-// ---------------------------------------------------------------------------
-// Admin moderation (RLS restricts these to platform admins)
-// ---------------------------------------------------------------------------
-
 export async function fetchListingsForModeration(): Promise<{
   data: Business[];
   error: string | null;
@@ -184,7 +239,6 @@ export async function fetchListingsForModeration(): Promise<{
     .order("updated_at", { ascending: false })
     .limit(200);
   if (error) return { data: [], error: error.message };
-  // Non-admins only see their own businesses via RLS; the screen checks role separately.
   return { data: (data ?? []) as Business[], error: null };
 }
 
@@ -203,9 +257,6 @@ export async function setListingModeration(
 
 export async function fetchMyPlatformRoles(profileId: string): Promise<string[]> {
   const supabase = getSupabaseBrowserClient();
-  const { data } = await supabase
-    .from("platform_roles")
-    .select("role")
-    .eq("profile_id", profileId);
+  const { data } = await supabase.from("platform_roles").select("role").eq("profile_id", profileId);
   return (data ?? []).map((r) => r.role as string);
 }

@@ -24,6 +24,7 @@ import { createProduct, updateProductImageUrl } from "@/services/product-service
 import type { ProductKind } from "@/types/database";
 import { saleLineTotals } from "@/utils/product-profit";
 import { formatNgn } from "@/utils/money";
+import { canPublishProduct, productPublishErrors, productPublishWarnings } from "@/lib/catalogue/publish-guard";
 import { parseVoiceProduct } from "@/utils/voice-product";
 
 const goodsUnits = ["piece", "bag", "carton", "kg", "litre"] as const;
@@ -62,9 +63,17 @@ export function NewProductForm({
   const [unit, setUnit] = useState<(typeof goodsUnits)[number]>("piece");
   const [salePrice, setSalePrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
-  const [initialStock, setInitialStock] = useState("");
+  const [initialStock, setInitialStock] = useState("1");
   const [lowThreshold, setLowThreshold] = useState("5");
   const [notes, setNotes] = useState("");
+  const [description, setDescription] = useState("");
+  const [catalogueCategory, setCatalogueCategory] = useState("");
+  const [colour, setColour] = useState("");
+  const [size, setSize] = useState("");
+  const [sizes, setSizes] = useState("");
+  const [colours, setColours] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [isPublished, setIsPublished] = useState(true);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -81,6 +90,19 @@ export function NewProductForm({
     Number.isFinite(saleNum) && saleNum > 0
       ? saleLineTotals(saleNum, Number.isFinite(costNum) ? costNum : 0, 1).profit
       : null;
+
+  const publishErrors = productPublishErrors({
+    name,
+    sale_price: Number.isFinite(saleNum) ? saleNum : salePrice.trim() ? null : null,
+    image_url: imageFile ? "pending" : null,
+    is_active: true,
+  });
+  const publishWarnings = productPublishWarnings({
+    name,
+    sale_price: Number.isFinite(saleNum) ? saleNum : null,
+    image_url: imageFile ? "pending" : null,
+    is_active: true,
+  });
 
   async function onVoice() {
     setVoiceHint(null);
@@ -140,6 +162,18 @@ export function NewProductForm({
       toast.message(t("app.products.ignoredBadStock"));
     }
 
+    let publishNow = isPublished;
+    if (publishNow && !canPublishProduct({
+      name: trimmedName,
+      sale_price: cleanedSale != null ? Number(cleanedSale) : null,
+      image_url: imageFile ? "pending" : null,
+      is_active: true,
+    })) {
+      toast.error(publishErrors[0] ?? "Fix catalogue errors before publishing.");
+      publishNow = false;
+      setIsPublished(false);
+    }
+
     const parsed = productFormSchema.safeParse({
       name: trimmedName,
       kind,
@@ -149,6 +183,14 @@ export function NewProductForm({
       initialStock: cleanedStock,
       lowStockThreshold: cleanedLow,
       notes: notes.trim() || undefined,
+      description: description.trim() || undefined,
+      catalogueCategory: catalogueCategory.trim() || undefined,
+      colour: colour.trim() || undefined,
+      size: size.trim() || undefined,
+      sizes: sizes.trim() || undefined,
+      colours: colours.trim() || undefined,
+      videoUrl: videoUrl.trim() || undefined,
+      isPublished: publishNow,
     });
 
     if (!parsed.success) {
@@ -413,8 +455,16 @@ export function NewProductForm({
       </FormSection>
 
       <FormSection title={t("app.products.notesSection")} hint={t("app.products.notesHint")}>
+        <textarea
+          className="min-h-24 w-full rounded-xl border border-input bg-background px-3 py-2 text-base"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Customer-facing description"
+          name="description"
+          maxLength={4000}
+        />
         <Input
-          className="min-h-12 rounded-xl bg-background"
+          className="mt-3 min-h-12 rounded-xl bg-background"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder={t("app.products.notesPlaceholder")}
@@ -422,10 +472,54 @@ export function NewProductForm({
         />
       </FormSection>
 
-      {formError && (
-        <div className="rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          {formError}
+      <FormSection title="Catalogue" hint="Shown on the storefront. Only business members can change this.">
+        <Input
+          className="min-h-12 rounded-xl bg-background"
+          value={catalogueCategory}
+          onChange={(e) => setCatalogueCategory(e.target.value)}
+          placeholder="Category (e.g. Foodstuff)"
+        />
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Input className="min-h-11 rounded-xl" value={size} onChange={(e) => setSize(e.target.value)} placeholder="Size" />
+          <Input className="min-h-11 rounded-xl" value={colour} onChange={(e) => setColour(e.target.value)} placeholder="Colour" />
         </div>
+        <Input
+          className="mt-3 min-h-11 rounded-xl"
+          value={sizes}
+          onChange={(e) => setSizes(e.target.value)}
+          placeholder="Variant sizes, comma separated (S, M, L)"
+        />
+        <Input
+          className="mt-3 min-h-11 rounded-xl"
+          value={colours}
+          onChange={(e) => setColours(e.target.value)}
+          placeholder="Variant colours, comma separated"
+        />
+        <Input
+          className="mt-3 min-h-11 rounded-xl"
+          value={videoUrl}
+          onChange={(e) => setVideoUrl(e.target.value)}
+          placeholder="Product video URL (optional)"
+        />
+        <label className="mt-3 flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} />
+          Publish on marketplace as soon as this has a price
+        </label>
+      </FormSection>
+
+      {publishErrors.length > 0 && isPublished && (
+        <ul className="list-disc space-y-1 pl-5 text-xs text-amber-800">
+          {publishErrors.map((err) => (
+            <li key={err}>{err}</li>
+          ))}
+        </ul>
+      )}
+      {publishWarnings.length > 0 && isPublished && (
+        <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+          {publishWarnings.map((err) => (
+            <li key={err}>{err}</li>
+          ))}
+        </ul>
       )}
 
       <Button

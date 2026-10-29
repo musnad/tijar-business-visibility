@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { OnboardingAnswers } from "@/features/onboarding/schemas";
+import type { MemberRole } from "@/lib/business/capabilities";
 import type { Business, BusinessCategory, BusinessDna } from "@/types/database";
 
 export async function listBusinessCategories(): Promise<{
@@ -52,18 +53,32 @@ export async function fetchPrimaryBusiness(profileId: string): Promise<{
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  const { data: businesses, error } = await supabase
+  const owned = await supabase
     .from("businesses")
     .select("*")
     .eq("owner_id", profileId)
     .order("created_at", { ascending: true })
     .limit(1);
 
-  if (error) {
-    return { business: null, dna: null, error: error.message };
+  let business = (owned.data?.[0] as Business | undefined) ?? null;
+  if (!business) {
+    const { data: memberships } = await supabase
+      .from("business_members")
+      .select("business_id, role")
+      .eq("profile_id", profileId)
+      .order("created_at", { ascending: true })
+      .limit(20);
+    const first = memberships?.[0];
+    if (first?.business_id) {
+      const memberBiz = await supabase.from("businesses").select("*").eq("id", first.business_id).maybeSingle();
+      business = (memberBiz.data as Business | undefined) ?? null;
+    }
   }
 
-  const business = (businesses?.[0] as Business | undefined) ?? null;
+  if (owned.error && !business) {
+    return { business: null, dna: null, error: owned.error.message };
+  }
+
   if (!business) {
     return { business: null, dna: null, error: null };
   }
@@ -205,4 +220,80 @@ export async function completeBusinessSetup(
   });
 
   return { businessId, error: null };
+}
+
+export type BusinessMemberRow = {
+  id: string;
+  business_id: string;
+  profile_id: string;
+  role: MemberRole;
+  permissions: Record<string, boolean>;
+  full_name?: string | null;
+  email?: string | null;
+};
+
+export async function fetchMyMembership(
+  businessId: string,
+  profileId: string,
+): Promise<{ role: MemberRole | null; permissions: Record<string, boolean> }> {
+  const supabase = getSupabaseBrowserClient();
+  const { data } = await supabase
+    .from("business_members")
+    .select("role, permissions")
+    .eq("business_id", businessId)
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  if (!data) {
+    const { data: owned } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("id", businessId)
+      .eq("owner_id", profileId)
+      .maybeSingle();
+    if (owned) return { role: "owner", permissions: {} };
+    return { role: null, permissions: {} };
+  }
+  return {
+    role: data.role as MemberRole,
+    permissions: (data.permissions as Record<string, boolean>) ?? {},
+  };
+}
+
+export async function fetchBusinessMembers(businessId: string): Promise<{
+  members: BusinessMemberRow[];
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("business_members")
+    .select("id, business_id, profile_id, role, permissions")
+    .eq("business_id", businessId)
+    .order("created_at");
+  if (error) return { members: [], error: error.message };
+  const rows = (data ?? []) as BusinessMemberRow[];
+  const ids = rows.map((r) => r.profile_id);
+  if (ids.length === 0) return { members: rows, error: null };
+  const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
+  const byId = new Map((profiles ?? []).map((p) => [p.id as string, p]));
+  return {
+    members: rows.map((r) => ({
+      ...r,
+      full_name: (byId.get(r.profile_id)?.full_name as string | null) ?? null,
+      email: (byId.get(r.profile_id)?.email as string | null) ?? null,
+    })),
+    error: null,
+  };
+}
+
+export async function inviteBusinessStaff(
+  businessId: string,
+  email: string,
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.rpc("invite_business_staff", {
+    p_business_id: businessId,
+    p_email: email.trim(),
+    p_permissions: {},
+  });
+  return { error: error?.message ?? null };
 }

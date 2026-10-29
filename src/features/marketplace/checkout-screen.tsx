@@ -2,21 +2,31 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
+import { quoteHasUnavailable, type CheckoutQuote } from "@/lib/checkout/quote";
+import { isLivePaymentConfigured } from "@/lib/payments/adapter";
 import {
-  completeTestPayment,
   fetchCart,
   listAddresses,
   placeOrders,
+  quoteCheckout,
   saveAddress,
 } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
+
+function checkoutKey(): string {
+  const existing = sessionStorage.getItem("tijar-checkout-key");
+  if (existing) return existing;
+  const key = crypto.randomUUID();
+  sessionStorage.setItem("tijar-checkout-key", key);
+  return key;
+}
 
 export function CheckoutScreen() {
   const { profile } = useAuth();
@@ -41,13 +51,34 @@ export function CheckoutScreen() {
     queryFn: async () => (await fetchCart(profile!.id)).items,
   });
 
-  const items = cartQuery.data ?? [];
-  const subtotal = items.reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0);
+  const quoteQuery = useQuery({
+    queryKey: ["marketplace-quote", profile?.id, fulfilment],
+    enabled: Boolean(profile?.id),
+    queryFn: async () => {
+      const r = await quoteCheckout(fulfilment);
+      if (r.error) throw new Error(r.error);
+      return r.quote as CheckoutQuote;
+    },
+  });
 
-  async function pay() {
+  const items = cartQuery.data ?? [];
+  const quote = quoteQuery.data;
+  const paymentReady = isLivePaymentConfigured();
+  const blocked = quote ? quoteHasUnavailable(quote) : false;
+
+  const fallbackTotal = useMemo(
+    () => items.reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0),
+    [items],
+  );
+
+  async function submitRequest() {
     if (!profile) return;
     if (items.length === 0) {
       toast.error("Cart is empty");
+      return;
+    }
+    if (blocked) {
+      toast.error("Some items are unavailable. Update the cart first.");
       return;
     }
     setBusy(true);
@@ -83,27 +114,24 @@ export function CheckoutScreen() {
       fulfilment,
       addressId,
       buyerNote: note,
+      idempotencyKey: checkoutKey(),
       ...(buyerPhone ? { buyerPhone } : {}),
     });
     if (placed.error || placed.orders.length === 0) {
-      toast.error(placed.error ?? "Could not place order");
+      toast.error(placed.error ?? "Could not send the order request");
       setBusy(false);
       return;
     }
 
-    for (const order of placed.orders) {
-      const paid = await completeTestPayment(order.id);
-      if (paid.error) {
-        toast.message(
-          `Order ${order.order_number} created — payment pending (test mode failed: ${paid.error})`,
-        );
-      }
-    }
-
+    sessionStorage.removeItem("tijar-checkout-key");
     await queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
     await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
     setBusy(false);
-    toast.success("Your order has been placed successfully! (Test payment)");
+    toast.success(
+      paymentReady
+        ? "Order placed. Complete payment with the provider to mark it paid."
+        : `${placed.orders.length} order request${placed.orders.length === 1 ? "" : "s"} sent. Not paid — the seller will confirm.`,
+    );
     void navigate({ to: "/shop/orders" });
   }
 
@@ -124,8 +152,9 @@ export function CheckoutScreen() {
     <MarketplaceShell cartCount={items.reduce((n, i) => n + Number(i.quantity), 0)}>
       <h1 className="text-xl font-extrabold">Checkout</h1>
       <p className="mt-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-        Payment is in <strong>TEST MODE</strong> until Paystack/Flutterwave is configured. This is
-        not a real charge.
+        {paymentReady
+          ? "Live payment is configured on the server. An order is paid only after the provider webhook succeeds — never from this screen."
+          : "Paystack / Flutterwave are not connected. This sends a labelled order request. It is not a completed payment."}
       </p>
 
       <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -153,62 +182,72 @@ export function CheckoutScreen() {
       {fulfilment === "seller_delivery" && (
         <section className="mt-4 space-y-2 rounded-2xl border border-border bg-card p-4 shadow-sm">
           <p className="text-sm font-bold">Delivery address</p>
-          <Input
-            placeholder="Full name"
-            value={addr.full_name}
-            onChange={(e) => setAddr({ ...addr, full_name: e.target.value })}
-            className="min-h-11 rounded-xl"
-          />
-          <Input
-            placeholder="Phone"
-            value={addr.phone}
-            onChange={(e) => setAddr({ ...addr, phone: e.target.value })}
-            className="min-h-11 rounded-xl"
-          />
-          <Input
-            placeholder="State"
-            value={addr.state}
-            onChange={(e) => setAddr({ ...addr, state: e.target.value })}
-            className="min-h-11 rounded-xl"
-          />
-          <Input
-            placeholder="City / town"
-            value={addr.city}
-            onChange={(e) => setAddr({ ...addr, city: e.target.value })}
-            className="min-h-11 rounded-xl"
-          />
-          <Input
-            placeholder="LGA"
-            value={addr.lga}
-            onChange={(e) => setAddr({ ...addr, lga: e.target.value })}
-            className="min-h-11 rounded-xl"
-          />
-          <Input
-            placeholder="Street address"
-            value={addr.street}
-            onChange={(e) => setAddr({ ...addr, street: e.target.value })}
-            className="min-h-11 rounded-xl"
-          />
+          <Input placeholder="Full name" value={addr.full_name} onChange={(e) => setAddr({ ...addr, full_name: e.target.value })} className="min-h-11 rounded-xl" />
+          <Input placeholder="Phone" value={addr.phone} onChange={(e) => setAddr({ ...addr, phone: e.target.value })} className="min-h-11 rounded-xl" />
+          <Input placeholder="State" value={addr.state} onChange={(e) => setAddr({ ...addr, state: e.target.value })} className="min-h-11 rounded-xl" />
+          <Input placeholder="City / town" value={addr.city} onChange={(e) => setAddr({ ...addr, city: e.target.value })} className="min-h-11 rounded-xl" />
+          <Input placeholder="LGA" value={addr.lga} onChange={(e) => setAddr({ ...addr, lga: e.target.value })} className="min-h-11 rounded-xl" />
+          <Input placeholder="Street address" value={addr.street} onChange={(e) => setAddr({ ...addr, street: e.target.value })} className="min-h-11 rounded-xl" />
         </section>
       )}
 
       <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <p className="text-sm font-bold">Order review</p>
-        <ul className="mt-2 space-y-1 text-sm">
-          {items.map((i) => (
-            <li key={i.id} className="flex justify-between gap-2">
-              <span className="truncate">
-                {i.product_name} × {i.quantity}
-              </span>
-              <span className="font-semibold">
-                {formatNgn(Number(i.quantity) * Number(i.unit_price))}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-3 flex justify-between border-t border-border pt-3 font-extrabold">
-          <span>Total</span>
-          <span className="text-primary">{formatNgn(subtotal)}</span>
+        <p className="text-sm font-bold">Order review by seller</p>
+        {quoteQuery.isError && (
+          <p className="mt-2 text-xs text-amber-800">
+            Live quote RPC is not applied yet. Showing cart lines. Run migration 000020 so prices are recalculated on the server.
+          </p>
+        )}
+        {(quote?.sellers ?? []).map((seller) => (
+          <div key={seller.business_id} className="mt-3 border-t border-border pt-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{seller.business_name}</p>
+            <ul className="mt-1 space-y-1 text-sm">
+              {seller.lines.map((line) => (
+                <li key={`${line.product_id}-${line.variant_label ?? ""}`} className="flex justify-between gap-2">
+                  <span className="truncate">
+                    {line.product_name}
+                    {line.variant_label ? ` (${line.variant_label})` : ""} × {line.quantity}
+                    {!line.available ? " — unavailable" : ""}
+                  </span>
+                  <span className="font-semibold">{formatNgn(line.line_total)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1 flex justify-between text-xs text-muted-foreground">
+              <span>Delivery</span>
+              <span>{formatNgn(seller.delivery_fee)}</span>
+            </p>
+          </div>
+        ))}
+        {!quote && items.length > 0 && (
+          <ul className="mt-2 space-y-1 text-sm">
+            {items.map((i) => (
+              <li key={i.id} className="flex justify-between gap-2">
+                <span className="truncate">
+                  {i.product_name} × {i.quantity}
+                </span>
+                <span className="font-semibold">{formatNgn(Number(i.quantity) * Number(i.unit_price))}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
+          <p className="flex justify-between">
+            <span>Items</span>
+            <span>{formatNgn(quote?.subtotal ?? fallbackTotal)}</span>
+          </p>
+          <p className="flex justify-between">
+            <span>Delivery fees</span>
+            <span>{formatNgn(quote?.delivery_fee ?? 0)}</span>
+          </p>
+          <p className="flex justify-between">
+            <span>Payment charges</span>
+            <span>{formatNgn(quote?.payment_fee ?? 0)}</span>
+          </p>
+          <p className="flex justify-between font-extrabold">
+            <span>Total</span>
+            <span className="text-primary">{formatNgn(quote?.total ?? fallbackTotal)}</span>
+          </p>
         </div>
         <Input
           className="mt-3 min-h-11 rounded-xl"
@@ -221,10 +260,10 @@ export function CheckoutScreen() {
       <Button
         type="button"
         className="mt-4 min-h-12 w-full rounded-xl font-bold"
-        disabled={busy || items.length === 0}
-        onClick={() => void pay()}
+        disabled={busy || items.length === 0 || blocked}
+        onClick={() => void submitRequest()}
       >
-        {busy ? "Placing order…" : "Pay with TEST mode"}
+        {busy ? "Sending…" : paymentReady ? "Place order (pay with provider)" : "Send order request"}
       </Button>
     </MarketplaceShell>
   );

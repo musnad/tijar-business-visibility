@@ -52,7 +52,16 @@ export function ProductListItem({
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold">{product.name}</p>
+          <p className="truncate text-sm font-bold">
+            <Link to="/app/products/$productId" params={{ productId: product.id }} className="hover:underline">
+              {product.name}
+            </Link>
+            {product.is_published === false ? (
+              <span className="ml-2 text-[10px] font-semibold uppercase text-amber-700">Draft</span>
+            ) : product.is_active === false ? (
+              <span className="ml-2 text-[10px] font-semibold uppercase text-muted-foreground">Archived</span>
+            ) : null}
+          </p>
           <p className="text-xs text-muted-foreground">
             {kind === "service" ? serviceLabel : `${qty} ${product.unit}`}
             {price != null ? ` · ${formatNgn(price)}` : ""}
@@ -87,19 +96,26 @@ export function ProductListItem({
           )}
         </div>
       </div>
-      {kind === "goods" && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-3 min-h-10 w-full rounded-xl font-semibold"
-          asChild
-        >
-          <Link to="/app/products/adjust" search={{ productId: product.id }}>
-            {adjustStockLabel}
+      <div className="mt-3 flex gap-2">
+        <Button type="button" variant="outline" size="sm" className="min-h-10 flex-1 rounded-xl font-semibold" asChild>
+          <Link to="/app/products/$productId" params={{ productId: product.id }}>
+            Edit
           </Link>
         </Button>
-      )}
+        {kind === "goods" && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-10 flex-1 rounded-xl font-semibold"
+            asChild
+          >
+            <Link to="/app/products/adjust" search={{ productId: product.id }}>
+              {adjustStockLabel}
+            </Link>
+          </Button>
+        )}
+      </div>
     </li>
   );
 }

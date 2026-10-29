@@ -311,7 +311,7 @@ export async function muteProfile(muterId: string, mutedId: string): Promise<{ e
 
 export async function recordFeedSignal(
   videoId: string,
-  kind: "view" | "complete" | "product_tap" | "add_to_cart" | "share" | "like",
+  kind: "view" | "complete" | "product_tap" | "add_to_cart" | "share" | "like" | "impression",
 ): Promise<void> {
   const supabase = getSupabaseBrowserClient();
   await supabase.rpc("record_feed_event", { p_video_id: videoId, p_kind: kind });

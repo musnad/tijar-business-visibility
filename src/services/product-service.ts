@@ -1,20 +1,22 @@
 import type { ProductFormInput, StockAdjustInput } from "@/features/products/schemas";
+import { parseAttributes, variantsFromSizeColour } from "@/lib/catalogue/variants";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ensureOwnerMembership } from "@/services/business-service";
 import type { Product, ProductKind, StockMovementReason } from "@/types/database";
 
-export async function listProducts(businessId: string): Promise<{
+export async function listProducts(
+  businessId: string,
+  options?: { includeArchived?: boolean },
+): Promise<{
   data: Product[];
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .eq("business_id", businessId)
-    .eq("is_active", true)
-    .order("name");
-
+  let query = supabase.from("products").select("*").eq("business_id", businessId).order("name");
+  if (!options?.includeArchived) {
+    query = query.eq("is_active", true);
+  }
+  const { data, error } = await query;
   if (error) return { data: [], error: error.message };
   return { data: (data ?? []) as Product[], error: null };
 }
@@ -68,6 +70,13 @@ type ProductInsert = {
   stock_quantity: number;
   low_stock_threshold: number;
   notes: string | null;
+  description?: string | null;
+  attributes?: Record<string, string>;
+  variants?: unknown;
+  video_url?: string | null;
+  catalogue_category?: string | null;
+  is_published?: boolean;
+  currency?: string;
 };
 
 export async function createProduct(
@@ -105,7 +114,14 @@ export async function createProduct(
     cost_price: input.costPrice ?? null,
     stock_quantity: 0,
     low_stock_threshold: kind === "service" ? 0 : (input.lowStockThreshold ?? 5),
-    notes: input.notes?.trim() || null,
+    notes: input.notes?.trim() || input.description?.trim() || null,
+    description: input.description?.trim() || input.notes?.trim() || null,
+    attributes: parseAttributes(input.size, input.colour),
+    variants: variantsFromSizeColour(input.sizes ?? "", input.colours ?? ""),
+    video_url: input.videoUrl?.trim() || null,
+    catalogue_category: input.catalogueCategory?.trim() || null,
+    is_published: input.isPublished ?? input.salePrice != null,
+    currency: "NGN",
   };
 
   let data: unknown = null;
@@ -154,6 +170,10 @@ export async function createProduct(
 
   if (error) return { product: null, error: mapProductError(error.message) };
   const product = data as Product;
+
+  if (fullPayload.is_published && fullPayload.sale_price != null) {
+    await supabase.rpc("ensure_marketplace_listing", { p_business_id: businessId });
+  }
 
   if (kind === "goods" && input.initialStock && input.initialStock > 0) {
     const moveErr = await recordStockMovement(
@@ -231,6 +251,40 @@ export async function adjustStock(
 
 export async function deactivateProduct(productId: string): Promise<{ error: string | null }> {
   const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.from("products").update({ is_active: false }).eq("id", productId);
+  const { error } = await supabase.from("products").update({ is_active: false, is_published: false }).eq("id", productId);
+  return { error: error?.message ?? null };
+}
+
+export async function restoreProduct(productId: string): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.from("products").update({ is_active: true }).eq("id", productId);
+  return { error: error?.message ?? null };
+}
+
+export async function setProductPublished(
+  productId: string,
+  published: boolean,
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.from("products").update({ is_published: published }).eq("id", productId);
+  return { error: error?.message ?? null };
+}
+
+export async function updateProduct(
+  productId: string,
+  patch: Partial<{
+    name: string;
+    description: string | null;
+    notes: string | null;
+    sale_price: number | null;
+    variants: unknown;
+    attributes: Record<string, string>;
+    image_url: string | null;
+    is_published: boolean | null;
+    video_url: string | null;
+  }>,
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.from("products").update(patch).eq("id", productId);
   return { error: error?.message ?? null };
 }
