@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/auth-context";
+import { isTijarSuperAdminEmail } from "@/lib/admin";
 import { useTranslation } from "@/lib/i18n/context";
 import {
   fetchListingsForModeration,
@@ -80,7 +81,8 @@ export function ModerationScreen() {
     enabled: Boolean(profile?.id),
     queryFn: async () => fetchMyPlatformRoles(profile!.id),
   });
-  const isAdmin = (rolesQuery.data ?? []).includes("admin");
+  const isAdmin =
+    isTijarSuperAdminEmail(profile?.email) || (rolesQuery.data ?? []).includes("admin");
 
   const listingsQuery = useQuery({
     queryKey: ["moderation-listings"],

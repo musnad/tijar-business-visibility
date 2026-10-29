@@ -20,6 +20,7 @@ import { OrderTrackTimeline } from "@/features/marketplace/order-track-timeline"
 import { useAuth } from "@/features/auth/auth-context";
 import { signOut } from "@/features/auth/auth-service";
 import { canUseBusinessMode, isCustomerOnly, profileAccountMode } from "@/lib/account-mode";
+import { isTijarSuperAdminEmail } from "@/lib/admin";
 import {
   countFavoriteProducts,
   fetchCart,
@@ -257,15 +258,29 @@ export function ShopProfileScreen() {
       <section className="mt-5 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-bold">Shopping account</p>
-            <p className="text-xs capitalize text-muted-foreground">{mode}</p>
+            <p className="text-sm font-bold">Account mode</p>
+            <p className="text-xs capitalize text-muted-foreground">
+              {mode === "both" ? "Shop + Business" : mode}
+            </p>
           </div>
-          {canUseBusinessMode(profile) ? <AccountModeSwitch /> : null}
+          <AccountModeSwitch />
         </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          {canUseBusinessMode(profile)
+            ? "Verified businesses can switch to Shop or Business anytime."
+            : "Customers request a business account first. Admin approval unlocks the dashboard."}
+        </p>
         {canUseBusinessMode(profile) && (
           <Button variant="outline" className="mt-3 w-full justify-start rounded-xl" asChild>
             <Link to="/app">
               <Store className="mr-2 size-4" /> Open business dashboard
+            </Link>
+          </Button>
+        )}
+        {isTijarSuperAdminEmail(profile.email) && (
+          <Button variant="outline" className="mt-2 w-full justify-start rounded-xl" asChild>
+            <Link to="/app/admin">
+              <Store className="mr-2 size-4" /> Admin console
             </Link>
           </Button>
         )}

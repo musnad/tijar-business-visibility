@@ -14,6 +14,7 @@ import {
 import { AppLanguageButton } from "@/features/app-layout/app-language-button";
 import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
 import { useAuth } from "@/features/auth/auth-context";
+import { isTijarSuperAdminEmail } from "@/lib/admin";
 import { useTranslation } from "@/lib/i18n/context";
 
 function initials(name: string): string {
@@ -64,6 +65,14 @@ export function AppTopBar() {
                 {t(item.labelKey)}
               </Link>
             ))}
+            {isTijarSuperAdminEmail(profile?.email) && (
+              <Link
+                to="/app/admin"
+                className="rounded-lg px-3 py-3 text-sm font-semibold text-primary hover:bg-muted"
+              >
+                Admin console
+              </Link>
+            )}
           </nav>
         </SheetContent>
       </Sheet>
@@ -75,7 +84,7 @@ export function AppTopBar() {
       </div>
 
       <div className="flex items-center justify-end gap-1.5">
-        <AccountModeSwitch className="hidden sm:inline-flex" />
+        <AccountModeSwitch className="hidden md:inline-flex" />
         <AppLanguageButton />
         <button
           type="button"

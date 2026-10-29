@@ -7,8 +7,9 @@ export function profileAccountMode(profile: Profile | null | undefined): Account
 export function profileActiveMode(profile: Profile | null | undefined): ActiveMode {
   const account = profileAccountMode(profile);
   const active = profile?.active_mode ?? "business";
+  // Customer-only accounts stay in the marketplace until admin approval.
   if (account === "customer") return "customer";
-  if (account === "business") return "business";
+  // Verified / registered businesses can switch Shop ↔ Business freely.
   return active === "customer" ? "customer" : "business";
 }
 

@@ -25,7 +25,7 @@ function ShopCard({ shop }: { shop: MarketplaceShop }) {
     <Link
       to="/b/$slug"
       params={{ slug: shop.slug }}
-      className="flex gap-3 rounded-2xl border border-border/80 bg-card p-3 shadow-[0_1px_2px_rgba(15,40,50,0.04)] transition hover:border-primary/35 hover:shadow-md"
+      className="flex h-full gap-3 rounded-2xl border border-border/80 bg-card p-3 shadow-[0_1px_2px_rgba(15,40,50,0.04)] transition hover:border-primary/35 hover:shadow-md"
     >
       <div className="size-16 shrink-0 overflow-hidden rounded-2xl bg-muted">
         {shop.logo_url ? (
@@ -126,7 +126,7 @@ export function ShopHomeScreen() {
         />
       }
     >
-      <section className="marketplace-hero relative overflow-hidden rounded-[1.35rem] p-4 text-primary-foreground shadow-lg sm:p-5">
+      <section className="marketplace-hero relative overflow-hidden rounded-[1.35rem] p-4 text-primary-foreground shadow-lg sm:p-5 lg:grid lg:grid-cols-[1.4fr_0.7fr] lg:items-end lg:gap-8 lg:p-8">
         <div
           className="pointer-events-none absolute -right-8 -top-10 size-36 rounded-full bg-white/10 blur-2xl"
           aria-hidden
@@ -135,7 +135,7 @@ export function ShopHomeScreen() {
           <p className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/90">
             <Sparkles className="size-3" /> Informal businesses
           </p>
-          <h1 className="mt-2.5 text-[1.35rem] font-extrabold leading-tight tracking-tight sm:text-2xl">
+          <h1 className="mt-2.5 text-[1.35rem] font-extrabold leading-tight tracking-tight sm:text-2xl lg:text-4xl">
             {firstName ? `Welcome, ${firstName}` : "Discover local shops"}
           </h1>
           <p className="mt-1.5 max-w-[32ch] text-sm leading-relaxed text-white/85">
@@ -211,7 +211,7 @@ export function ShopHomeScreen() {
         </div>
 
         {shopsQuery.isLoading && (
-          <ul className="mt-3 space-y-3">
+          <ul className="mt-3 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <li key={i} className="flex gap-3 rounded-2xl border border-border bg-card p-3">
                 <div className="size-16 animate-pulse rounded-2xl bg-muted" />
@@ -254,9 +254,9 @@ export function ShopHomeScreen() {
           </div>
         )}
 
-        <ul className="mt-3 space-y-3">
+        <ul className="mt-3 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
           {filtered.map((shop) => (
-            <li key={shop.id}>
+            <li key={shop.id} className="min-w-0">
               <ShopCard shop={shop} />
             </li>
           ))}

@@ -23,8 +23,12 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/features/auth/auth-service";
+import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
 import { ProfileAvatarField } from "@/features/profile/profile-avatar-field";
 import { ProfileMenuRow } from "@/features/profile/profile-menu-row";
+import { useAuth } from "@/features/auth/auth-context";
+import { isTijarSuperAdminEmail } from "@/lib/admin";
+import { canUseBusinessMode, profileAccountMode } from "@/lib/account-mode";
 import { useTranslation } from "@/lib/i18n/context";
 import { fetchProfileDashboard } from "@/services/profile-analytics-service";
 import type { Business, Profile } from "@/types/database";
@@ -66,7 +70,10 @@ export function ProfileScreen({
   business: Business | null;
 }) {
   const { t, locale } = useTranslation();
+  const { profile: authProfile } = useAuth();
   const verified = business?.verification_status === "verified";
+  const accountMode = profileAccountMode(profile);
+  const isAdmin = isTijarSuperAdminEmail(profile.email) || isTijarSuperAdminEmail(authProfile?.email);
   const bio = profile.bio?.trim() || business?.description?.trim() || "";
   const location = business?.location?.trim() || "";
 
@@ -130,6 +137,46 @@ export function ProfileScreen({
           value={formatJoined(profile.created_at, locale)}
         />
       </div>
+
+      <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-extrabold">Account mode</p>
+            <p className="text-xs capitalize text-muted-foreground">
+              {accountMode === "both" ? "Shop + Business" : accountMode}
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              {canUseBusinessMode(profile)
+                ? "Switch to Shop to buy on the marketplace, or Business for your dashboard."
+                : "Customers request a business account first. Approved shops switch freely."}
+            </p>
+          </div>
+          <AccountModeSwitch />
+        </div>
+        {canUseBusinessMode(profile) && (
+          <Button variant="outline" className="mt-3 w-full justify-start rounded-xl" asChild>
+            <Link to="/shop">
+              <ShoppingCart className="mr-2 size-4" /> Open marketplace
+            </Link>
+          </Button>
+        )}
+      </section>
+
+      {isAdmin && (
+        <Link
+          to="/app/admin"
+          className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/[0.06] p-4"
+        >
+          <span className="flex size-11 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <BadgeCheck className="size-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <p className="text-sm font-extrabold">Admin console</p>
+            <p className="text-xs text-muted-foreground">Approvals, listings, users, and orders</p>
+          </span>
+          <ChevronRight className="size-5 text-muted-foreground" />
+        </Link>
+      )}
 
       {business && (
         <div

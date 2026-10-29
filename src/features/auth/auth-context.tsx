@@ -98,6 +98,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshProfile();
   }, [session, refreshProfile]);
 
+  useEffect(() => {
+    if (!profile?.email) return;
+    void import("@/lib/admin").then(({ isTijarSuperAdminEmail }) => {
+      if (!isTijarSuperAdminEmail(profile.email)) return;
+      const supabase = getSupabaseBrowserClient();
+      void supabase.rpc("claim_tijar_super_admin");
+    });
+  }, [profile?.email]);
+
   // Keep local TTS prefs in sync so speakText uses the shopkeeper's voice.
   useEffect(() => {
     if (!profile) return;

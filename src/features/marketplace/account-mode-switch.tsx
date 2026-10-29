@@ -21,7 +21,7 @@ export function AccountModeSwitch({ className }: { className?: string }) {
   async function switchTo(mode: "customer" | "business") {
     if (mode === "business" && !hasBusiness) {
       void navigate({ to: "/shop/business-apply" });
-      toast.message("Complete your business details — admin approval is required first.");
+      toast.message("Fill your business details — admin approval is required first.");
       return;
     }
     const { error } = await setActiveMode(profile!.id, mode);
@@ -30,6 +30,7 @@ export function AccountModeSwitch({ className }: { className?: string }) {
       return;
     }
     await refreshProfile();
+    toast.success(mode === "customer" ? "Switched to Shop" : "Switched to Business");
     void navigate({ to: mode === "customer" ? "/shop" : "/app" });
   }
 

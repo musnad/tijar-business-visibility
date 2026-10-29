@@ -678,6 +678,19 @@
     );
 }
 
+@media (min-width: 1024px) {
+  .marketplace-hero {
+    background:
+      radial-gradient(ellipse 70% 90% at 90% 20%, oklch(0.5 0.11 165 / 0.5), transparent 58%),
+      linear-gradient(
+        125deg,
+        oklch(0.26 0.055 210) 0%,
+        oklch(0.34 0.075 190) 48%,
+        oklch(0.42 0.09 165) 100%
+      );
+  }
+}
+
 .dashboard-expense-card {
   background: linear-gradient(
     135deg,

@@ -41,7 +41,7 @@ function MarketplaceTopBar({ leftSlot }: { leftSlot?: ReactNode }) {
       </div>
 
       <div className="flex items-center justify-end gap-1.5">
-        <AccountModeSwitch className="hidden sm:inline-flex" />
+        <AccountModeSwitch className="hidden min-[420px]:inline-flex" />
         <AppLanguageButton />
         {!session ? (
           <Button size="sm" className="h-9 rounded-full px-3 text-xs font-bold" asChild>
@@ -91,7 +91,7 @@ export function MarketplaceShell({
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <main
         className={cn(
-          "mx-auto w-full max-w-lg flex-1 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5",
+          "mx-auto w-full max-w-lg flex-1 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 lg:max-w-6xl xl:max-w-7xl",
           mapLayout ? "px-3 pb-2" : "px-4 pb-4",
         )}
       >
@@ -100,7 +100,7 @@ export function MarketplaceShell({
       </main>
 
       <nav className="app-bottom-nav sticky bottom-0 z-40 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-sm">
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0 px-1 sm:px-2">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0 px-1 sm:px-2 lg:max-w-6xl xl:max-w-7xl">
           {tabs.map((tab) => {
             const active =
               "exact" in tab && tab.exact

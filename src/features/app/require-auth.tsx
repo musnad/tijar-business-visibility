@@ -7,6 +7,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
 import { resolveAppEntry } from "@/features/auth/route-guards";
 import { canUseBusinessMode, isCustomerOnly } from "@/lib/account-mode";
+import { isTijarSuperAdminEmail } from "@/lib/admin";
 
 export function RequireAuth({
   children,
@@ -30,10 +31,13 @@ export function RequireAuth({
     }
 
     // Customers never land on the business dashboard — apply from profile first.
+    // Super-admin always keeps dashboard + admin console access.
     if (
       profile &&
       isCustomerOnly(profile) &&
       !canUseBusinessMode(profile) &&
+      !isTijarSuperAdminEmail(profile.email) &&
+      !isTijarSuperAdminEmail(session?.user.email) &&
       pathname.startsWith("/app") &&
       !pathname.startsWith("/app/login") &&
       !pathname.startsWith("/app/register")
@@ -42,7 +46,14 @@ export function RequireAuth({
       return;
     }
 
-    if (requireOnboardingComplete && profile?.onboarding_status !== "completed") {
+    const superAdmin =
+      isTijarSuperAdminEmail(profile?.email) || isTijarSuperAdminEmail(session?.user.email);
+
+    if (
+      requireOnboardingComplete &&
+      profile?.onboarding_status !== "completed" &&
+      !superAdmin
+    ) {
       void navigate({ to: "/app/onboarding" });
     }
   }, [loading, session, profile, configured, requireOnboardingComplete, navigate, pathname]);
@@ -69,7 +80,12 @@ export function RequireAuth({
     );
   }
 
-  if (requireOnboardingComplete && profile?.onboarding_status !== "completed") {
+  if (
+    requireOnboardingComplete &&
+    profile?.onboarding_status !== "completed" &&
+    !isTijarSuperAdminEmail(profile?.email) &&
+    !isTijarSuperAdminEmail(session.user.email)
+  ) {
     return null;
   }
 

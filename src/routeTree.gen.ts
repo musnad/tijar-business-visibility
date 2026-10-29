@@ -15,30 +15,21 @@ import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as BusinessVisibilityRouteImport } from './routes/business-visibility'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoverRouteImport } from './routes/discover'
-import { Route as ShopRouteImport } from './routes/shop'
-import { Route as ShopCartRouteImport } from './routes/shop/cart'
-import { Route as ShopCheckoutRouteImport } from './routes/shop/checkout'
-import { Route as ShopFavoritesRouteImport } from './routes/shop/favorites'
-import { Route as ShopNearbyRouteImport } from './routes/shop/nearby'
-import { Route as ShopBusinessApplyRouteImport } from './routes/shop/business-apply'
-import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
-import { Route as ShopProfileRouteImport } from './routes/shop/profile'
-import { Route as ShopOrdersOrderIdRouteImport } from './routes/shop/orders.$orderId'
-import { Route as ShopPProductIdRouteImport } from './routes/shop/p.$productId'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ShopRouteImport } from './routes/shop'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TranslateRouteImport } from './routes/translate'
 import { Route as ApiPublicConfigRouteImport } from './routes/api.public-config'
 import { Route as ApiSpeakRouteImport } from './routes/api.speak'
-import { Route as ApiVoiceEnrollRouteImport } from './routes/api.voice-enroll'
 import { Route as ApiSupabaseHealthRouteImport } from './routes/api.supabase-health'
 import { Route as ApiTranslateRouteImport } from './routes/api.translate'
 import { Route as ApiTranslateBatchRouteImport } from './routes/api.translate-batch'
 import { Route as ApiTranslateSpeechRouteImport } from './routes/api.translate-speech'
+import { Route as ApiVoiceEnrollRouteImport } from './routes/api.voice-enroll'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppAssistantRouteImport } from './routes/app/assistant'
 import { Route as AppBusinessRouteImport } from './routes/app/business'
@@ -57,6 +48,14 @@ import { Route as AppScanRouteImport } from './routes/app/scan'
 import { Route as AppSuppliersRouteImport } from './routes/app/suppliers'
 import { Route as AppTransactionsRouteImport } from './routes/app/transactions'
 import { Route as BSlugRouteImport } from './routes/b/$slug'
+import { Route as ShopBusinessApplyRouteImport } from './routes/shop/business-apply'
+import { Route as ShopCartRouteImport } from './routes/shop/cart'
+import { Route as ShopCheckoutRouteImport } from './routes/shop/checkout'
+import { Route as ShopFavoritesRouteImport } from './routes/shop/favorites'
+import { Route as ShopNearbyRouteImport } from './routes/shop/nearby'
+import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
+import { Route as ShopProfileRouteImport } from './routes/shop/profile'
+import { Route as AppAdminIndexRouteImport } from './routes/app/admin/index'
 import { Route as AppAdminModerationRouteImport } from './routes/app/admin/moderation'
 import { Route as AppAdminTranslateRouteImport } from './routes/app/admin/translate'
 import { Route as AppBusinessEditRouteImport } from './routes/app/business/edit'
@@ -71,6 +70,8 @@ import { Route as AppProductsNewRouteImport } from './routes/app/products/new'
 import { Route as AppProductsScanShopRouteImport } from './routes/app/products/scan-shop'
 import { Route as AppProfileEditRouteImport } from './routes/app/profile/edit'
 import { Route as AppProfileSettingsRouteImport } from './routes/app/profile/settings'
+import { Route as ShopOrdersOrderIdRouteImport } from './routes/shop/orders.$orderId'
+import { Route as ShopPProductIdRouteImport } from './routes/shop/p.$productId'
 import { Route as AppCustomersCreditNewRouteImport } from './routes/app/customers/credit/new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -103,57 +104,6 @@ const DiscoverRoute = DiscoverRouteImport.update({
   path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
-
-const ShopRoute = ShopRouteImport.update({
-  id: '/shop',
-  path: '/shop',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ShopCartRoute = ShopCartRouteImport.update({
-  id: '/cart',
-  path: '/cart',
-  getParentRoute: () => ShopRoute,
-} as any)
-const ShopCheckoutRoute = ShopCheckoutRouteImport.update({
-  id: '/checkout',
-  path: '/checkout',
-  getParentRoute: () => ShopRoute,
-} as any)
-const ShopFavoritesRoute = ShopFavoritesRouteImport.update({
-  id: '/favorites',
-  path: '/favorites',
-  getParentRoute: () => ShopRoute,
-} as any)
-const ShopNearbyRoute = ShopNearbyRouteImport.update({
-  id: '/nearby',
-  path: '/nearby',
-  getParentRoute: () => ShopRoute,
-} as any)
-const ShopBusinessApplyRoute = ShopBusinessApplyRouteImport.update({
-  id: '/business-apply',
-  path: '/business-apply',
-  getParentRoute: () => ShopRoute,
-} as any)
-const ShopOrdersRoute = ShopOrdersRouteImport.update({
-  id: '/orders',
-  path: '/orders',
-  getParentRoute: () => ShopRoute,
-} as any)
-const ShopProfileRoute = ShopProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => ShopRoute,
-} as any)
-const ShopOrdersOrderIdRoute = ShopOrdersOrderIdRouteImport.update({
-  id: '/orders/$orderId',
-  path: '/orders/$orderId',
-  getParentRoute: () => ShopRoute,
-} as any)
-const ShopPProductIdRoute = ShopPProductIdRouteImport.update({
-  id: '/p/$productId',
-  path: '/p/$productId',
-  getParentRoute: () => ShopRoute,
-} as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
   path: '/how-it-works',
@@ -179,6 +129,11 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShopRoute = ShopRouteImport.update({
+  id: '/shop',
+  path: '/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -199,11 +154,6 @@ const ApiSpeakRoute = ApiSpeakRouteImport.update({
   path: '/api/speak',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiVoiceEnrollRoute = ApiVoiceEnrollRouteImport.update({
-  id: '/api/voice-enroll',
-  path: '/api/voice-enroll',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiSupabaseHealthRoute = ApiSupabaseHealthRouteImport.update({
   id: '/api/supabase-health',
   path: '/api/supabase-health',
@@ -222,6 +172,11 @@ const ApiTranslateBatchRoute = ApiTranslateBatchRouteImport.update({
 const ApiTranslateSpeechRoute = ApiTranslateSpeechRouteImport.update({
   id: '/api/translate-speech',
   path: '/api/translate-speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVoiceEnrollRoute = ApiVoiceEnrollRouteImport.update({
+  id: '/api/voice-enroll',
+  path: '/api/voice-enroll',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -314,6 +269,46 @@ const BSlugRoute = BSlugRouteImport.update({
   path: '/b/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShopBusinessApplyRoute = ShopBusinessApplyRouteImport.update({
+  id: '/business-apply',
+  path: '/business-apply',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopCartRoute = ShopCartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopCheckoutRoute = ShopCheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopFavoritesRoute = ShopFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopNearbyRoute = ShopNearbyRouteImport.update({
+  id: '/nearby',
+  path: '/nearby',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopOrdersRoute = ShopOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopProfileRoute = ShopProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => ShopRoute,
+} as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppAdminModerationRoute = AppAdminModerationRouteImport.update({
   id: '/admin/moderation',
   path: '/admin/moderation',
@@ -384,6 +379,16 @@ const AppProfileSettingsRoute = AppProfileSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppProfileRoute,
 } as any)
+const ShopOrdersOrderIdRoute = ShopOrdersOrderIdRouteImport.update({
+  id: '/$orderId',
+  path: '/$orderId',
+  getParentRoute: () => ShopOrdersRoute,
+} as any)
+const ShopPProductIdRoute = ShopPProductIdRouteImport.update({
+  id: '/p/$productId',
+  path: '/p/$productId',
+  getParentRoute: () => ShopRoute,
+} as any)
 const AppCustomersCreditNewRoute = AppCustomersCreditNewRouteImport.update({
   id: '/credit/new',
   path: '/credit/new',
@@ -397,32 +402,23 @@ export interface FileRoutesByFullPath {
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/discover': typeof DiscoverRoute
-  '/shop': typeof ShopRouteWithChildren
-  '/shop/cart': typeof ShopCartRoute
-  '/shop/checkout': typeof ShopCheckoutRoute
-  '/shop/favorites': typeof ShopFavoritesRoute
-  '/shop/nearby': typeof ShopNearbyRoute
-  '/shop/business-apply': typeof ShopBusinessApplyRoute
-  '/shop/orders': typeof ShopOrdersRoute
-  '/shop/profile': typeof ShopProfileRoute
-  '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
-  '/shop/p/$productId': typeof ShopPProductIdRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/shop': typeof ShopRouteWithChildren
   '/terms': typeof TermsRoute
   '/translate': typeof TranslateRoute
   '/app/customers': typeof AppCustomersRouteRouteWithChildren
   '/app/learn': typeof AppLearnRouteRouteWithChildren
   '/api/public-config': typeof ApiPublicConfigRoute
   '/api/speak': typeof ApiSpeakRoute
-  '/api/voice-enroll': typeof ApiVoiceEnrollRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/translate-batch': typeof ApiTranslateBatchRoute
   '/api/translate-speech': typeof ApiTranslateSpeechRoute
+  '/api/voice-enroll': typeof ApiVoiceEnrollRoute
   '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
@@ -438,6 +434,13 @@ export interface FileRoutesByFullPath {
   '/app/suppliers': typeof AppSuppliersRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/b/$slug': typeof BSlugRoute
+  '/shop/business-apply': typeof ShopBusinessApplyRoute
+  '/shop/cart': typeof ShopCartRoute
+  '/shop/checkout': typeof ShopCheckoutRoute
+  '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/nearby': typeof ShopNearbyRoute
+  '/shop/orders': typeof ShopOrdersRouteWithChildren
+  '/shop/profile': typeof ShopProfileRoute
   '/app/': typeof AppIndexRoute
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
@@ -451,6 +454,9 @@ export interface FileRoutesByFullPath {
   '/app/products/scan-shop': typeof AppProductsScanShopRoute
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
+  '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
+  '/shop/p/$productId': typeof ShopPProductIdRoute
+  '/app/admin/': typeof AppAdminIndexRoute
   '/app/customers/': typeof AppCustomersIndexRoute
   '/app/learn/': typeof AppLearnIndexRoute
   '/app/customers/credit/new': typeof AppCustomersCreditNewRoute
@@ -461,30 +467,21 @@ export interface FileRoutesByTo {
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/discover': typeof DiscoverRoute
-  '/shop': typeof ShopRouteWithChildren
-  '/shop/cart': typeof ShopCartRoute
-  '/shop/checkout': typeof ShopCheckoutRoute
-  '/shop/favorites': typeof ShopFavoritesRoute
-  '/shop/nearby': typeof ShopNearbyRoute
-  '/shop/business-apply': typeof ShopBusinessApplyRoute
-  '/shop/orders': typeof ShopOrdersRoute
-  '/shop/profile': typeof ShopProfileRoute
-  '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
-  '/shop/p/$productId': typeof ShopPProductIdRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/shop': typeof ShopRouteWithChildren
   '/terms': typeof TermsRoute
   '/translate': typeof TranslateRoute
   '/api/public-config': typeof ApiPublicConfigRoute
   '/api/speak': typeof ApiSpeakRoute
-  '/api/voice-enroll': typeof ApiVoiceEnrollRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/translate-batch': typeof ApiTranslateBatchRoute
   '/api/translate-speech': typeof ApiTranslateSpeechRoute
+  '/api/voice-enroll': typeof ApiVoiceEnrollRoute
   '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
@@ -500,6 +497,13 @@ export interface FileRoutesByTo {
   '/app/suppliers': typeof AppSuppliersRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/b/$slug': typeof BSlugRoute
+  '/shop/business-apply': typeof ShopBusinessApplyRoute
+  '/shop/cart': typeof ShopCartRoute
+  '/shop/checkout': typeof ShopCheckoutRoute
+  '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/nearby': typeof ShopNearbyRoute
+  '/shop/orders': typeof ShopOrdersRouteWithChildren
+  '/shop/profile': typeof ShopProfileRoute
   '/app': typeof AppIndexRoute
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
@@ -513,6 +517,9 @@ export interface FileRoutesByTo {
   '/app/products/scan-shop': typeof AppProductsScanShopRoute
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
+  '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
+  '/shop/p/$productId': typeof ShopPProductIdRoute
+  '/app/admin': typeof AppAdminIndexRoute
   '/app/customers': typeof AppCustomersIndexRoute
   '/app/learn': typeof AppLearnIndexRoute
   '/app/customers/credit/new': typeof AppCustomersCreditNewRoute
@@ -525,32 +532,23 @@ export interface FileRoutesById {
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/discover': typeof DiscoverRoute
-  '/shop': typeof ShopRouteWithChildren
-  '/shop/cart': typeof ShopCartRoute
-  '/shop/checkout': typeof ShopCheckoutRoute
-  '/shop/favorites': typeof ShopFavoritesRoute
-  '/shop/nearby': typeof ShopNearbyRoute
-  '/shop/business-apply': typeof ShopBusinessApplyRoute
-  '/shop/orders': typeof ShopOrdersRoute
-  '/shop/profile': typeof ShopProfileRoute
-  '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
-  '/shop/p/$productId': typeof ShopPProductIdRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/shop': typeof ShopRouteWithChildren
   '/terms': typeof TermsRoute
   '/translate': typeof TranslateRoute
   '/app/customers': typeof AppCustomersRouteRouteWithChildren
   '/app/learn': typeof AppLearnRouteRouteWithChildren
   '/api/public-config': typeof ApiPublicConfigRoute
   '/api/speak': typeof ApiSpeakRoute
-  '/api/voice-enroll': typeof ApiVoiceEnrollRoute
   '/api/supabase-health': typeof ApiSupabaseHealthRoute
   '/api/translate': typeof ApiTranslateRoute
   '/api/translate-batch': typeof ApiTranslateBatchRoute
   '/api/translate-speech': typeof ApiTranslateSpeechRoute
+  '/api/voice-enroll': typeof ApiVoiceEnrollRoute
   '/app/assistant': typeof AppAssistantRoute
   '/app/business': typeof AppBusinessRouteWithChildren
   '/app/expenses': typeof AppExpensesRoute
@@ -566,6 +564,13 @@ export interface FileRoutesById {
   '/app/suppliers': typeof AppSuppliersRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/b/$slug': typeof BSlugRoute
+  '/shop/business-apply': typeof ShopBusinessApplyRoute
+  '/shop/cart': typeof ShopCartRoute
+  '/shop/checkout': typeof ShopCheckoutRoute
+  '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/nearby': typeof ShopNearbyRoute
+  '/shop/orders': typeof ShopOrdersRouteWithChildren
+  '/shop/profile': typeof ShopProfileRoute
   '/app/': typeof AppIndexRoute
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
@@ -579,6 +584,9 @@ export interface FileRoutesById {
   '/app/products/scan-shop': typeof AppProductsScanShopRoute
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
+  '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
+  '/shop/p/$productId': typeof ShopPProductIdRoute
+  '/app/admin/': typeof AppAdminIndexRoute
   '/app/customers/': typeof AppCustomersIndexRoute
   '/app/learn/': typeof AppLearnIndexRoute
   '/app/customers/credit/new': typeof AppCustomersCreditNewRoute
@@ -592,32 +600,23 @@ export interface FileRouteTypes {
     | '/business-visibility'
     | '/contact'
     | '/discover'
-    | '/shop'
-    | '/shop/cart'
-    | '/shop/checkout'
-    | '/shop/favorites'
-    | '/shop/nearby'
-    | '/shop/business-apply'
-    | '/shop/orders'
-    | '/shop/profile'
-    | '/shop/orders/$orderId'
-    | '/shop/p/$productId'
     | '/how-it-works'
     | '/learn'
     | '/login'
     | '/privacy'
     | '/register'
+    | '/shop'
     | '/terms'
     | '/translate'
     | '/app/customers'
     | '/app/learn'
     | '/api/public-config'
     | '/api/speak'
-    | '/api/voice-enroll'
     | '/api/supabase-health'
     | '/api/translate'
     | '/api/translate-batch'
     | '/api/translate-speech'
+    | '/api/voice-enroll'
     | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
@@ -633,6 +632,13 @@ export interface FileRouteTypes {
     | '/app/suppliers'
     | '/app/transactions'
     | '/b/$slug'
+    | '/shop/business-apply'
+    | '/shop/cart'
+    | '/shop/checkout'
+    | '/shop/favorites'
+    | '/shop/nearby'
+    | '/shop/orders'
+    | '/shop/profile'
     | '/app/'
     | '/app/admin/moderation'
     | '/app/admin/translate'
@@ -646,6 +652,9 @@ export interface FileRouteTypes {
     | '/app/products/scan-shop'
     | '/app/profile/edit'
     | '/app/profile/settings'
+    | '/shop/orders/$orderId'
+    | '/shop/p/$productId'
+    | '/app/admin/'
     | '/app/customers/'
     | '/app/learn/'
     | '/app/customers/credit/new'
@@ -656,30 +665,21 @@ export interface FileRouteTypes {
     | '/business-visibility'
     | '/contact'
     | '/discover'
-    | '/shop'
-    | '/shop/cart'
-    | '/shop/checkout'
-    | '/shop/favorites'
-    | '/shop/nearby'
-    | '/shop/business-apply'
-    | '/shop/orders'
-    | '/shop/profile'
-    | '/shop/orders/$orderId'
-    | '/shop/p/$productId'
     | '/how-it-works'
     | '/learn'
     | '/login'
     | '/privacy'
     | '/register'
+    | '/shop'
     | '/terms'
     | '/translate'
     | '/api/public-config'
     | '/api/speak'
-    | '/api/voice-enroll'
     | '/api/supabase-health'
     | '/api/translate'
     | '/api/translate-batch'
     | '/api/translate-speech'
+    | '/api/voice-enroll'
     | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
@@ -695,6 +695,13 @@ export interface FileRouteTypes {
     | '/app/suppliers'
     | '/app/transactions'
     | '/b/$slug'
+    | '/shop/business-apply'
+    | '/shop/cart'
+    | '/shop/checkout'
+    | '/shop/favorites'
+    | '/shop/nearby'
+    | '/shop/orders'
+    | '/shop/profile'
     | '/app'
     | '/app/admin/moderation'
     | '/app/admin/translate'
@@ -708,6 +715,9 @@ export interface FileRouteTypes {
     | '/app/products/scan-shop'
     | '/app/profile/edit'
     | '/app/profile/settings'
+    | '/shop/orders/$orderId'
+    | '/shop/p/$productId'
+    | '/app/admin'
     | '/app/customers'
     | '/app/learn'
     | '/app/customers/credit/new'
@@ -719,32 +729,23 @@ export interface FileRouteTypes {
     | '/business-visibility'
     | '/contact'
     | '/discover'
-    | '/shop'
-    | '/shop/cart'
-    | '/shop/checkout'
-    | '/shop/favorites'
-    | '/shop/nearby'
-    | '/shop/business-apply'
-    | '/shop/orders'
-    | '/shop/profile'
-    | '/shop/orders/$orderId'
-    | '/shop/p/$productId'
     | '/how-it-works'
     | '/learn'
     | '/login'
     | '/privacy'
     | '/register'
+    | '/shop'
     | '/terms'
     | '/translate'
     | '/app/customers'
     | '/app/learn'
     | '/api/public-config'
     | '/api/speak'
-    | '/api/voice-enroll'
     | '/api/supabase-health'
     | '/api/translate'
     | '/api/translate-batch'
     | '/api/translate-speech'
+    | '/api/voice-enroll'
     | '/app/assistant'
     | '/app/business'
     | '/app/expenses'
@@ -760,6 +761,13 @@ export interface FileRouteTypes {
     | '/app/suppliers'
     | '/app/transactions'
     | '/b/$slug'
+    | '/shop/business-apply'
+    | '/shop/cart'
+    | '/shop/checkout'
+    | '/shop/favorites'
+    | '/shop/nearby'
+    | '/shop/orders'
+    | '/shop/profile'
     | '/app/'
     | '/app/admin/moderation'
     | '/app/admin/translate'
@@ -773,38 +781,14 @@ export interface FileRouteTypes {
     | '/app/products/scan-shop'
     | '/app/profile/edit'
     | '/app/profile/settings'
+    | '/shop/orders/$orderId'
+    | '/shop/p/$productId'
+    | '/app/admin/'
     | '/app/customers/'
     | '/app/learn/'
     | '/app/customers/credit/new'
   fileRoutesById: FileRoutesById
 }
-
-interface ShopRouteChildren {
-  ShopCartRoute: typeof ShopCartRoute
-  ShopCheckoutRoute: typeof ShopCheckoutRoute
-  ShopFavoritesRoute: typeof ShopFavoritesRoute
-  ShopNearbyRoute: typeof ShopNearbyRoute
-  ShopBusinessApplyRoute: typeof ShopBusinessApplyRoute
-  ShopOrdersRoute: typeof ShopOrdersRoute
-  ShopProfileRoute: typeof ShopProfileRoute
-  ShopOrdersOrderIdRoute: typeof ShopOrdersOrderIdRoute
-  ShopPProductIdRoute: typeof ShopPProductIdRoute
-}
-
-const ShopRouteChildren: ShopRouteChildren = {
-  ShopCartRoute: ShopCartRoute,
-  ShopCheckoutRoute: ShopCheckoutRoute,
-  ShopFavoritesRoute: ShopFavoritesRoute,
-  ShopNearbyRoute: ShopNearbyRoute,
-  ShopBusinessApplyRoute: ShopBusinessApplyRoute,
-  ShopOrdersRoute: ShopOrdersRoute,
-  ShopProfileRoute: ShopProfileRoute,
-  ShopOrdersOrderIdRoute: ShopOrdersOrderIdRoute,
-  ShopPProductIdRoute: ShopPProductIdRoute,
-}
-
-const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
@@ -812,21 +796,21 @@ export interface RootRouteChildren {
   BusinessVisibilityRoute: typeof BusinessVisibilityRoute
   ContactRoute: typeof ContactRoute
   DiscoverRoute: typeof DiscoverRoute
-  ShopRoute: typeof ShopRouteWithChildren
   HowItWorksRoute: typeof HowItWorksRoute
   LearnRoute: typeof LearnRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
+  ShopRoute: typeof ShopRouteWithChildren
   TermsRoute: typeof TermsRoute
   TranslateRoute: typeof TranslateRoute
   ApiPublicConfigRoute: typeof ApiPublicConfigRoute
   ApiSpeakRoute: typeof ApiSpeakRoute
-  ApiVoiceEnrollRoute: typeof ApiVoiceEnrollRoute
   ApiSupabaseHealthRoute: typeof ApiSupabaseHealthRoute
   ApiTranslateRoute: typeof ApiTranslateRoute
   ApiTranslateBatchRoute: typeof ApiTranslateBatchRoute
   ApiTranslateSpeechRoute: typeof ApiTranslateSpeechRoute
+  ApiVoiceEnrollRoute: typeof ApiVoiceEnrollRoute
   BSlugRoute: typeof BSlugRoute
 }
 
@@ -874,76 +858,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/shop': {
-      id: '/shop'
-      path: '/shop'
-      fullPath: '/shop'
-      preLoaderRoute: typeof ShopRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/shop/cart': {
-      id: '/shop/cart'
-      path: '/cart'
-      fullPath: '/shop/cart'
-      preLoaderRoute: typeof ShopCartRouteImport
-      parentRoute: typeof ShopRoute
-    }
-    '/shop/checkout': {
-      id: '/shop/checkout'
-      path: '/checkout'
-      fullPath: '/shop/checkout'
-      preLoaderRoute: typeof ShopCheckoutRouteImport
-      parentRoute: typeof ShopRoute
-    }
-    '/shop/favorites': {
-      id: '/shop/favorites'
-      path: '/favorites'
-      fullPath: '/shop/favorites'
-      preLoaderRoute: typeof ShopFavoritesRouteImport
-      parentRoute: typeof ShopRoute
-    }
-    '/shop/nearby': {
-      id: '/shop/nearby'
-      path: '/nearby'
-      fullPath: '/shop/nearby'
-      preLoaderRoute: typeof ShopNearbyRouteImport
-      parentRoute: typeof ShopRoute
-    }
-    '/shop/business-apply': {
-      id: '/shop/business-apply'
-      path: '/business-apply'
-      fullPath: '/shop/business-apply'
-      preLoaderRoute: typeof ShopBusinessApplyRouteImport
-      parentRoute: typeof ShopRoute
-    }
-    '/shop/orders': {
-      id: '/shop/orders'
-      path: '/orders'
-      fullPath: '/shop/orders'
-      preLoaderRoute: typeof ShopOrdersRouteImport
-      parentRoute: typeof ShopRoute
-    }
-    '/shop/profile': {
-      id: '/shop/profile'
-      path: '/profile'
-      fullPath: '/shop/profile'
-      preLoaderRoute: typeof ShopProfileRouteImport
-      parentRoute: typeof ShopRoute
-    }
-    '/shop/orders/$orderId': {
-      id: '/shop/orders/$orderId'
-      path: '/orders/$orderId'
-      fullPath: '/shop/orders/$orderId'
-      preLoaderRoute: typeof ShopOrdersOrderIdRouteImport
-      parentRoute: typeof ShopRoute
-    }
-    '/shop/p/$productId': {
-      id: '/shop/p/$productId'
-      path: '/p/$productId'
-      fullPath: '/shop/p/$productId'
-      preLoaderRoute: typeof ShopPProductIdRouteImport
-      parentRoute: typeof ShopRoute
-    }
     '/how-it-works': {
       id: '/how-it-works'
       path: '/how-it-works'
@@ -979,6 +893,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shop': {
+      id: '/shop'
+      path: '/shop'
+      fullPath: '/shop'
+      preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -1007,13 +928,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSpeakRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/voice-enroll': {
-      id: '/api/voice-enroll'
-      path: '/api/voice-enroll'
-      fullPath: '/api/voice-enroll'
-      preLoaderRoute: typeof ApiVoiceEnrollRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/supabase-health': {
       id: '/api/supabase-health'
       path: '/api/supabase-health'
@@ -1040,6 +954,13 @@ declare module '@tanstack/react-router' {
       path: '/api/translate-speech'
       fullPath: '/api/translate-speech'
       preLoaderRoute: typeof ApiTranslateSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/voice-enroll': {
+      id: '/api/voice-enroll'
+      path: '/api/voice-enroll'
+      fullPath: '/api/voice-enroll'
+      preLoaderRoute: typeof ApiVoiceEnrollRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -1168,6 +1089,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shop/business-apply': {
+      id: '/shop/business-apply'
+      path: '/business-apply'
+      fullPath: '/shop/business-apply'
+      preLoaderRoute: typeof ShopBusinessApplyRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/cart': {
+      id: '/shop/cart'
+      path: '/cart'
+      fullPath: '/shop/cart'
+      preLoaderRoute: typeof ShopCartRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/checkout': {
+      id: '/shop/checkout'
+      path: '/checkout'
+      fullPath: '/shop/checkout'
+      preLoaderRoute: typeof ShopCheckoutRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/favorites': {
+      id: '/shop/favorites'
+      path: '/favorites'
+      fullPath: '/shop/favorites'
+      preLoaderRoute: typeof ShopFavoritesRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/nearby': {
+      id: '/shop/nearby'
+      path: '/nearby'
+      fullPath: '/shop/nearby'
+      preLoaderRoute: typeof ShopNearbyRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/orders': {
+      id: '/shop/orders'
+      path: '/orders'
+      fullPath: '/shop/orders'
+      preLoaderRoute: typeof ShopOrdersRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/profile': {
+      id: '/shop/profile'
+      path: '/profile'
+      fullPath: '/shop/profile'
+      preLoaderRoute: typeof ShopProfileRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/app/admin/': {
+      id: '/app/admin/'
+      path: '/admin'
+      fullPath: '/app/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/app/admin/moderation': {
       id: '/app/admin/moderation'
       path: '/admin/moderation'
@@ -1265,6 +1242,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/profile/settings'
       preLoaderRoute: typeof AppProfileSettingsRouteImport
       parentRoute: typeof AppProfileRoute
+    }
+    '/shop/orders/$orderId': {
+      id: '/shop/orders/$orderId'
+      path: '/$orderId'
+      fullPath: '/shop/orders/$orderId'
+      preLoaderRoute: typeof ShopOrdersOrderIdRouteImport
+      parentRoute: typeof ShopOrdersRoute
+    }
+    '/shop/p/$productId': {
+      id: '/shop/p/$productId'
+      path: '/p/$productId'
+      fullPath: '/shop/p/$productId'
+      preLoaderRoute: typeof ShopPProductIdRouteImport
+      parentRoute: typeof ShopRoute
     }
     '/app/customers/credit/new': {
       id: '/app/customers/credit/new'
@@ -1381,6 +1372,7 @@ interface AppRouteRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppAdminModerationRoute: typeof AppAdminModerationRoute
   AppAdminTranslateRoute: typeof AppAdminTranslateRoute
+  AppAdminIndexRoute: typeof AppAdminIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
@@ -1403,11 +1395,48 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppAdminModerationRoute: AppAdminModerationRoute,
   AppAdminTranslateRoute: AppAdminTranslateRoute,
+  AppAdminIndexRoute: AppAdminIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
+
+interface ShopOrdersRouteChildren {
+  ShopOrdersOrderIdRoute: typeof ShopOrdersOrderIdRoute
+}
+
+const ShopOrdersRouteChildren: ShopOrdersRouteChildren = {
+  ShopOrdersOrderIdRoute: ShopOrdersOrderIdRoute,
+}
+
+const ShopOrdersRouteWithChildren = ShopOrdersRoute._addFileChildren(
+  ShopOrdersRouteChildren,
+)
+
+interface ShopRouteChildren {
+  ShopBusinessApplyRoute: typeof ShopBusinessApplyRoute
+  ShopCartRoute: typeof ShopCartRoute
+  ShopCheckoutRoute: typeof ShopCheckoutRoute
+  ShopFavoritesRoute: typeof ShopFavoritesRoute
+  ShopNearbyRoute: typeof ShopNearbyRoute
+  ShopOrdersRoute: typeof ShopOrdersRouteWithChildren
+  ShopProfileRoute: typeof ShopProfileRoute
+  ShopPProductIdRoute: typeof ShopPProductIdRoute
+}
+
+const ShopRouteChildren: ShopRouteChildren = {
+  ShopBusinessApplyRoute: ShopBusinessApplyRoute,
+  ShopCartRoute: ShopCartRoute,
+  ShopCheckoutRoute: ShopCheckoutRoute,
+  ShopFavoritesRoute: ShopFavoritesRoute,
+  ShopNearbyRoute: ShopNearbyRoute,
+  ShopOrdersRoute: ShopOrdersRouteWithChildren,
+  ShopProfileRoute: ShopProfileRoute,
+  ShopPProductIdRoute: ShopPProductIdRoute,
+}
+
+const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1416,33 +1445,23 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessVisibilityRoute: BusinessVisibilityRoute,
   ContactRoute: ContactRoute,
   DiscoverRoute: DiscoverRoute,
-  ShopRoute: ShopRouteWithChildren,
   HowItWorksRoute: HowItWorksRoute,
   LearnRoute: LearnRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
+  ShopRoute: ShopRouteWithChildren,
   TermsRoute: TermsRoute,
   TranslateRoute: TranslateRoute,
   ApiPublicConfigRoute: ApiPublicConfigRoute,
   ApiSpeakRoute: ApiSpeakRoute,
-  ApiVoiceEnrollRoute: ApiVoiceEnrollRoute,
   ApiSupabaseHealthRoute: ApiSupabaseHealthRoute,
   ApiTranslateRoute: ApiTranslateRoute,
   ApiTranslateBatchRoute: ApiTranslateBatchRoute,
   ApiTranslateSpeechRoute: ApiTranslateSpeechRoute,
+  ApiVoiceEnrollRoute: ApiVoiceEnrollRoute,
   BSlugRoute: BSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
