@@ -1,6 +1,39 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { Business, MarketplaceOrder, Profile } from "@/types/database";
+import type {
+  Business,
+  MarketplaceOrder,
+  Profile,
+  Transaction,
+} from "@/types/database";
 import type { BusinessUpgradeRequest } from "@/services/marketplace-service";
+
+export type AdminTransaction = Transaction & {
+  businesses?: { business_name: string } | null;
+};
+
+export type AdminOrder = MarketplaceOrder & {
+  businesses?: { business_name: string } | null;
+  buyer?: { full_name: string; email: string | null } | null;
+};
+
+export type AdminPayment = {
+  id: string;
+  order_id: string;
+  provider: string;
+  status: string;
+  amount: number;
+  currency: string;
+  created_at: string;
+};
+
+export type KycStatus =
+  | "not_started"
+  | "in_progress"
+  | "submitted"
+  | "under_review"
+  | "verified"
+  | "rejected"
+  | "requires_update";
 
 export async function fetchAdminUpgradeRequests(): Promise<{
   requests: BusinessUpgradeRequest[];
@@ -11,7 +44,7 @@ export async function fetchAdminUpgradeRequests(): Promise<{
     .from("business_upgrade_requests")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(300);
   if (error) return { requests: [], error: error.message };
   return { requests: (data ?? []) as BusinessUpgradeRequest[], error: null };
 }
@@ -39,49 +72,116 @@ export async function fetchAdminProfiles(): Promise<{
     .from("profiles")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(300);
+    .limit(500);
   if (error) return { profiles: [], error: error.message };
   return { profiles: (data ?? []) as Profile[], error: null };
 }
 
+export async function fetchAdminBusinesses(): Promise<{
+  businesses: Business[];
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("businesses")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .limit(500);
+  if (error) return { businesses: [], error: error.message };
+  return { businesses: (data ?? []) as Business[], error: null };
+}
+
 export async function fetchAdminOrders(): Promise<{
-  orders: MarketplaceOrder[];
+  orders: AdminOrder[];
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("orders")
-    .select("*")
+    .select("*, businesses(business_name), buyer:profiles!orders_buyer_profile_id_fkey(full_name, email)")
     .order("created_at", { ascending: false })
-    .limit(200);
-  if (error) return { orders: [], error: error.message };
-  return { orders: (data ?? []) as MarketplaceOrder[], error: null };
+    .limit(400);
+  if (error) {
+    const fallback = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(400);
+    if (fallback.error) return { orders: [], error: fallback.error.message };
+    return { orders: (fallback.data ?? []) as AdminOrder[], error: null };
+  }
+  return { orders: (data ?? []) as AdminOrder[], error: null };
+}
+
+export async function fetchAdminTransactions(): Promise<{
+  transactions: AdminTransaction[];
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*, businesses(business_name)")
+    .order("occurred_at", { ascending: false })
+    .limit(800);
+  if (error) {
+    const fallback = await supabase
+      .from("transactions")
+      .select("*")
+      .order("occurred_at", { ascending: false })
+      .limit(800);
+    if (fallback.error) return { transactions: [], error: fallback.error.message };
+    return { transactions: (fallback.data ?? []) as AdminTransaction[], error: null };
+  }
+  return { transactions: (data ?? []) as AdminTransaction[], error: null };
+}
+
+export async function fetchAdminPayments(): Promise<{
+  payments: AdminPayment[];
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("id, order_id, provider, status, amount, currency, created_at")
+    .order("created_at", { ascending: false })
+    .limit(400);
+  if (error) return { payments: [], error: error.message };
+  return { payments: (data ?? []) as AdminPayment[], error: null };
 }
 
 export async function setBusinessVerification(
   businessId: string,
-  status: "verified" | "rejected" | "under_review",
+  status: KycStatus,
+  notes?: string,
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const patch: Record<string, unknown> = {
+    verification_status: status,
+  };
+  if (notes?.trim()) patch.moderation_notes = notes.trim();
+  if (status === "verified") {
+    patch.moderation_status = "approved";
+    patch.location_approved = true;
+  }
+  const { error } = await supabase.from("businesses").update(patch).eq("id", businessId);
+  return { error: error?.message ?? null };
+}
+
+export async function setBusinessPublished(
+  businessId: string,
+  published: boolean,
 ): Promise<{ error: string | null }> {
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase
     .from("businesses")
-    .update({ verification_status: status })
+    .update({
+      is_published: published,
+      published_at: published ? new Date().toISOString() : null,
+    })
     .eq("id", businessId);
   return { error: error?.message ?? null };
 }
 
-export function summarizeAdmin(
-  profiles: Profile[],
-  businesses: Business[],
-  requests: BusinessUpgradeRequest[],
-  orders: MarketplaceOrder[],
-) {
-  return {
-    users: profiles.length,
-    shops: businesses.length,
-    pendingListings: businesses.filter((b) => b.moderation_status === "pending").length,
-    pendingUpgrades: requests.filter((r) => r.status === "pending").length,
-    orders: orders.length,
-    verified: businesses.filter((b) => b.verification_status === "verified").length,
-  };
+export function shopName(row: { businesses?: { business_name: string } | null; business_id?: string }): string {
+  return row.businesses?.business_name ?? row.business_id?.slice(0, 8) ?? "Shop";
 }
