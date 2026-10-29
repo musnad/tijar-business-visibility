@@ -14,7 +14,7 @@ export function StatusBadge({
       className={cn(
         "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold",
         variant === "completed" && "bg-primary/15 text-primary",
-        variant === "pending" && "bg-sky-100 text-sky-800",
+        variant === "pending" && "bg-primary/10 text-primary",
       )}
     >
       {label}

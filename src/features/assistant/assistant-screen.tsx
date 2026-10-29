@@ -55,11 +55,11 @@ const LOCALE_TO_SPEAK_LANG: Partial<Record<Locale, string>> = {
 };
 
 const INTENT_META: Record<VoiceIntentType, { labelKey: string; icon: typeof ShoppingBag; className: string }> = {
-  sale: { labelKey: "app.assistant.intentSale", icon: ShoppingBag, className: "bg-emerald-100 text-emerald-800" },
-  expense: { labelKey: "app.assistant.intentExpense", icon: Wallet, className: "bg-rose-100 text-rose-800" },
-  purchase: { labelKey: "app.assistant.intentPurchase", icon: PackagePlus, className: "bg-sky-100 text-sky-800" },
+  sale: { labelKey: "app.assistant.intentSale", icon: ShoppingBag, className: "bg-primary/15 text-primary" },
+  expense: { labelKey: "app.assistant.intentExpense", icon: Wallet, className: "bg-destructive/10 text-destructive" },
+  purchase: { labelKey: "app.assistant.intentPurchase", icon: PackagePlus, className: "bg-primary/10 text-primary" },
   customer_payment: { labelKey: "app.assistant.intentCustomerPayment", icon: Banknote, className: "bg-teal-100 text-teal-800" },
-  supplier_payment: { labelKey: "app.assistant.intentSupplierPayment", icon: ReceiptText, className: "bg-violet-100 text-violet-800" },
+  supplier_payment: { labelKey: "app.assistant.intentSupplierPayment", icon: ReceiptText, className: "bg-primary/10 text-primary" },
 };
 
 type Mode = "books" | "chat";
@@ -399,7 +399,7 @@ export function AssistantScreen() {
       </div>
 
       {showHausaNote && (
-        <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+        <p className="mt-3 rounded-xl bg-accent p-3 text-xs text-foreground dark:bg-primary/15 dark:text-primary-foreground">
           {t("app.assistant.hausaVoiceOnly")}
         </p>
       )}
@@ -495,7 +495,7 @@ export function AssistantScreen() {
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[11px] font-extrabold",
-                draft.confidence === "high" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800",
+                draft.confidence === "high" ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary",
               )}
             >
               {draft.confidence === "high" ? t("app.assistant.understoodClearly") : t("app.assistant.checkCarefully")}
@@ -769,7 +769,7 @@ export function AssistantScreen() {
           <ul className="mt-2.5 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             {activity.map((item) => (
               <li key={item.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="flex size-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-primary">
                   <Check className="size-4" />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{item.label}</span>

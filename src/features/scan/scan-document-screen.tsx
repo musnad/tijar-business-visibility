@@ -234,7 +234,7 @@ export function ScanDocumentScreen() {
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[11px] font-extrabold",
-                draft.confidence === "high" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800",
+                draft.confidence === "high" ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary",
               )}
             >
               {draft.confidence === "high" ? t("app.assistant.understoodClearly") : t("app.assistant.checkCarefully")}

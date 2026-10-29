@@ -10,14 +10,14 @@ const actions = [
     key: "customers",
     labelKey: "app.business.manageCustomers",
     icon: Users,
-    iconClass: "bg-sky-100 text-sky-700",
+    iconClass: "bg-primary/10 text-primary",
     to: "/app/customers" as const,
   },
   {
     key: "suppliers",
     labelKey: "app.business.manageSuppliers",
     icon: Truck,
-    iconClass: "bg-violet-100 text-violet-700",
+    iconClass: "bg-primary/10 text-primary",
     to: "/app/suppliers" as const,
   },
 ] as const;

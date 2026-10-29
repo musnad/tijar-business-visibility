@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Compass, Home, Plus, ShoppingBag, UserRound, Clapperboard, PlusSquare } from "lucide-react";
+import { Compass, Heart, Home, Mail, PlusSquare, ShoppingBag, UserRound, Clapperboard } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { TijarLogo } from "@/components/brand-logo";
@@ -78,10 +78,10 @@ export function MarketplaceShell({
 
   const tabs = feed
     ? [
-        { to: "/shop" as const, label: "For You", icon: Home, exact: true },
-        { to: "/shop/discover" as const, label: "Discover", icon: Compass },
-        { to: (showCreate ? "/shop/create" : "/shop/business-apply") as const, label: "", icon: Plus, fab: true },
-        { to: "/shop/browse" as const, label: "Shop", icon: ShoppingBag, badge: cartCount },
+        { to: "/shop" as const, label: "Home", icon: Home, exact: true },
+        { to: "/shop/discover" as const, label: "Explore", icon: Compass },
+        { to: (showCreate ? "/shop/create" : "/shop/favorites") as const, label: "Sell", icon: Heart },
+        { to: "/shop/enquiries" as const, label: "Messages", icon: Mail, badge: cartCount },
         { to: "/shop/profile" as const, label: "Profile", icon: UserRound },
       ]
     : [
@@ -93,12 +93,12 @@ export function MarketplaceShell({
       ];
 
   return (
-    <div className={cn("flex min-h-dvh flex-col", feed ? "bg-black text-white" : "bg-background text-foreground")}>
+    <div className={cn("flex min-h-dvh flex-col", feed && "h-full max-h-dvh overflow-hidden", feed ? "bg-white text-foreground" : "bg-background text-foreground")}>
       <main
         className={cn(
           "mx-auto w-full flex-1",
           feed
-            ? "max-w-lg p-0"
+            ? "flex max-w-lg min-h-0 flex-col p-0"
             : cn(
                 "max-w-lg pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 lg:max-w-6xl xl:max-w-7xl",
                 mapLayout ? "px-2 pb-2" : "px-4 pb-4",
@@ -111,8 +111,10 @@ export function MarketplaceShell({
 
       <nav
         className={cn(
-          "sticky bottom-0 z-40 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1",
-          feed ? "border-t border-white/10 bg-black" : "app-bottom-nav border-t border-border bg-background/95 backdrop-blur-sm",
+          "z-40 shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1",
+          feed
+            ? "relative border-t border-border bg-white pb-[max(0.55rem,env(safe-area-inset-bottom))]"
+            : "sticky bottom-0 app-bottom-nav border-t border-border bg-background/95 backdrop-blur-sm",
         )}
         aria-label="Marketplace"
       >
@@ -123,29 +125,19 @@ export function MarketplaceShell({
                 ? pathname === "/shop" || pathname === "/shop/"
                 : pathname === tab.to || pathname.startsWith(`${tab.to}/`);
             const Icon = tab.icon;
-            const fab = "fab" in tab && tab.fab;
             return (
               <Link
-                key={tab.to}
+                key={`${tab.to}-${tab.label}`}
                 to={tab.to}
                 className={cn(
-                  "relative flex min-h-[3.5rem] touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-semibold",
-                  fab && "-mt-5",
-                  !fab && (active ? (feed ? "text-[#A855F7]" : "app-tab-active text-primary") : feed ? "text-white/55" : "text-muted-foreground"),
+                  "relative flex min-h-11 min-w-11 touch-manipulation flex-col items-center justify-center gap-0.5 py-1 text-[10px] font-semibold",
+                  active ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                {fab ? (
-                  <span className="flex size-14 items-center justify-center rounded-full bg-[#7C3AED] text-white shadow-[0_8px_24px_rgba(124,58,237,0.45)]">
-                    <Plus className="size-7" strokeWidth={2.75} />
-                  </span>
-                ) : (
-                  <>
-                    <Icon className={cn("size-5", active && "stroke-[2.5]")} />
-                    {tab.label}
-                  </>
-                )}
+                <Icon className={cn("size-5", active && "stroke-[2.5]")} />
+                {tab.label}
                 {"badge" in tab && tab.badge && tab.badge > 0 ? (
-                  <span className="absolute right-[18%] top-1.5 flex size-4 items-center justify-center rounded-full bg-[#7C3AED] text-[9px] font-bold text-white">
+                  <span className="absolute right-[18%] top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white">
                     {tab.badge > 9 ? "9+" : tab.badge}
                   </span>
                 ) : null}

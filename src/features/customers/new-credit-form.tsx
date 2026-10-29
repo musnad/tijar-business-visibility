@@ -80,7 +80,7 @@ export function NewCreditForm({
   if (customers.length === 0) {
     return (
       <div className="mt-5 rounded-2xl border border-dashed border-border bg-card p-6 text-center shadow-sm">
-        <HandCoins className="mx-auto size-10 text-amber-700" strokeWidth={2} />
+        <HandCoins className="mx-auto size-10 text-primary" strokeWidth={2} />
         <p className="mt-3 text-sm font-semibold">{t("app.customers.creditNeedCustomerTitle")}</p>
         <p className="mt-1 text-sm text-muted-foreground">{t("app.customers.creditNeedCustomerBody")}</p>
         <Button className="mt-4 min-h-11 w-full rounded-xl font-bold" asChild>
@@ -137,7 +137,7 @@ export function NewCreditForm({
               : t("app.customers.noBalanceYet")}
           </p>
         )}
-        <Button type="button" variant="link" className="mt-1 h-auto p-0 text-sky-700" asChild>
+        <Button type="button" variant="link" className="mt-1 h-auto p-0 text-primary" asChild>
           <Link to="/app/customers/new">{t("app.sales.addCustomerLink")}</Link>
         </Button>
       </FormSection>
@@ -153,7 +153,7 @@ export function NewCreditForm({
 
       <Button
         type="button"
-        className="min-h-12 w-full rounded-xl bg-amber-700 text-base font-bold shadow-md hover:bg-amber-800"
+        className="min-h-12 w-full rounded-xl bg-primary text-base font-bold shadow-md hover:bg-primary/90"
         disabled={submitting || !customerId}
         onClick={() => void submit()}
       >

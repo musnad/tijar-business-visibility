@@ -63,7 +63,7 @@ export function CustomerActivitySection({ businessId }: { businessId: string }) 
                 </div>
                 <p
                   className={`shrink-0 text-sm font-extrabold tabular-nums ${
-                    incoming ? "text-emerald-700" : "text-amber-800"
+                    incoming ? "text-primary" : "text-primary"
                   }`}
                 >
                   {incoming ? "+" : ""}

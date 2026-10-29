@@ -25,7 +25,7 @@ type Tab = "active" | "completed" | "all";
 function statusBadgeClass(status: string): string {
   const tone = orderStatusTone(status);
   if (tone === "active") return "bg-primary/15 text-primary";
-  if (tone === "done") return "bg-emerald-100 text-emerald-800";
+  if (tone === "done") return "bg-primary/15 text-primary";
   if (tone === "warn") return "bg-destructive/10 text-destructive";
   return "bg-muted text-muted-foreground";
 }

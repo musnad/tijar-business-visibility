@@ -53,7 +53,7 @@ export function LessonNode({
         {status === "locked" && <Lock className="size-6" />}
         {status === "current" && <Play className="size-7 fill-primary text-primary" />}
         {status === "available" && <Star className="size-7 text-primary" />}
-        <span className="absolute -bottom-1.5 rounded-full bg-gradient-to-r from-amber-100 to-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-900 shadow-sm">
+        <span className="absolute -bottom-1.5 rounded-full bg-gradient-to-r from-primary/15 to-accent px-2 py-0.5 text-[10px] font-bold text-foreground shadow-sm">
           +{xp}
         </span>
       </div>

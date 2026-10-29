@@ -103,14 +103,14 @@ export function SaleProductPicker({
       {profitPreview && (
         <p className="mt-2 text-xs font-semibold text-muted-foreground">
           {t("app.sales.profitPreview")}:{" "}
-          <span className={profitPreview.profit >= 0 ? "text-emerald-700" : "text-red-700"}>
+          <span className={profitPreview.profit >= 0 ? "text-primary" : "text-red-700"}>
             {formatNgn(profitPreview.profit)}
           </span>
           {" · "}
           {t("app.sales.costPreview")}: {formatNgn(profitPreview.cost)}
         </p>
       )}
-      <Button type="button" variant="link" className="mt-2 h-auto p-0 text-sky-700" asChild>
+      <Button type="button" variant="link" className="mt-2 h-auto p-0 text-primary" asChild>
         <Link to="/app/products/new">{t("app.sales.addProductLink")}</Link>
       </Button>
     </FormSection>

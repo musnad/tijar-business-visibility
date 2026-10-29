@@ -188,7 +188,7 @@ export function DiscoverScreen() {
         </label>
       </div>
 
-      {geoMessage && <p className="mt-2 text-sm text-amber-700">{geoMessage}</p>}
+      {geoMessage && <p className="mt-2 text-sm text-primary">{geoMessage}</p>}
       {centre && <p className="mt-2 text-xs text-muted-foreground">{t("app.discover.showingNear").replace("{name}", centreLabel || t("app.discover.selectedPoint"))}</p>}
 
       {listingsQuery.isLoading && <p className="mt-8 text-muted-foreground">{t("app.discover.loading")}</p>}

@@ -5,7 +5,7 @@ import path from "node:path";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const src =
   process.argv[2] ??
-  "/Users/macbookpro/.cursor/projects/Users-macbookpro-Desktop-Tijar-app/assets/WhatsApp_Image_2026-10-06_at_5.49.04_AM-406c3aea-d02e-449b-9a97-882df7ff93.png";
+  "/Users/macbookpro/.cursor/projects/Users-macbookpro-Desktop-Tijar-app/assets/WhatsApp_Image_2026-10-06_at_5.49.04_AM-a9314307-2c5a-4aac-867e-395d85b63d81.jpg";
 const out = path.join(root, "public", "tijar-logo.png");
 
 const { data, info } = await sharp(src)

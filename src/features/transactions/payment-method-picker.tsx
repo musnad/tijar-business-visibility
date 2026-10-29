@@ -27,10 +27,10 @@ const paymentIcons: Record<PaymentMethodId, LucideIcon> = {
 };
 
 const paymentTone: Record<PaymentMethodId, string> = {
-  cash: "bg-emerald-100 text-emerald-700 ring-emerald-200",
-  transfer: "bg-sky-100 text-sky-700 ring-sky-200",
-  pos: "bg-violet-100 text-violet-700 ring-violet-200",
-  credit: "bg-amber-100 text-amber-800 ring-amber-200",
+  cash: "bg-primary/15 text-primary ring-emerald-200",
+  transfer: "bg-primary/10 text-primary ring-primary/30",
+  pos: "bg-primary/10 text-primary ring-primary/30",
+  credit: "bg-primary/10 text-primary ring-primary/30",
   mobile_money: "bg-teal-100 text-teal-800 ring-teal-200",
   other: "bg-muted text-muted-foreground ring-border",
 };

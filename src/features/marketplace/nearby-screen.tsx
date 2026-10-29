@@ -209,7 +209,7 @@ export function NearbyScreen() {
               </button>
             ))}
           </div>
-          {geoHint && <p className="text-xs text-amber-800">{geoHint}</p>}
+          {geoHint && <p className="text-xs text-primary">{geoHint}</p>}
         </div>
 
         <div className="relative min-h-[42vh] flex-1 overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">

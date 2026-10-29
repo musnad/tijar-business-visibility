@@ -22,19 +22,19 @@ export function LearnStatsBar({
     <div className="learn-stats-bar sticky top-0 z-20 -mx-4 mb-1 border-b border-primary/10 px-4 py-3 backdrop-blur-md">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-sm font-extrabold text-orange-600">
-            <Flame className="size-5 fill-orange-500 text-orange-600" />
+          <span className="flex items-center gap-1 text-sm font-extrabold text-primary">
+            <Flame className="size-5 fill-primary text-primary" />
             {streak}
           </span>
-          <span className="flex items-center gap-1 text-sm font-extrabold text-sky-600">
-            <Gem className="size-5 fill-sky-400 text-sky-600" />
+          <span className="flex items-center gap-1 text-sm font-extrabold text-primary">
+            <Gem className="size-5 fill-secondary text-primary" />
             {totalXp}
           </span>
           <span className="flex items-center gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => (
               <Heart
                 key={i}
-                className={`size-4 ${i < hearts ? "fill-rose-500 text-rose-500" : "text-muted-foreground/30"}`}
+                className={`size-4 ${i < hearts ? "fill-primary text-primary" : "text-muted-foreground/30"}`}
               />
             ))}
           </span>

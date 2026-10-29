@@ -151,7 +151,7 @@ export function CheckoutScreen() {
   return (
     <MarketplaceShell cartCount={items.reduce((n, i) => n + Number(i.quantity), 0)}>
       <h1 className="text-xl font-extrabold">Checkout</h1>
-      <p className="mt-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+      <p className="mt-1 rounded-xl border border-primary/30 bg-accent px-3 py-2 text-xs text-foreground">
         {paymentReady
           ? "Live payment is configured on the server. An order is paid only after the provider webhook succeeds — never from this screen."
           : "Paystack / Flutterwave are not connected. This sends a labelled order request. It is not a completed payment."}
@@ -194,7 +194,7 @@ export function CheckoutScreen() {
       <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <p className="text-sm font-bold">Order review by seller</p>
         {quoteQuery.isError && (
-          <p className="mt-2 text-xs text-amber-800">
+          <p className="mt-2 text-xs text-primary">
             Live quote RPC is not applied yet. Showing cart lines. Run migration 000020 so prices are recalculated on the server.
           </p>
         )}

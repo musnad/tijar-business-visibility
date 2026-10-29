@@ -124,18 +124,18 @@ export function LearnStepView({
     return (
       <div className="learn-step space-y-5">
         <LearnStepProgress current={stepNum} total={totalSteps} />
-        <div className="learn-mission-card overflow-hidden rounded-3xl border-2 border-amber-300/50 shadow-md">
-          <div className="bg-gradient-to-r from-amber-500 to-amber-400 px-5 py-3">
-            <p className="text-xs font-black uppercase tracking-wider text-amber-950">
+        <div className="learn-mission-card overflow-hidden rounded-3xl border-2 border-primary/40 shadow-md">
+          <div className="bg-gradient-to-r from-primary to-secondary px-5 py-3">
+            <p className="text-xs font-black uppercase tracking-wider text-foreground">
               🎯 {t("app.learn.missionBadge")}
             </p>
           </div>
           <div className="space-y-3 bg-card p-5">
             <p className="text-lg font-extrabold">{t(step.titleKey)}</p>
             <p className="text-sm text-muted-foreground">{t(step.hintKey)}</p>
-            <div className="h-3 overflow-hidden rounded-full bg-amber-100">
+            <div className="h-3 overflow-hidden rounded-full bg-primary/10">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-primary transition-all duration-500"
+                className="h-full rounded-full bg-gradient-to-r from-primary to-primary transition-all duration-500"
                 style={{ width: `${progressPct}%` }}
               />
             </div>

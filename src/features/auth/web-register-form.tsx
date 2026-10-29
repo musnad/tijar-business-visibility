@@ -129,7 +129,7 @@ export function WebRegisterForm() {
               onClick={() => setAccountMode("customer")}
               className={`min-h-14 rounded-2xl border px-3 text-left text-sm font-bold ${
                 accountMode === "customer"
-                  ? "border-[#00C853] bg-[#e8faf0] text-[#001B3A]"
+                  ? "border-[#1B8A52] bg-[#e8faf0] text-[#001B3A]"
                   : "border-[#dce3eb] bg-white text-[#5a6578]"
               }`}
             >
@@ -141,7 +141,7 @@ export function WebRegisterForm() {
               onClick={() => setAccountMode("business")}
               className={`min-h-14 rounded-2xl border px-3 text-left text-sm font-bold ${
                 accountMode === "business"
-                  ? "border-[#00C853] bg-[#e8faf0] text-[#001B3A]"
+                  ? "border-[#1B8A52] bg-[#e8faf0] text-[#001B3A]"
                   : "border-[#dce3eb] bg-white text-[#5a6578]"
               }`}
             >
@@ -207,15 +207,15 @@ export function WebRegisterForm() {
           <Checkbox
             checked={agreeTerms}
             onCheckedChange={(v) => setAgreeTerms(v === true)}
-            className="mt-0.5 border-[#c5d0db] data-[state=checked]:border-[#00C853] data-[state=checked]:bg-[#00C853]"
+            className="mt-0.5 border-[#c5d0db] data-[state=checked]:border-[#1B8A52] data-[state=checked]:bg-[#1B8A52]"
           />
           <span>
             {t("auth.agreeTerms")}{" "}
-            <Link to="/terms" className="font-semibold text-[#00A896] hover:underline">
+            <Link to="/terms" className="font-semibold text-[#2AA86A] hover:underline">
               {t("auth.terms")}
             </Link>{" "}
             {t("auth.and")}{" "}
-            <Link to="/privacy" className="font-semibold text-[#00A896] hover:underline">
+            <Link to="/privacy" className="font-semibold text-[#2AA86A] hover:underline">
               {t("auth.privacy")}
             </Link>
           </span>
@@ -224,7 +224,7 @@ export function WebRegisterForm() {
       </form>
       <p className="mt-6 border-t border-[#eceff3] pt-6 text-center text-sm text-[#5a6578]">
         {t("auth.hasAccount")}{" "}
-        <Link to="/login" className="font-semibold text-[#00C853] hover:underline">
+        <Link to="/login" className="font-semibold text-[#1B8A52] hover:underline">
           {t("auth.logIn")}
         </Link>
       </p>

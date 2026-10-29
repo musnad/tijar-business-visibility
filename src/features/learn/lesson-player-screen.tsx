@@ -123,7 +123,7 @@ export function LessonPlayerScreen({
             <p className="mt-2 text-sm font-semibold text-primary">{t("app.learn.businessStarterBadge")}</p>
           )}
           {!alreadyDone && (
-            <p className="learn-xp-pop mt-3 inline-flex rounded-full bg-amber-100 px-4 py-1.5 text-sm font-extrabold text-amber-900">
+            <p className="learn-xp-pop mt-3 inline-flex rounded-full bg-primary/10 px-4 py-1.5 text-sm font-extrabold text-foreground">
               +{lesson.xp + sessionXp} XP
             </p>
           )}

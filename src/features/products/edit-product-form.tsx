@@ -169,7 +169,7 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
         <ProductPhotoField previewUrl={product.image_url} onFile={setImageFile} onClear={() => setImageFile(null)} />
       </div>
       {publishErrors.length > 0 && (
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-amber-800">
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-primary">
           {publishErrors.map((e) => (
             <li key={e}>{e}</li>
           ))}

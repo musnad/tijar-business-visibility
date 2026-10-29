@@ -112,7 +112,7 @@ export function LoginForm() {
       </form>
       <p className="mt-6 text-center text-sm text-[#5a6578]">
         {t("auth.noAccount")}{" "}
-        <Link to="/app/register" className="font-semibold text-[#00C853] hover:underline">
+        <Link to="/app/register" className="font-semibold text-[#1B8A52] hover:underline">
           {t("auth.signUp")}
         </Link>
       </p>

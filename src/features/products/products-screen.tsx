@@ -89,13 +89,13 @@ export function ProductsScreen({ businessId }: { businessId: string }) {
               label={t("app.products.statLowStock")}
               value={String(data.lowStockCount)}
               icon={AlertTriangle}
-              iconClassName="bg-amber-100 text-amber-800"
+              iconClassName="bg-primary/10 text-primary"
             />
             <MiniStatCard
               label={t("app.products.statInStock")}
               value={String(data.inStock.length)}
               icon={Warehouse}
-              iconClassName="bg-emerald-100 text-emerald-800"
+              iconClassName="bg-primary/15 text-primary"
             />
           </div>
 
@@ -111,7 +111,7 @@ export function ProductsScreen({ businessId }: { businessId: string }) {
               {data.lowStock.length > 0 && (
                 <section className="mt-6">
                   <h2 className="font-bold">{t("app.products.lowStockTitle")}</h2>
-                  <ul className="mt-3 overflow-hidden rounded-2xl border border-amber-200/80 bg-card shadow-sm">
+                  <ul className="mt-3 overflow-hidden rounded-2xl border border-primary/25 bg-card shadow-sm">
                     {data.lowStock.map((p) => (
                       <ProductListItem
                         key={p.id}

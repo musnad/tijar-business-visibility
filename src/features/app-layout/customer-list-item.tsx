@@ -9,10 +9,10 @@ import { formatNgn } from "@/utils/money";
 import type { Customer } from "@/types/database";
 
 const avatarTones = [
-  "bg-sky-100 text-sky-700",
-  "bg-violet-100 text-violet-700",
-  "bg-amber-100 text-amber-800",
-  "bg-emerald-100 text-emerald-800",
+  "bg-primary/10 text-primary",
+  "bg-primary/10 text-primary",
+  "bg-primary/10 text-primary",
+  "bg-primary/15 text-primary",
 ];
 
 export function CustomerListItem({
@@ -59,7 +59,7 @@ export function CustomerListItem({
         {onCredit && (
           <p className="shrink-0 text-right">
             <span className="block text-[10px] font-semibold text-muted-foreground">{owesLabel}</span>
-            <span className="text-sm font-extrabold tabular-nums text-amber-900">{formatNgn(owed)}</span>
+            <span className="text-sm font-extrabold tabular-nums text-foreground">{formatNgn(owed)}</span>
           </p>
         )}
       </div>
@@ -72,7 +72,7 @@ export function CustomerListItem({
           className={
             onCredit
               ? "min-h-10 rounded-xl font-semibold"
-              : "min-h-10 rounded-xl bg-amber-700 font-semibold hover:bg-amber-800"
+              : "min-h-10 rounded-xl bg-primary font-semibold hover:bg-primary/90"
           }
           asChild
         >

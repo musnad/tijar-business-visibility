@@ -60,12 +60,14 @@ function publicPlaybackUrl(storagePath: string, playbackUrl: string | null): str
 }
 
 export function resolveVideoSrc(row: PublicFeedVideo): string {
+  const path = row.playback_url || row.storage_path;
+  if (path.startsWith("http") || path.startsWith("/")) return path;
   return publicPlaybackUrl(row.storage_path, row.playback_url);
 }
 
 export function resolveCoverSrc(coverPath: string | null): string | null {
   if (!coverPath) return null;
-  if (coverPath.startsWith("http")) return coverPath;
+  if (coverPath.startsWith("http") || coverPath.startsWith("/")) return coverPath;
   const supabase = getSupabaseBrowserClient();
   return supabase.storage.from("business-videos").getPublicUrl(coverPath).data.publicUrl;
 }

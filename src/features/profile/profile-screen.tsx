@@ -183,12 +183,12 @@ export function ProfileScreen({
           className={`flex items-center gap-3 rounded-2xl border p-4 ${
             verified
               ? "border-primary/25 bg-primary/[0.06]"
-              : "border-amber-200/80 bg-amber-50/50"
+              : "border-primary/25 bg-accent"
           }`}
         >
           <span
             className={`flex size-11 shrink-0 items-center justify-center rounded-full ${
-              verified ? "bg-primary/15 text-primary" : "bg-amber-100 text-amber-800"
+              verified ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary"
             }`}
           >
             <BadgeCheck className="size-6" />

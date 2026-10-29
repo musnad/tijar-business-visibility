@@ -80,27 +80,27 @@ export function RecordSalesScreen({ businessId }: { businessId: string }) {
               value={String(data.orderCount)}
               changePct={data.ordersChangePct}
               icon={ShoppingBag}
-              iconClassName="bg-emerald-100 text-emerald-700"
+              iconClassName="bg-primary/15 text-primary"
             />
             <MiniStatCard
               label={t("app.sales.averageOrder")}
               value={formatNgn(data.averageOrder)}
               changePct={data.averageChangePct}
               icon={ShoppingCart}
-              iconClassName="bg-sky-100 text-sky-700"
+              iconClassName="bg-primary/10 text-primary"
             />
             <MiniStatCard
               label={t("app.sales.totalCustomers")}
               value={String(data.customerCount)}
               changePct={data.customersChangePct}
               icon={Users}
-              iconClassName="bg-violet-100 text-violet-700"
+              iconClassName="bg-primary/10 text-primary"
             />
             <MiniStatCard
               label={t("app.sales.topProduct")}
               value={data.topProduct}
               icon={Package}
-              iconClassName="bg-amber-100 text-amber-800"
+              iconClassName="bg-primary/10 text-primary"
               showArrow={false}
             />
           </div>

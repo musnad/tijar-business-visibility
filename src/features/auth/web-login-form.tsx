@@ -121,13 +121,13 @@ export function WebLoginForm() {
             <Checkbox
               checked={rememberMe}
               onCheckedChange={(v) => setRememberMe(v === true)}
-              className="border-[#c5d0db] data-[state=checked]:border-[#00C853] data-[state=checked]:bg-[#00C853]"
+              className="border-[#c5d0db] data-[state=checked]:border-[#1B8A52] data-[state=checked]:bg-[#1B8A52]"
             />
             {t("auth.rememberMe")}
           </label>
           <button
             type="button"
-            className="text-sm font-semibold text-[#00A896] hover:underline"
+            className="text-sm font-semibold text-[#2AA86A] hover:underline"
             onClick={() => void onForgot()}
           >
             {t("auth.forgotPassword")}
@@ -140,7 +140,7 @@ export function WebLoginForm() {
       </form>
       <p className="mt-6 border-t border-[#eceff3] pt-6 text-center text-sm text-[#5a6578]">
         {t("auth.noAccount")}{" "}
-        <Link to="/register" className="font-semibold text-[#00C853] hover:underline">
+        <Link to="/register" className="font-semibold text-[#1B8A52] hover:underline">
           {t("auth.signUp")}
         </Link>
       </p>

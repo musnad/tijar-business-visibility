@@ -407,7 +407,7 @@ export function NewProductForm({
           <p
             className={cn(
               "mt-2 text-xs font-semibold",
-              previewProfit >= 0 ? "text-emerald-700" : "text-red-700",
+              previewProfit >= 0 ? "text-primary" : "text-red-700",
             )}
           >
             {previewProfit >= 0 ? t("app.products.profitPerUnit") : t("app.products.lossPerUnit")}:{" "}
@@ -544,7 +544,7 @@ export function NewProductForm({
       </FormSection>
 
       {publishErrors.length > 0 && isPublished && (
-        <ul className="list-disc space-y-1 pl-5 text-xs text-amber-800">
+        <ul className="list-disc space-y-1 pl-5 text-xs text-primary">
           {publishErrors.map((err) => (
             <li key={err}>{err}</li>
           ))}

@@ -152,15 +152,15 @@ export function RegisterForm() {
             <Checkbox
               checked={agreeTerms}
               onCheckedChange={(v) => setAgreeTerms(v === true)}
-              className="mt-0.5 border-[#c5d0db] data-[state=checked]:border-[#00C853] data-[state=checked]:bg-[#00C853]"
+              className="mt-0.5 border-[#c5d0db] data-[state=checked]:border-[#1B8A52] data-[state=checked]:bg-[#1B8A52]"
             />
             <span>
               {t("auth.agreeTerms")}{" "}
-              <Link to="/terms" className="font-semibold text-[#00C853]">
+              <Link to="/terms" className="font-semibold text-[#1B8A52]">
                 {t("auth.terms")}
               </Link>{" "}
               {t("auth.and")}{" "}
-              <Link to="/privacy" className="font-semibold text-[#00C853]">
+              <Link to="/privacy" className="font-semibold text-[#1B8A52]">
                 {t("auth.privacy")}
               </Link>
             </span>
@@ -172,7 +172,7 @@ export function RegisterForm() {
       </form>
       <p className="relative z-10 mt-8 pb-8 text-center text-sm text-[#5a6578]">
         {t("auth.hasAccount")}{" "}
-        <Link to="/app/login" className="font-semibold text-[#00C853]">
+        <Link to="/app/login" className="font-semibold text-[#1B8A52]">
           {t("auth.logIn")}
         </Link>
       </p>

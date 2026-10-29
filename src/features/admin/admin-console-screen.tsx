@@ -133,9 +133,9 @@ function StatusPill({
 }) {
   const cls =
     tone === "ok"
-      ? "bg-emerald-50 text-emerald-800"
+      ? "bg-primary/10 text-primary"
       : tone === "warn"
-        ? "bg-amber-50 text-amber-800"
+        ? "bg-accent text-primary"
         : tone === "bad"
           ? "bg-destructive/10 text-destructive"
           : tone === "info"

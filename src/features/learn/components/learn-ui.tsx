@@ -158,7 +158,7 @@ export function LearnInsightCard({ body }: { body: string }) {
   return (
     <div className="learn-insight-card rounded-3xl border-2 border-secondary/40 bg-gradient-to-br from-secondary/15 to-primary/[0.06] p-5 shadow-sm">
       <p className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-primary">
-        <Lightbulb className="size-4 fill-amber-300 text-amber-600" />
+        <Lightbulb className="size-4 fill-secondary text-primary" />
         {t("app.learn.proTip")}
       </p>
       <p className="text-sm font-semibold leading-relaxed text-foreground">{body}</p>
@@ -237,7 +237,7 @@ export function LearnExplainCard({
       )}
     >
       {correct && xp != null && xp > 0 && (
-        <p className="learn-xp-pop mb-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-900">
+        <p className="learn-xp-pop mb-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-extrabold text-foreground">
           +{xp} XP
         </p>
       )}

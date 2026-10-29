@@ -40,15 +40,15 @@ export function WebAuthLayout({
             <p className="mt-4 max-w-md text-base leading-relaxed text-white/85">{t("auth.webBrandBody")}</p>
             <ul className="mt-8 space-y-3 text-sm text-white/90">
               <li className="flex items-start gap-2">
-                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#00C853]" aria-hidden />
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#1B8A52]" aria-hidden />
                 {t("auth.webBullet1")}
               </li>
               <li className="flex items-start gap-2">
-                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#00C853]" aria-hidden />
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#1B8A52]" aria-hidden />
                 {t("auth.webBullet2")}
               </li>
               <li className="flex items-start gap-2">
-                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#00C853]" aria-hidden />
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-[#1B8A52]" aria-hidden />
                 {t("auth.webBullet3")}
               </li>
             </ul>
@@ -71,7 +71,7 @@ export function WebAuthLayout({
         <main className="flex flex-col justify-center px-5 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-8 lg:px-12 lg:py-12">
           <div className="mx-auto w-full max-w-md">
             <div className="mb-8 lg:mb-10">
-              <p className="text-xs font-bold uppercase tracking-wider text-[#00A896]">{t("auth.webFormLabel")}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#2AA86A]">{t("auth.webFormLabel")}</p>
               <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h2>
               <p className="mt-2 text-sm leading-relaxed text-[#5a6578]">{subtitle}</p>
             </div>

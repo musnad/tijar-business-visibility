@@ -75,7 +75,7 @@ export function ImportContactsScreen({ businessId }: { businessId: string }) {
       </label>
 
       {warning && rows.length > 0 && (
-        <p className="mt-3 text-xs text-amber-800">{warning}</p>
+        <p className="mt-3 text-xs text-primary">{warning}</p>
       )}
 
       {rows.length > 0 && (

@@ -81,7 +81,7 @@ export function StockAdjustForm({
             type="button"
             onClick={() => setDirection("out")}
             className={`min-h-11 rounded-xl text-sm font-bold ${
-              direction === "out" ? "bg-amber-700 text-white" : "bg-muted"
+              direction === "out" ? "bg-primary text-white" : "bg-muted"
             }`}
           >
             {t("app.products.stockOut")}

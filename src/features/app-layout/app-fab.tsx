@@ -22,7 +22,7 @@ export function AppLinkFab({
       to={to}
       search={search}
       className={cn(
-        "app-fab fixed bottom-[5.25rem] right-4 z-40 flex size-14 items-center justify-center rounded-full bg-amber-700 text-primary-foreground shadow-lg ring-4 ring-background hover:bg-amber-800 sm:right-[max(1rem,calc(50%-15.5rem))]",
+        "app-fab fixed bottom-[5.25rem] right-4 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-4 ring-background hover:bg-primary/90 sm:right-[max(1rem,calc(50%-15.5rem))]",
         className,
       )}
       aria-label={label}
@@ -47,7 +47,7 @@ export function AppFab({
       search={{ type: recordType }}
       className={cn(
         "app-fab fixed bottom-[5.25rem] right-4 z-40 flex size-14 items-center justify-center rounded-full text-primary-foreground shadow-lg ring-4 ring-background sm:right-[max(1rem,calc(50%-15.5rem))]",
-        isExpense ? "bg-violet-700 hover:bg-violet-800" : "bg-primary",
+        isExpense ? "bg-foreground hover:bg-foreground/90" : "bg-primary",
       )}
       aria-label={label}
     >

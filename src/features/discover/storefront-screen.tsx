@@ -258,7 +258,7 @@ export function StorefrontScreen({ slug }: { slug: string }) {
                   <p className="mt-2 flex items-center justify-between">
                     <span className="font-extrabold">{p.sale_price != null ? formatNgn(p.sale_price) : t("app.storefront.priceOnRequest")}</span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${p.is_available ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${p.is_available ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary"}`}
                     >
                       {p.is_available ? t("app.storefront.available") : t("app.storefront.outOfStock")}
                     </span>

@@ -7,10 +7,10 @@ import { formatNgn } from "@/utils/money";
 import type { TransactionListItem } from "@/types/database";
 
 const avatarTones = [
-  "bg-sky-100 text-sky-700",
-  "bg-violet-100 text-violet-700",
-  "bg-amber-100 text-amber-800",
-  "bg-emerald-100 text-emerald-800",
+  "bg-primary/10 text-primary",
+  "bg-primary/10 text-primary",
+  "bg-primary/10 text-primary",
+  "bg-primary/15 text-primary",
 ];
 
 function formatWhen(iso: string): string {

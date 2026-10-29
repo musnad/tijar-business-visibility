@@ -8,7 +8,7 @@ export const LEARN_PATHS: LearnPath[] = [
     subtitleKey: "app.learn.paths.businessBasics.subtitle",
     levelLabelKey: "app.learn.paths.businessBasics.level",
     icon: "store",
-    colorClass: "bg-emerald-100 text-emerald-800",
+    colorClass: "bg-primary/15 text-primary",
     lessons: BUSINESS_BASICS_LESSONS,
   },
 ];

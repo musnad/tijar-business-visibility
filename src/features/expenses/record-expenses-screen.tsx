@@ -41,7 +41,7 @@ export function RecordExpensesScreen({ businessId }: { businessId: string }) {
         action={<PeriodFilter value={period} onChange={setPeriod} />}
       />
 
-      <div className="expenses-hub-strip mt-3 flex items-center gap-2 rounded-2xl border border-violet-300/25 px-4 py-2.5 text-xs font-semibold text-violet-900 dark:text-violet-100">
+      <div className="expenses-hub-strip mt-3 flex items-center gap-2 rounded-2xl border border-primary/25 px-4 py-2.5 text-xs font-semibold text-foreground dark:text-primary-foreground">
         <Receipt className="size-4 shrink-0" />
         {t("app.expenses.hubHint")}
       </div>
@@ -77,20 +77,20 @@ export function RecordExpensesScreen({ businessId }: { businessId: string }) {
               value={String(data.expenseCount)}
               changePct={data.countChangePct}
               icon={Receipt}
-              iconClassName="bg-violet-100 text-violet-700"
+              iconClassName="bg-primary/10 text-primary"
             />
             <MiniStatCard
               label={t("app.expenses.averageLabel")}
               value={formatNgn(data.averageExpense)}
               changePct={data.averageChangePct}
               icon={TrendingDown}
-              iconClassName="bg-sky-100 text-sky-700"
+              iconClassName="bg-primary/10 text-primary"
             />
             <MiniStatCard
               label={t("app.expenses.topCategoryLabel")}
               value={data.topCategory}
               icon={Wallet}
-              iconClassName="bg-amber-100 text-amber-800"
+              iconClassName="bg-primary/10 text-primary"
               showArrow={false}
             />
           </div>
@@ -98,15 +98,15 @@ export function RecordExpensesScreen({ businessId }: { businessId: string }) {
           <section className="mt-6 pb-4">
             <div className="flex items-center justify-between gap-2">
               <h2 className="font-bold">{t("app.expenses.recentTitle")}</h2>
-              <Link to="/app/transactions" className="text-sm font-semibold text-violet-700">
+              <Link to="/app/transactions" className="text-sm font-semibold text-primary">
                 {t("app.dashboard.viewAll")}
               </Link>
             </div>
             {data.recentExpenses.length === 0 ? (
-              <div className="expenses-empty-state mt-4 rounded-3xl border border-dashed border-violet-300/35 p-6 text-center">
+              <div className="expenses-empty-state mt-4 rounded-3xl border border-dashed border-primary/30 p-6 text-center">
                 <p className="text-sm text-muted-foreground">{t("app.expenses.empty")}</p>
                 <Button
-                  className="mt-4 min-h-11 rounded-2xl bg-violet-700 font-bold shadow-md hover:bg-violet-800"
+                  className="mt-4 min-h-11 rounded-2xl bg-foreground font-bold shadow-md hover:bg-foreground/90"
                   asChild
                 >
                   <Link to="/app/record" search={{ type: "expense" }}>

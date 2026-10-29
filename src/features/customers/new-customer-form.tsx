@@ -102,7 +102,7 @@ export function NewCustomerForm({ businessId }: { businessId: string }) {
 
       <Button
         type="button"
-        className="min-h-12 w-full rounded-xl bg-amber-700 text-base font-bold shadow-md hover:bg-amber-800"
+        className="min-h-12 w-full rounded-xl bg-primary text-base font-bold shadow-md hover:bg-primary/90"
         disabled={saving}
         onClick={() => void save(true)}
       >

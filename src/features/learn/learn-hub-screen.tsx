@@ -91,11 +91,11 @@ export function LearnHubScreen({
       </div>
 
       {hasStarterBadge && (
-        <div className="learn-badge-card mt-4 rounded-3xl border border-amber-300/50 p-4 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wide text-amber-900 dark:text-amber-200">
+        <div className="learn-badge-card mt-4 rounded-3xl border border-primary/40 p-4 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-wide text-foreground dark:text-primary">
             {t("app.learn.yourBadge")}
           </p>
-          <p className="mt-1 flex items-center gap-2 text-lg font-extrabold text-amber-950 dark:text-amber-100">
+          <p className="mt-1 flex items-center gap-2 text-lg font-extrabold text-foreground dark:text-primary-foreground">
             <span className="text-2xl" aria-hidden>
               🏆
             </span>

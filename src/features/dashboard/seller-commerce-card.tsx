@@ -61,7 +61,7 @@ export function SellerCommerceCard({
       <div className="mt-4 rounded-xl bg-muted/50 p-3">
         <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Engagement (this shop only)</p>
         {!analyticsReady && (
-          <p className="mt-1 text-xs text-amber-800">
+          <p className="mt-1 text-xs text-primary">
             Analytics RPC is not applied yet (migration 000021). Totals below stay at zero instead of inventing numbers.
           </p>
         )}

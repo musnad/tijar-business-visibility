@@ -126,7 +126,7 @@ export function NewSaleForm({
             ))}
           </SelectContent>
         </Select>
-        <Button type="button" variant="link" className="mt-2 h-auto p-0 text-sky-700" asChild>
+        <Button type="button" variant="link" className="mt-2 h-auto p-0 text-primary" asChild>
           <Link to="/app/customers/new">{t("app.sales.addCustomerLink")}</Link>
         </Button>
       </FormSection>

@@ -102,7 +102,7 @@ export function NewCustomerPaymentForm({
   if (customers.length === 0) {
     return (
       <div className="mt-5 rounded-2xl border border-dashed border-border bg-card p-6 text-center shadow-sm">
-        <Wallet className="mx-auto size-10 text-emerald-700" strokeWidth={2} />
+        <Wallet className="mx-auto size-10 text-primary" strokeWidth={2} />
         <p className="mt-3 text-sm font-semibold">{t("app.customers.paymentNeedCustomerTitle")}</p>
         <p className="mt-1 text-sm text-muted-foreground">{t("app.customers.paymentNeedCustomerBody")}</p>
         <Button className="mt-4 min-h-11 w-full rounded-xl font-bold" asChild>
@@ -117,7 +117,7 @@ export function NewCustomerPaymentForm({
       <div className="mt-5 rounded-2xl border border-dashed border-border bg-card p-6 text-center shadow-sm">
         <p className="text-sm font-semibold">{t("app.customers.paymentNothingOwedTitle")}</p>
         <p className="mt-1 text-sm text-muted-foreground">{t("app.customers.paymentNothingOwedBody")}</p>
-        <Button className="mt-4 min-h-11 w-full rounded-xl bg-amber-700 font-bold hover:bg-amber-800" asChild>
+        <Button className="mt-4 min-h-11 w-full rounded-xl bg-primary font-bold hover:bg-primary/90" asChild>
           <Link to="/app/customers/credit/new">{t("app.customers.actionNewCredit")}</Link>
         </Button>
       </div>

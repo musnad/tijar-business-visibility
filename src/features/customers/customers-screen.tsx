@@ -48,7 +48,7 @@ export function CustomersScreen({ businessId }: { businessId: string }) {
         </Button>
       </div>
 
-      <div className="customers-hub-strip mt-3 flex items-center gap-2 rounded-2xl border border-amber-300/30 px-4 py-2.5 text-xs font-semibold text-amber-950 dark:text-amber-100">
+      <div className="customers-hub-strip mt-3 flex items-center gap-2 rounded-2xl border border-primary/30 px-4 py-2.5 text-xs font-semibold text-foreground dark:text-primary-foreground">
         <HandCoins className="size-4 shrink-0" />
         {t("app.customers.hubHint")}
       </div>
@@ -82,23 +82,23 @@ export function CustomersScreen({ businessId }: { businessId: string }) {
               label={t("app.customers.statTotal")}
               value={String(data.customerCount)}
               icon={Users}
-              iconClassName="bg-sky-100 text-sky-700"
+              iconClassName="bg-primary/10 text-primary"
               showArrow={false}
             />
             <MiniStatCard
               label={t("app.customers.statOnCredit")}
               value={String(data.owingCount)}
               icon={HandCoins}
-              iconClassName="bg-amber-100 text-amber-800"
+              iconClassName="bg-primary/10 text-primary"
               showArrow={false}
             />
           </div>
 
           {data.allCustomers.length === 0 ? (
-            <div className="customers-empty-state mt-6 rounded-3xl border border-dashed border-amber-300/40 p-6 text-center">
+            <div className="customers-empty-state mt-6 rounded-3xl border border-dashed border-primary/35 p-6 text-center">
               <p className="text-sm text-muted-foreground">{t("app.customers.empty")}</p>
               <div className="mt-4 flex flex-col gap-2">
-                <Button className="min-h-11 rounded-xl bg-amber-700 font-bold hover:bg-amber-800" asChild>
+                <Button className="min-h-11 rounded-xl bg-primary font-bold hover:bg-primary/90" asChild>
                   <Link to="/app/customers/new">{t("app.customers.actionAddCustomer")}</Link>
                 </Button>
                 <Button variant="outline" className="min-h-11 rounded-xl font-bold" asChild>
@@ -112,11 +112,11 @@ export function CustomersScreen({ businessId }: { businessId: string }) {
                 <section className="mt-6">
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="font-bold">{t("app.customers.onCreditTitle")}</h2>
-                    <Button variant="link" className="h-auto p-0 text-amber-800" asChild>
+                    <Button variant="link" className="h-auto p-0 text-primary" asChild>
                       <Link to="/app/customers/credit/new">{t("app.customers.newCreditShort")}</Link>
                     </Button>
                   </div>
-                  <ul className="mt-3 overflow-hidden rounded-2xl border border-amber-200/80 bg-card shadow-sm">
+                  <ul className="mt-3 overflow-hidden rounded-2xl border border-primary/25 bg-card shadow-sm">
                     {data.onCredit.map((c) => (
                       <CustomerListItem key={c.id} customer={c} {...labels} />
                     ))}
@@ -127,7 +127,7 @@ export function CustomersScreen({ businessId }: { businessId: string }) {
               {data.onCredit.length === 0 && (
                 <div className="mt-6 rounded-2xl border border-border bg-muted/30 p-4">
                   <p className="text-sm text-muted-foreground">{t("app.customers.noCredit")}</p>
-                  <Button className="mt-3 min-h-11 w-full rounded-xl bg-amber-700 font-bold hover:bg-amber-800" asChild>
+                  <Button className="mt-3 min-h-11 w-full rounded-xl bg-primary font-bold hover:bg-primary/90" asChild>
                     <Link to="/app/customers/credit/new">{t("app.customers.actionNewCredit")}</Link>
                   </Button>
                 </div>

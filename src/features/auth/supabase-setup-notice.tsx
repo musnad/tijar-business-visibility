@@ -8,7 +8,7 @@ export function SupabaseSetupNotice() {
   const { t } = useTranslation();
 
   return (
-    <div className="mx-auto max-w-lg rounded-2xl border border-amber-300/60 bg-amber-50 p-6 text-center shadow-sm">
+    <div className="mx-auto max-w-lg rounded-2xl border border-primary/40 bg-accent p-6 text-center shadow-sm">
       <h2 className="text-lg font-bold text-foreground">{t("app.login.supabaseNotConfigured")}</h2>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t("auth.deployEnvHint")}</p>
       <ul className="mt-4 space-y-1 text-left text-xs text-muted-foreground">

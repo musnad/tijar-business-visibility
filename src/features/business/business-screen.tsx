@@ -130,13 +130,13 @@ export function BusinessScreen({
               label={t("app.business.payments")}
               value={paymentLabels.length > 0 ? String(paymentLabels.length) : "—"}
               icon={Wallet}
-              iconClassName="bg-emerald-100 text-emerald-800"
+              iconClassName="bg-primary/15 text-primary"
             />
             <MiniStatCard
               label={t("app.business.goals")}
               value={goalLabels.length > 0 ? String(goalLabels.length) : "—"}
               icon={Target}
-              iconClassName="bg-amber-100 text-amber-800"
+              iconClassName="bg-primary/10 text-primary"
             />
           </div>
 

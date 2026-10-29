@@ -40,7 +40,7 @@ export function MarketingStudioScreen({ businessId, businessName }: { businessId
         title="AI Marketing Studio"
         subtitle="Video generation is not connected. Captions here are drafted only from your public catalogue fields."
       />
-      <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+      <p className="mt-3 rounded-xl border border-primary/30 bg-accent px-3 py-2 text-xs text-foreground">
         No AI video library exists yet. Choose a product, draft a caption from its name and description, then attach a video you filmed.
       </p>
       <select

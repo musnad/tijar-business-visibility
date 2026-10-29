@@ -11,9 +11,9 @@ import { dismissRecommendation } from "@/services/business-health-service";
 import { cn } from "@/lib/utils";
 
 const bandTone: Record<HealthBand, string> = {
-  strong: "bg-emerald-100 text-emerald-800 ring-emerald-200",
-  stable: "bg-sky-100 text-sky-800 ring-sky-200",
-  watch: "bg-amber-100 text-amber-900 ring-amber-200",
+  strong: "bg-primary/15 text-primary ring-emerald-200",
+  stable: "bg-primary/10 text-primary ring-primary/30",
+  watch: "bg-primary/10 text-foreground ring-primary/30",
   risk: "bg-red-100 text-red-800 ring-red-200",
 };
 
@@ -82,7 +82,7 @@ export function HealthInsightsCard({
                   <p className="text-sm font-bold">{reco.title}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{reco.body}</p>
                   {reco.actionPath && (
-                    <Button variant="link" className="mt-1 h-auto p-0 text-sky-700" asChild>
+                    <Button variant="link" className="mt-1 h-auto p-0 text-primary" asChild>
                       <Link to={reco.actionPath}>{t("app.health.recoCta")}</Link>
                     </Button>
                   )}

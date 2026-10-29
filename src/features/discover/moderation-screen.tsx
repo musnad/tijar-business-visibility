@@ -141,7 +141,7 @@ export function ModerationScreen() {
               /b/{b.public_slug ?? "—"} · {b.public_location_label ?? b.location ?? t("app.moderation.noArea")} · {verificationStatusLabel(b.verification_status)}
             </p>
             {completeness.missing.length > 0 && (
-              <p className="mt-1 text-xs text-amber-700">{t("app.moderation.incomplete").replace("{missing}", completeness.missing.map(missingLabel).join(", "))}</p>
+              <p className="mt-1 text-xs text-primary">{t("app.moderation.incomplete").replace("{missing}", completeness.missing.map(missingLabel).join(", "))}</p>
             )}
             {dupes.length > 0 && (
               <p className="mt-1 flex items-start gap-1 text-xs text-destructive">

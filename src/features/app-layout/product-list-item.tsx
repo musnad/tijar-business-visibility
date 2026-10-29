@@ -57,7 +57,7 @@ export function ProductListItem({
               {product.name}
             </Link>
             {product.is_published === false ? (
-              <span className="ml-2 text-[10px] font-semibold uppercase text-amber-700">Draft</span>
+              <span className="ml-2 text-[10px] font-semibold uppercase text-primary">Draft</span>
             ) : product.is_active === false ? (
               <span className="ml-2 text-[10px] font-semibold uppercase text-muted-foreground">Archived</span>
             ) : null}
@@ -79,7 +79,7 @@ export function ProductListItem({
             {unitMargin !== null && (
               <span
                 className={`text-xs font-semibold tabular-nums ${
-                  unitMargin >= 0 ? "text-emerald-700" : "text-red-700"
+                  unitMargin >= 0 ? "text-primary" : "text-red-700"
                 }`}
               >
                 {unitMargin >= 0 ? profitLabel : lossLabel}: {formatNgn(Math.abs(unitMargin))}

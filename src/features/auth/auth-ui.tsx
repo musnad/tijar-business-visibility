@@ -25,8 +25,8 @@ import { useTranslation } from "@/lib/i18n/context";
 
 const TIJAR_BG = "#F4F6F8";
 const TIJAR_NAVY = "#001B3A";
-const TIJAR_GREEN = "#00C853";
-const TIJAR_TEAL = "#00A896";
+const TIJAR_GREEN = "#1B8A52";
+const TIJAR_TEAL = "#2AA86A";
 
 export function AuthScreen({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
   return (
@@ -34,7 +34,7 @@ export function AuthScreen({ children, footer }: { children: ReactNode; footer?:
       className="relative min-h-screen overflow-x-hidden antialiased"
       style={{ backgroundColor: TIJAR_BG }}
     >
-      <div className="pointer-events-none absolute -right-20 top-0 h-80 w-80 rounded-full bg-gradient-to-br from-[#00C853]/20 to-[#00A896]/5 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 top-0 h-80 w-80 rounded-full bg-gradient-to-br from-[#1B8A52]/20 to-[#2AA86A]/5 blur-3xl" />
       <div className="pointer-events-none absolute -left-28 bottom-48 h-72 w-72 rounded-full bg-[#001B3A]/[0.04] blur-3xl" />
       <div className="relative mx-auto max-w-lg px-5 pb-36 pt-8 sm:pt-10">{children}</div>
       {footer ?? <LoginSecurityFooter />}
@@ -155,7 +155,7 @@ export function AuthField({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="min-h-[52px] w-full rounded-[26px] border border-[#c5d0db] bg-white py-3 pl-12 pr-12 text-sm text-[#001B3A] outline-none ring-[#00C853]/30 placeholder:text-[#94a3b8] focus:border-[#00A896] focus:ring-2"
+          className="min-h-[52px] w-full rounded-[26px] border border-[#c5d0db] bg-white py-3 pl-12 pr-12 text-sm text-[#001B3A] outline-none ring-[#1B8A52]/30 placeholder:text-[#94a3b8] focus:border-[#2AA86A] focus:ring-2"
         />
         {trailing && <div className="absolute right-3 flex items-center">{trailing}</div>}
       </div>
@@ -267,13 +267,13 @@ export function RememberForgotRow({
         <Checkbox
           checked={remember}
           onCheckedChange={(v) => onRemember(v === true)}
-          className="border-[#c5d0db] data-[state=checked]:border-[#00C853] data-[state=checked]:bg-[#00C853]"
+          className="border-[#c5d0db] data-[state=checked]:border-[#1B8A52] data-[state=checked]:bg-[#1B8A52]"
         />
         {t("auth.rememberMe")}
       </label>
       <button
         type="button"
-        className="text-sm font-medium text-[#00C853] hover:underline"
+        className="text-sm font-medium text-[#1B8A52] hover:underline"
         onClick={onForgot}
       >
         {t("auth.forgotPassword")}
@@ -294,7 +294,7 @@ export function AuthFooterLink({
   return (
     <p className="mt-6 text-center text-sm text-[#5a6578]">
       {prompt}{" "}
-      <a href={to} className="font-semibold text-[#00C853] hover:underline">
+      <a href={to} className="font-semibold text-[#1B8A52] hover:underline">
         {linkLabel}
       </a>
     </p>
@@ -378,7 +378,7 @@ export function AuthSelectField({
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="min-h-[52px] w-full appearance-none rounded-[26px] border border-[#c5d0db] bg-white py-3 pl-12 pr-10 text-sm text-[#001B3A] outline-none focus:border-[#00A896] focus:ring-2 focus:ring-[#00C853]/30"
+          className="min-h-[52px] w-full appearance-none rounded-[26px] border border-[#c5d0db] bg-white py-3 pl-12 pr-10 text-sm text-[#001B3A] outline-none focus:border-[#2AA86A] focus:ring-2 focus:ring-[#1B8A52]/30"
         >
           <option value="">{placeholder}</option>
           {options.map((o) => (

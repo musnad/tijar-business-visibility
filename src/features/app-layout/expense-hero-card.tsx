@@ -35,7 +35,7 @@ export function ExpenseHeroCard({
             {formatNgn(amount)}
           </p>
           {changePct !== null && (
-            <span className="mt-1 inline-flex rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-violet-100">
+            <span className="mt-1 inline-flex rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
               {changePct >= 0 ? "↑" : "↓"} {changePct >= 0 ? "+" : ""}
               {changePct}% {changeLabel}
             </span>

@@ -45,7 +45,7 @@ export function DashboardRecentTransactions({
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-bold">{t("app.dashboard.recentTitle")}</h2>
         {!hideViewAll && (
-          <Link to="/app/transactions" className="text-sm font-semibold text-sky-700">
+          <Link to="/app/transactions" className="text-sm font-semibold text-primary">
             {t("app.dashboard.viewAll")}
           </Link>
         )}

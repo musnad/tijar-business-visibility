@@ -165,10 +165,12 @@ function RootLayout() {
 
   const showMarketingShell = !isAppChromePath(pathname) && !isLoggedInProductSurface;
 
+  const shopFeed = pathname === "/shop" || pathname === "/shop/";
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className={shopFeed ? "h-dvh overflow-hidden bg-background text-foreground" : "min-h-screen bg-background text-foreground"}>
       {showMarketingShell && <SiteHeader />}
-      <main id="main-content">
+      <main id="main-content" className={shopFeed ? "h-full overflow-hidden" : undefined}>
         <Outlet />
       </main>
       {showMarketingShell && <SiteFooter />}
