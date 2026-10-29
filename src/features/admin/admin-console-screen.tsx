@@ -15,7 +15,8 @@ import {
   BadgeCheck,
   Building2,
   ClipboardList,
-  CreditCard,
+  Download,
+  Percent,
   Search,
   ShieldCheck,
   Store,
@@ -28,8 +29,24 @@ import { toast } from "sonner";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { downloadAdminCsv } from "@/features/admin/admin-export";
+import {
+  accountCategory,
+  businessGross,
+  businessLedgerSales,
+  businessMarketplaceSales,
+  categoryLabel,
+  commissionOnAmount,
+  totalsForFinance,
+  userSpend,
+  type AccountCategory,
+} from "@/features/admin/admin-metrics";
 import { useAuth } from "@/features/auth/auth-context";
-import { TIJAR_SUPER_ADMIN_EMAIL, isTijarSuperAdminEmail } from "@/lib/admin";
+import {
+  DEFAULT_PLATFORM_COMMISSION_RATE,
+  TIJAR_SUPER_ADMIN_EMAIL,
+  isTijarSuperAdminEmail,
+} from "@/lib/admin";
 import { cn } from "@/lib/utils";
 import {
   fetchAdminBusinesses,
@@ -52,6 +69,7 @@ import { formatNgn, formatNgnCompact } from "@/utils/money";
 
 type Tab =
   | "overview"
+  | "finance"
   | "kyc"
   | "applications"
   | "businesses"
@@ -69,6 +87,10 @@ const engagementConfig = {
 function dayKey(iso?: string | null): string {
   if (!iso) return "";
   return iso.slice(0, 10);
+}
+
+function stamp(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function formatWhen(iso?: string | null): string {
@@ -148,7 +170,10 @@ export function AdminConsoleScreen() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("overview");
   const [query, setQuery] = useState("");
+  const [userKind, setUserKind] = useState<"all" | AccountCategory>("all");
+  const [ratePct, setRatePct] = useState(DEFAULT_PLATFORM_COMMISSION_RATE * 100);
   const [notesById, setNotesById] = useState<Record<string, string>>({});
+  const commissionRate = Math.max(0, ratePct) / 100;
 
   const rolesQuery = useQuery({
     queryKey: ["platform-roles", profile?.id],
@@ -255,6 +280,34 @@ export function AdminConsoleScreen() {
     };
   }, [businesses, users, orders, transactions, payments, upgrades]);
 
+  const finance = useMemo(
+    () => totalsForFinance(transactions, orders, commissionRate),
+    [transactions, orders, commissionRate],
+  );
+
+  const userLedger = useMemo(() => {
+    return users.map((user) => {
+      const kind = accountCategory(user, businesses);
+      const spend = userSpend(user.id, orders);
+      const owned = businesses.filter((b) => b.owner_id === user.id);
+      const making = owned.reduce(
+        (n, b) => n + businessGross(b.id, transactions, orders),
+        0,
+      );
+      return { user, kind, spend, making, commission: commissionOnAmount(spend + making, commissionRate) };
+    });
+  }, [users, businesses, orders, transactions, commissionRate]);
+
+  const businessLedger = useMemo(() => {
+    return businesses.map((biz) => {
+      const ledger = businessLedgerSales(biz.id, transactions);
+      const market = businessMarketplaceSales(biz.id, orders);
+      const gross = ledger + market;
+      const commission = commissionOnAmount(gross, commissionRate);
+      return { biz, ledger, market, gross, commission, net: gross - commission };
+    });
+  }, [businesses, transactions, orders, commissionRate]);
+
   const engagement = useMemo(() => {
     const days = lastDays(14);
     return days.map((day) => {
@@ -309,6 +362,7 @@ export function AdminConsoleScreen() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
+    { id: "finance", label: "Finance" },
     { id: "kyc", label: "KYC" },
     { id: "applications", label: "Applications" },
     { id: "businesses", label: "Businesses" },
@@ -316,6 +370,101 @@ export function AdminConsoleScreen() {
     { id: "transactions", label: "Transactions" },
     { id: "orders", label: "Orders" },
   ];
+
+  function exportUsers() {
+    downloadAdminCsv(
+      `tijar-users-${stamp()}.csv`,
+      ["Name", "Email", "Phone", "Category", "Account mode", "Onboarding", "Spend", "Business making", "Commission", "Joined"],
+      userLedger.map(({ user, kind, spend, making, commission }) => [
+        user.full_name,
+        user.email,
+        user.phone,
+        categoryLabel(kind),
+        user.account_mode ?? "business",
+        user.onboarding_status,
+        spend.toFixed(2),
+        making.toFixed(2),
+        commission.toFixed(2),
+        user.created_at,
+      ]),
+    );
+    toast.success("Users CSV downloaded");
+  }
+
+  function exportBusinesses() {
+    downloadAdminCsv(
+      `tijar-businesses-${stamp()}.csv`,
+      ["Business", "Owner id", "Phone", "KYC", "Listing", "Published", "Ledger sales", "Marketplace sales", "Gross", "Commission", "Net"],
+      businessLedger.map(({ biz, ledger, market, gross, commission, net }) => [
+        biz.business_name,
+        biz.owner_id,
+        biz.public_phone,
+        biz.verification_status,
+        biz.moderation_status,
+        biz.is_published ? "yes" : "no",
+        ledger.toFixed(2),
+        market.toFixed(2),
+        gross.toFixed(2),
+        commission.toFixed(2),
+        net.toFixed(2),
+      ]),
+    );
+    toast.success("Businesses CSV downloaded");
+  }
+
+  function exportTransactions() {
+    downloadAdminCsv(
+      `tijar-transactions-${stamp()}.csv`,
+      ["When", "Shop", "Type", "Amount", "Commission", "Method", "Note"],
+      transactions.map((tx) => [
+        tx.occurred_at,
+        shopName(tx),
+        tx.type,
+        Number(tx.amount).toFixed(2),
+        commissionOnAmount(Number(tx.amount), commissionRate).toFixed(2),
+        tx.payment_method,
+        tx.description,
+      ]),
+    );
+    toast.success("Transactions CSV downloaded");
+  }
+
+  function exportOrders() {
+    downloadAdminCsv(
+      `tijar-orders-${stamp()}.csv`,
+      ["Order", "Buyer", "Email", "Shop", "Status", "Total", "Commission", "When"],
+      orders.map((order) => [
+        order.order_number,
+        order.buyer?.full_name,
+        order.buyer?.email ?? order.buyer_phone,
+        shopName(order),
+        order.status,
+        Number(order.total).toFixed(2),
+        commissionOnAmount(Number(order.total), commissionRate).toFixed(2),
+        order.created_at,
+      ]),
+    );
+    toast.success("Orders CSV downloaded");
+  }
+
+  function exportFinance() {
+    downloadAdminCsv(
+      `tijar-finance-${stamp()}.csv`,
+      ["Metric", "Amount"],
+      [
+        ["Commission rate %", ratePct],
+        ["User spend (marketplace)", finance.userSpendTotal.toFixed(2)],
+        ["Ledger sales", finance.ledgerSales.toFixed(2)],
+        ["Marketplace GMV", finance.marketplaceGmv.toFixed(2)],
+        ["Business gross", finance.businessGross.toFixed(2)],
+        ["Ledger commission", finance.ledgerCommission.toFixed(2)],
+        ["Marketplace commission", finance.marketplaceCommission.toFixed(2)],
+        ["Total commission", finance.totalCommission.toFixed(2)],
+        ["Business net after commission", finance.businessNet.toFixed(2)],
+      ],
+    );
+    toast.success("Finance summary downloaded");
+  }
 
   const q = query.trim();
   const kycRows = businesses.filter((b) =>
@@ -325,11 +474,12 @@ export function AdminConsoleScreen() {
     ),
   );
   const kycQueue = kycRows.filter((b) => KYC_QUEUE.includes(b.verification_status as KycStatus));
-  const userRows = users.filter((u) =>
-    matchesQuery([u.full_name, u.email, u.phone, u.account_mode].join(" "), q),
-  );
-  const bizRows = businesses.filter((b) =>
-    matchesQuery([b.business_name, b.public_phone, b.location, b.public_slug].join(" "), q),
+  const userRows = userLedger.filter(({ user, kind }) => {
+    if (userKind !== "all" && kind !== userKind) return false;
+    return matchesQuery([user.full_name, user.email, user.phone, user.account_mode, kind].join(" "), q);
+  });
+  const bizFinanceRows = businessLedger.filter(({ biz }) =>
+    matchesQuery([biz.business_name, biz.public_phone, biz.location, biz.public_slug].join(" "), q),
   );
   const txRows = transactions.filter((t) =>
     matchesQuery([shopName(t), t.type, t.description, t.payment_method].join(" "), q),
@@ -360,7 +510,7 @@ export function AdminConsoleScreen() {
           <Kpi icon={BadgeCheck} label="KYC queue" value={String(stats.pendingKyc)} hint={`${stats.pendingApps} applications`} />
           <Kpi icon={Wallet} label="Sales (ledger)" value={formatNgnCompact(stats.salesVolume)} hint={`${formatNgnCompact(stats.salesToday)} today`} />
           <Kpi icon={Building2} label="Marketplace GMV" value={formatNgnCompact(stats.gmv)} hint={`${stats.ordersToday} orders today`} />
-          <Kpi icon={CreditCard} label="Active shops today" value={String(stats.activeShopsToday)} hint={`${stats.transactions} tx tracked`} />
+          <Kpi icon={Percent} label="Commission" value={formatNgnCompact(finance.totalCommission)} hint={`${ratePct}% of volume`} />
         </div>
       </section>
 
@@ -385,7 +535,25 @@ export function AdminConsoleScreen() {
         ))}
       </div>
 
-      {tab !== "overview" && (
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" className="rounded-xl font-bold" onClick={exportUsers}>
+          <Download className="mr-1.5 size-3.5" /> Users
+        </Button>
+        <Button size="sm" variant="outline" className="rounded-xl font-bold" onClick={exportBusinesses}>
+          <Download className="mr-1.5 size-3.5" /> Businesses
+        </Button>
+        <Button size="sm" variant="outline" className="rounded-xl font-bold" onClick={exportTransactions}>
+          <Download className="mr-1.5 size-3.5" /> Transactions
+        </Button>
+        <Button size="sm" variant="outline" className="rounded-xl font-bold" onClick={exportOrders}>
+          <Download className="mr-1.5 size-3.5" /> Orders
+        </Button>
+        <Button size="sm" variant="outline" className="rounded-xl font-bold" onClick={exportFinance}>
+          <Download className="mr-1.5 size-3.5" /> Finance
+        </Button>
+      </div>
+
+      {tab !== "overview" && tab !== "finance" && (
         <div className="relative mt-4">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -461,7 +629,77 @@ export function AdminConsoleScreen() {
                   {stats.orders}
                 </button>
               </li>
+              <li className="flex justify-between gap-3">
+                <span>Platform commission</span>
+                <button type="button" className="font-bold text-primary" onClick={() => setTab("finance")}>
+                  {formatNgn(finance.totalCommission)}
+                </button>
+              </li>
             </ul>
+          </div>
+        </div>
+      )}
+
+      {tab === "finance" && (
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4">
+            <label className="text-sm font-semibold">
+              Commission rate
+              <Input
+                type="number"
+                min={0}
+                max={40}
+                step={0.1}
+                value={ratePct}
+                onChange={(e) => setRatePct(Number(e.target.value) || 0)}
+                className="mt-1 h-10 w-28 rounded-xl"
+              />
+            </label>
+            <p className="pb-2 text-xs text-muted-foreground">
+              Applied to marketplace GMV and recorded business sales.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <FinanceStat label="User spend" value={formatNgn(finance.userSpendTotal)} hint="Marketplace checkouts" />
+            <FinanceStat label="Business making" value={formatNgn(finance.businessGross)} hint="Ledger + marketplace" />
+            <FinanceStat label="TIJAR commission" value={formatNgn(finance.totalCommission)} hint={`${ratePct}% take`} />
+            <FinanceStat label="Business net" value={formatNgn(finance.businessNet)} hint="After commission" />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h2 className="font-extrabold">Top customer spend</h2>
+              <ul className="mt-3 space-y-2">
+                {[...userLedger]
+                  .sort((a, b) => b.spend - a.spend)
+                  .slice(0, 8)
+                  .map(({ user, spend, kind }) => (
+                    <li key={user.id} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="min-w-0 truncate">
+                        <span className="font-semibold">{user.full_name || user.email}</span>
+                        <span className="ml-2 text-[11px] text-muted-foreground">{categoryLabel(kind)}</span>
+                      </span>
+                      <span className="font-extrabold tabular-nums">{formatNgn(spend)}</span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h2 className="font-extrabold">Top business making</h2>
+              <ul className="mt-3 space-y-2">
+                {[...businessLedger]
+                  .sort((a, b) => b.gross - a.gross)
+                  .slice(0, 8)
+                  .map(({ biz, gross, commission }) => (
+                    <li key={biz.id} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="min-w-0 truncate font-semibold">{biz.business_name}</span>
+                      <span className="text-right">
+                        <span className="block font-extrabold tabular-nums">{formatNgn(gross)}</span>
+                        <span className="text-[11px] text-muted-foreground">fee {formatNgn(commission)}</span>
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
           </div>
         </div>
       )}
@@ -560,15 +798,17 @@ export function AdminConsoleScreen() {
       {tab === "businesses" && (
         <AdminTable
           empty="No businesses yet."
-          headers={["Business", "Contact", "KYC", "Listing", "Published"]}
+          headers={["Business", "Making", "Commission", "Net", "KYC", "Listing", "Actions"]}
         >
-          {bizRows.map((biz) => (
+          {bizFinanceRows.map(({ biz, gross, commission, net }) => (
             <tr key={biz.id} className="border-t border-border align-top">
               <td className="px-3 py-3">
                 <p className="font-semibold">{biz.business_name}</p>
-                <p className="text-[11px] text-muted-foreground">{biz.public_location_label ?? biz.location ?? "—"}</p>
+                <p className="text-[11px] text-muted-foreground">{biz.public_phone ?? "—"} · {biz.public_location_label ?? biz.location ?? "—"}</p>
               </td>
-              <td className="px-3 py-3 text-sm text-muted-foreground">{biz.public_phone ?? "—"}</td>
+              <td className="px-3 py-3 font-extrabold tabular-nums">{formatNgn(gross)}</td>
+              <td className="px-3 py-3 tabular-nums text-muted-foreground">{formatNgn(commission)}</td>
+              <td className="px-3 py-3 font-semibold tabular-nums">{formatNgn(net)}</td>
               <td className="px-3 py-3">
                 <StatusPill label={biz.verification_status} tone={kycTone(biz.verification_status)} />
               </td>
@@ -619,17 +859,34 @@ export function AdminConsoleScreen() {
       )}
 
       {tab === "users" && (
-        <AdminTable empty="No users yet." headers={["Name", "Email", "Phone", "Mode", "Onboarding", "Joined"]}>
-          {userRows.map((user) => (
-            <UserRow key={user.id} user={user} />
-          ))}
-        </AdminTable>
+        <>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(["all", "customer", "business", "both"] as const).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => setUserKind(kind)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs font-bold",
+                  userKind === kind ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                )}
+              >
+                {kind === "all" ? "All" : categoryLabel(kind)}
+              </button>
+            ))}
+          </div>
+          <AdminTable empty="No users in this category." headers={["Name", "Category", "Spend", "Business making", "Email", "Joined"]}>
+            {userRows.map((row) => (
+              <UserRow key={row.user.id} row={row} />
+            ))}
+          </AdminTable>
+        </>
       )}
 
       {tab === "transactions" && (
-        <AdminTable empty="No ledger transactions yet." headers={["When", "Shop", "Type", "Amount", "Method", "Note"]}>
+        <AdminTable empty="No ledger transactions yet." headers={["When", "Shop", "Type", "Amount", "Commission", "Method", "Note"]}>
           {txRows.map((tx) => (
-            <TxRow key={tx.id} tx={tx} />
+            <TxRow key={tx.id} tx={tx} rate={commissionRate} />
           ))}
         </AdminTable>
       )}
@@ -637,11 +894,12 @@ export function AdminConsoleScreen() {
       {tab === "orders" && (
         <div className="mt-4 space-y-3">
           <p className="text-xs text-muted-foreground">
-            Marketplace checkout · {payments.length} payment records · {formatNgn(stats.payments)} captured/initiated
+            Marketplace checkout · {payments.length} payment records · {formatNgn(stats.payments)} captured/initiated ·
+            commission {formatNgn(finance.marketplaceCommission)}
           </p>
-          <AdminTable empty="No marketplace orders yet." headers={["Order", "Buyer", "Shop", "Status", "Total", "When"]}>
+          <AdminTable empty="No marketplace orders yet." headers={["Order", "Buyer", "Shop", "Status", "Total", "Commission", "When"]}>
             {orderRows.map((order) => (
-              <OrderRow key={order.id} order={order} />
+              <OrderRow key={order.id} order={order} rate={commissionRate} />
             ))}
           </AdminTable>
         </div>
@@ -708,33 +966,54 @@ function AdminTable({
   );
 }
 
-function UserRow({ user }: { user: Profile }) {
+function UserRow({
+  row,
+}: {
+  row: {
+    user: Profile;
+    kind: AccountCategory;
+    spend: number;
+    making: number;
+  };
+}) {
+  const { user, kind, spend, making } = row;
   return (
     <tr className="border-t border-border">
-      <td className="px-3 py-2.5 font-semibold">{user.full_name || "—"}</td>
+      <td className="px-3 py-2.5">
+        <p className="font-semibold">{user.full_name || "—"}</p>
+        <p className="text-[11px] text-muted-foreground">{user.phone ?? "—"}</p>
+      </td>
+      <td className="px-3 py-2.5">
+        <StatusPill
+          label={categoryLabel(kind)}
+          tone={kind === "business" ? "info" : kind === "both" ? "ok" : "muted"}
+        />
+      </td>
+      <td className="px-3 py-2.5 font-extrabold tabular-nums">{formatNgn(spend)}</td>
+      <td className="px-3 py-2.5 tabular-nums">{formatNgn(making)}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{user.email ?? "—"}</td>
-      <td className="px-3 py-2.5 text-muted-foreground">{user.phone ?? "—"}</td>
-      <td className="px-3 py-2.5 capitalize">{user.account_mode ?? "business"}</td>
-      <td className="px-3 py-2.5">{user.onboarding_status}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{formatWhen(user.created_at)}</td>
     </tr>
   );
 }
 
-function TxRow({ tx }: { tx: AdminTransaction }) {
+function TxRow({ tx, rate }: { tx: AdminTransaction; rate: number }) {
+  const amount = Number(tx.amount);
   return (
     <tr className="border-t border-border">
       <td className="px-3 py-2.5 text-muted-foreground">{formatWhen(tx.occurred_at)}</td>
       <td className="px-3 py-2.5 font-semibold">{shopName(tx)}</td>
       <td className="px-3 py-2.5 capitalize">{tx.type.replaceAll("_", " ")}</td>
-      <td className="px-3 py-2.5 font-extrabold tabular-nums">{formatNgn(Number(tx.amount))}</td>
+      <td className="px-3 py-2.5 font-extrabold tabular-nums">{formatNgn(amount)}</td>
+      <td className="px-3 py-2.5 tabular-nums text-muted-foreground">{formatNgn(commissionOnAmount(amount, rate))}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{tx.payment_method ?? "—"}</td>
       <td className="max-w-[220px] truncate px-3 py-2.5 text-muted-foreground">{tx.description ?? "—"}</td>
     </tr>
   );
 }
 
-function OrderRow({ order }: { order: AdminOrder }) {
+function OrderRow({ order, rate }: { order: AdminOrder; rate: number }) {
+  const total = Number(order.total);
   return (
     <tr className="border-t border-border">
       <td className="px-3 py-2.5 font-semibold">{order.order_number}</td>
@@ -746,9 +1025,20 @@ function OrderRow({ order }: { order: AdminOrder }) {
       <td className="px-3 py-2.5">
         <StatusPill label={order.status} tone={order.status.includes("cancel") ? "bad" : "info"} />
       </td>
-      <td className="px-3 py-2.5 font-extrabold tabular-nums">{formatNgn(Number(order.total))}</td>
+      <td className="px-3 py-2.5 font-extrabold tabular-nums">{formatNgn(total)}</td>
+      <td className="px-3 py-2.5 tabular-nums text-muted-foreground">{formatNgn(commissionOnAmount(total, rate))}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{formatWhen(order.created_at)}</td>
     </tr>
+  );
+}
+
+function FinanceStat({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-extrabold tabular-nums">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+    </div>
   );
 }
 
