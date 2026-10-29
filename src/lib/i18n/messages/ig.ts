@@ -64,6 +64,7 @@ export const igMessages = {
 
   nav: {
     skipToContent: "Gafere na ọdịnaya",
+    shop: "Ahịa",
     howItWorks: "Otu O Si Arụ",
     learn: "Mụta",
     businessVisibility: "Ịpụta Azụmahịa Íhè",

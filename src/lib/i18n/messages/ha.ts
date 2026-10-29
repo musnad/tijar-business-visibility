@@ -64,6 +64,7 @@ export const haMessages = {
 
   nav: {
     skipToContent: "Tsallake zuwa abun ciki",
+    shop: "Kasuwa",
     howItWorks: "Yadda Yake Aiki",
     learn: "Koyi",
     businessVisibility: "Bayyanar Kasuwanci",

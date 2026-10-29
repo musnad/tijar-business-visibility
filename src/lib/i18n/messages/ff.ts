@@ -21,6 +21,7 @@ export const ffMessages = {
   },
   nav: {
     skipToContent: "Skip",
+    shop: "Luumo",
     howItWorks: "No feewi",
     learn: "Janngu",
     businessVisibility: "Bayyana",

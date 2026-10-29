@@ -118,7 +118,7 @@ export function StorefrontScreen({ slug }: { slug: string }) {
         </Button>
       </div>
 
-      <p className="mt-3 flex gap-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+      <p id="verification" className="mt-3 flex gap-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
         <Info className="size-4 shrink-0" />
         <span>
           {business.is_verified

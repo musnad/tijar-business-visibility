@@ -64,6 +64,7 @@ export const arMessages = {
 
   nav: {
     skipToContent: "انتقل إلى المحتوى",
+    shop: "المتجر",
     howItWorks: "كيف يعمل",
     learn: "تعلّم",
     businessVisibility: "ظهور الأعمال",

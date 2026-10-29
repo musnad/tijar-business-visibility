@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, MapPin, Package, ShoppingCart, UserRound } from "lucide-react";
+import { Compass, PlusSquare, ShoppingBag, UserRound, Clapperboard } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { TijarLogo } from "@/components/brand-logo";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AppLanguageButton } from "@/features/app-layout/app-language-button";
 import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
 import { useAuth } from "@/features/auth/auth-context";
+import { canUseBusinessMode } from "@/lib/account-mode";
 import { cn } from "@/lib/utils";
 
 function initials(name: string): string {
@@ -24,15 +25,7 @@ function MarketplaceTopBar({ leftSlot }: { leftSlot?: ReactNode }) {
 
   return (
     <header className="grid grid-cols-[auto_1fr_auto] items-center gap-2 pb-3">
-      {leftSlot ?? (
-        <Link
-          to="/shop/nearby"
-          className="flex size-10 items-center justify-center rounded-full border border-border bg-card text-primary"
-          aria-label="Nearby products map"
-        >
-          <MapPin className="size-5" />
-        </Link>
-      )}
+      {leftSlot ?? <div className="size-10" />}
 
       <div className="flex justify-center px-1">
         <Link to="/shop" className="block max-w-[140px]">
@@ -73,34 +66,43 @@ export function MarketplaceShell({
   children: ReactNode;
   cartCount?: number;
   hideTopBar?: boolean;
-  /** Tighter padding for full-bleed map screens on mobile. */
   mapLayout?: boolean;
   leftSlot?: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { profile } = useAuth();
+  const showCreate = canUseBusinessMode(profile);
 
   const tabs = [
-    { to: "/shop", label: "Home", icon: Home, exact: true },
-    { to: "/shop/nearby", label: "Near", icon: MapPin },
-    { to: "/shop/cart", label: "Cart", icon: ShoppingCart, badge: cartCount },
-    { to: "/shop/orders", label: "Orders", icon: Package },
-    { to: "/shop/profile", label: "Me", icon: UserRound },
-  ] as const;
+    { to: "/shop" as const, label: "For You", icon: Clapperboard, exact: true },
+    { to: "/shop/discover" as const, label: "Discover", icon: Compass },
+    ...(showCreate ? [{ to: "/shop/create" as const, label: "Create", icon: PlusSquare }] : []),
+    { to: "/shop/browse" as const, label: "Shop", icon: ShoppingBag, badge: cartCount },
+    { to: "/shop/profile" as const, label: "Profile", icon: UserRound },
+  ];
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <main
         className={cn(
           "mx-auto w-full max-w-lg flex-1 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 lg:max-w-6xl xl:max-w-7xl",
-          mapLayout ? "px-3 pb-2" : "px-4 pb-4",
+          mapLayout ? "px-2 pb-2" : "px-4 pb-4",
         )}
       >
         {!hideTopBar && <MarketplaceTopBar leftSlot={leftSlot} />}
         {children}
       </main>
 
-      <nav className="app-bottom-nav sticky bottom-0 z-40 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-sm">
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0 px-1 sm:px-2 lg:max-w-6xl xl:max-w-7xl">
+      <nav
+        className="app-bottom-nav sticky bottom-0 z-40 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-sm"
+        aria-label="Marketplace"
+      >
+        <div
+          className={cn(
+            "mx-auto grid max-w-lg gap-0 px-1 sm:px-2 lg:max-w-6xl xl:max-w-7xl",
+            showCreate ? "grid-cols-5" : "grid-cols-4",
+          )}
+        >
           {tabs.map((tab) => {
             const active =
               "exact" in tab && tab.exact

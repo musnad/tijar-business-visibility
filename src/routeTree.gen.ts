@@ -48,9 +48,13 @@ import { Route as AppScanRouteImport } from './routes/app/scan'
 import { Route as AppSuppliersRouteImport } from './routes/app/suppliers'
 import { Route as AppTransactionsRouteImport } from './routes/app/transactions'
 import { Route as BSlugRouteImport } from './routes/b/$slug'
+import { Route as ShopIndexRouteImport } from './routes/shop/index'
+import { Route as ShopBrowseRouteImport } from './routes/shop/browse'
 import { Route as ShopBusinessApplyRouteImport } from './routes/shop/business-apply'
 import { Route as ShopCartRouteImport } from './routes/shop/cart'
 import { Route as ShopCheckoutRouteImport } from './routes/shop/checkout'
+import { Route as ShopCreateRouteImport } from './routes/shop/create'
+import { Route as ShopDiscoverRouteImport } from './routes/shop/discover'
 import { Route as ShopFavoritesRouteImport } from './routes/shop/favorites'
 import { Route as ShopNearbyRouteImport } from './routes/shop/nearby'
 import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
@@ -269,6 +273,16 @@ const BSlugRoute = BSlugRouteImport.update({
   path: '/b/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShopIndexRoute = ShopIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopBrowseRoute = ShopBrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
+  getParentRoute: () => ShopRoute,
+} as any)
 const ShopBusinessApplyRoute = ShopBusinessApplyRouteImport.update({
   id: '/business-apply',
   path: '/business-apply',
@@ -282,6 +296,16 @@ const ShopCartRoute = ShopCartRouteImport.update({
 const ShopCheckoutRoute = ShopCheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopCreateRoute = ShopCreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopDiscoverRoute = ShopDiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
   getParentRoute: () => ShopRoute,
 } as any)
 const ShopFavoritesRoute = ShopFavoritesRouteImport.update({
@@ -434,14 +458,18 @@ export interface FileRoutesByFullPath {
   '/app/suppliers': typeof AppSuppliersRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/b/$slug': typeof BSlugRoute
+  '/shop/browse': typeof ShopBrowseRoute
   '/shop/business-apply': typeof ShopBusinessApplyRoute
   '/shop/cart': typeof ShopCartRoute
   '/shop/checkout': typeof ShopCheckoutRoute
+  '/shop/create': typeof ShopCreateRoute
+  '/shop/discover': typeof ShopDiscoverRoute
   '/shop/favorites': typeof ShopFavoritesRoute
   '/shop/nearby': typeof ShopNearbyRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
   '/shop/profile': typeof ShopProfileRoute
   '/app/': typeof AppIndexRoute
+  '/shop/': typeof ShopIndexRoute
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
@@ -472,7 +500,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
-  '/shop': typeof ShopRouteWithChildren
   '/terms': typeof TermsRoute
   '/translate': typeof TranslateRoute
   '/api/public-config': typeof ApiPublicConfigRoute
@@ -497,14 +524,18 @@ export interface FileRoutesByTo {
   '/app/suppliers': typeof AppSuppliersRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/b/$slug': typeof BSlugRoute
+  '/shop/browse': typeof ShopBrowseRoute
   '/shop/business-apply': typeof ShopBusinessApplyRoute
   '/shop/cart': typeof ShopCartRoute
   '/shop/checkout': typeof ShopCheckoutRoute
+  '/shop/create': typeof ShopCreateRoute
+  '/shop/discover': typeof ShopDiscoverRoute
   '/shop/favorites': typeof ShopFavoritesRoute
   '/shop/nearby': typeof ShopNearbyRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
   '/shop/profile': typeof ShopProfileRoute
   '/app': typeof AppIndexRoute
+  '/shop': typeof ShopIndexRoute
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
@@ -564,14 +595,18 @@ export interface FileRoutesById {
   '/app/suppliers': typeof AppSuppliersRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/b/$slug': typeof BSlugRoute
+  '/shop/browse': typeof ShopBrowseRoute
   '/shop/business-apply': typeof ShopBusinessApplyRoute
   '/shop/cart': typeof ShopCartRoute
   '/shop/checkout': typeof ShopCheckoutRoute
+  '/shop/create': typeof ShopCreateRoute
+  '/shop/discover': typeof ShopDiscoverRoute
   '/shop/favorites': typeof ShopFavoritesRoute
   '/shop/nearby': typeof ShopNearbyRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
   '/shop/profile': typeof ShopProfileRoute
   '/app/': typeof AppIndexRoute
+  '/shop/': typeof ShopIndexRoute
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
@@ -632,14 +667,18 @@ export interface FileRouteTypes {
     | '/app/suppliers'
     | '/app/transactions'
     | '/b/$slug'
+    | '/shop/browse'
     | '/shop/business-apply'
     | '/shop/cart'
     | '/shop/checkout'
+    | '/shop/create'
+    | '/shop/discover'
     | '/shop/favorites'
     | '/shop/nearby'
     | '/shop/orders'
     | '/shop/profile'
     | '/app/'
+    | '/shop/'
     | '/app/admin/moderation'
     | '/app/admin/translate'
     | '/app/business/edit'
@@ -670,7 +709,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/register'
-    | '/shop'
     | '/terms'
     | '/translate'
     | '/api/public-config'
@@ -695,14 +733,18 @@ export interface FileRouteTypes {
     | '/app/suppliers'
     | '/app/transactions'
     | '/b/$slug'
+    | '/shop/browse'
     | '/shop/business-apply'
     | '/shop/cart'
     | '/shop/checkout'
+    | '/shop/create'
+    | '/shop/discover'
     | '/shop/favorites'
     | '/shop/nearby'
     | '/shop/orders'
     | '/shop/profile'
     | '/app'
+    | '/shop'
     | '/app/admin/moderation'
     | '/app/admin/translate'
     | '/app/business/edit'
@@ -761,14 +803,18 @@ export interface FileRouteTypes {
     | '/app/suppliers'
     | '/app/transactions'
     | '/b/$slug'
+    | '/shop/browse'
     | '/shop/business-apply'
     | '/shop/cart'
     | '/shop/checkout'
+    | '/shop/create'
+    | '/shop/discover'
     | '/shop/favorites'
     | '/shop/nearby'
     | '/shop/orders'
     | '/shop/profile'
     | '/app/'
+    | '/shop/'
     | '/app/admin/moderation'
     | '/app/admin/translate'
     | '/app/business/edit'
@@ -1089,6 +1135,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shop/': {
+      id: '/shop/'
+      path: '/'
+      fullPath: '/shop/'
+      preLoaderRoute: typeof ShopIndexRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/browse': {
+      id: '/shop/browse'
+      path: '/browse'
+      fullPath: '/shop/browse'
+      preLoaderRoute: typeof ShopBrowseRouteImport
+      parentRoute: typeof ShopRoute
+    }
     '/shop/business-apply': {
       id: '/shop/business-apply'
       path: '/business-apply'
@@ -1108,6 +1168,20 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/shop/checkout'
       preLoaderRoute: typeof ShopCheckoutRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/create': {
+      id: '/shop/create'
+      path: '/create'
+      fullPath: '/shop/create'
+      preLoaderRoute: typeof ShopCreateRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/discover': {
+      id: '/shop/discover'
+      path: '/discover'
+      fullPath: '/shop/discover'
+      preLoaderRoute: typeof ShopDiscoverRouteImport
       parentRoute: typeof ShopRoute
     }
     '/shop/favorites': {
@@ -1415,24 +1489,32 @@ const ShopOrdersRouteWithChildren = ShopOrdersRoute._addFileChildren(
 )
 
 interface ShopRouteChildren {
+  ShopBrowseRoute: typeof ShopBrowseRoute
   ShopBusinessApplyRoute: typeof ShopBusinessApplyRoute
   ShopCartRoute: typeof ShopCartRoute
   ShopCheckoutRoute: typeof ShopCheckoutRoute
+  ShopCreateRoute: typeof ShopCreateRoute
+  ShopDiscoverRoute: typeof ShopDiscoverRoute
   ShopFavoritesRoute: typeof ShopFavoritesRoute
   ShopNearbyRoute: typeof ShopNearbyRoute
   ShopOrdersRoute: typeof ShopOrdersRouteWithChildren
   ShopProfileRoute: typeof ShopProfileRoute
+  ShopIndexRoute: typeof ShopIndexRoute
   ShopPProductIdRoute: typeof ShopPProductIdRoute
 }
 
 const ShopRouteChildren: ShopRouteChildren = {
+  ShopBrowseRoute: ShopBrowseRoute,
   ShopBusinessApplyRoute: ShopBusinessApplyRoute,
   ShopCartRoute: ShopCartRoute,
   ShopCheckoutRoute: ShopCheckoutRoute,
+  ShopCreateRoute: ShopCreateRoute,
+  ShopDiscoverRoute: ShopDiscoverRoute,
   ShopFavoritesRoute: ShopFavoritesRoute,
   ShopNearbyRoute: ShopNearbyRoute,
   ShopOrdersRoute: ShopOrdersRouteWithChildren,
   ShopProfileRoute: ShopProfileRoute,
+  ShopIndexRoute: ShopIndexRoute,
   ShopPProductIdRoute: ShopPProductIdRoute,
 }
 

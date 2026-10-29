@@ -64,6 +64,7 @@ export const swMessages = {
 
   nav: {
     skipToContent: "Ruka hadi maudhui",
+    shop: "Duka",
     howItWorks: "Jinsi Inavyofanya Kazi",
     learn: "Jifunza",
     businessVisibility: "Kuonekana kwa Biashara",

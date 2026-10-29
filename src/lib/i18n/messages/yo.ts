@@ -64,6 +64,7 @@ export const yoMessages = {
 
   nav: {
     skipToContent: "Fò sí àkóónú",
+    shop: "Ilé ìtajà",
     howItWorks: "Bí Ó Ṣe ń Ṣiṣẹ́",
     learn: "Kọ",
     businessVisibility: "Híhàn Iṣowo",
