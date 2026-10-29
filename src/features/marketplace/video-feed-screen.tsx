@@ -49,6 +49,7 @@ import {
   rankAndLoadFeed,
   recordFeedSignal,
   reportVideo,
+  isImagePost,
   resolveCoverSrc,
   resolveVideoSrc,
   toggleFollowBusiness,
@@ -110,13 +111,14 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
       if (r.error) throw new Error(r.error);
       return r.videos;
     },
-    staleTime: 20_000,
+    staleTime: 5_000,
+    refetchOnMount: "always",
   });
 
   const listingsQuery = useQuery({
     queryKey: ["for-you-listings"],
     queryFn: async () => {
-      const r = await fetchMarketplaceProducts(24);
+      const r = await fetchMarketplaceProducts(80);
       if (r.error) throw new Error(r.error);
       return r.data;
     },
@@ -163,9 +165,10 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
 
   const productsById = useMemo(() => {
     const m = new Map<string, PublicProduct>();
+    for (const p of liveListings) m.set(p.id, p);
     for (const p of productsQuery.data ?? []) m.set(p.id, p);
     return m;
-  }, [productsQuery.data]);
+  }, [liveListings, productsQuery.data]);
 
   const active = videos.find((v) => v.id === activeId) ?? videos[0] ?? null;
 
@@ -541,23 +544,31 @@ function VideoSlide({
   const ref = useRef<HTMLVideoElement>(null);
   const src = resolveVideoSrc(video);
   const poster = resolveCoverSrc(video.cover_path) ?? undefined;
+  const image = isImagePost(video);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || image) return;
     if (active && !paused) {
       void el.play().catch(() => undefined);
     } else {
       el.pause();
     }
-  }, [active, paused, muted]);
+  }, [active, paused, muted, image]);
 
   return (
     <article
       data-video-id={video.id}
       className="relative h-full w-full snap-start snap-always overflow-hidden bg-zinc-950"
     >
-      {preload || active ? (
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={poster || src}
+          alt=""
+          className="h-full w-full object-cover"
+        />
+      ) : preload || active ? (
         // eslint-disable-next-line jsx-a11y/media-has-caption
         <video
           ref={ref}
@@ -584,12 +595,14 @@ function VideoSlide({
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/40" />
 
-      <button
-        type="button"
-        className="absolute inset-0 z-10"
-        aria-label={paused || !active ? "Play video" : "Pause video"}
-        onClick={onTogglePause}
-      />
+      {!image && (
+        <button
+          type="button"
+          className="absolute inset-0 z-10"
+          aria-label={paused || !active ? "Play video" : "Pause video"}
+          onClick={onTogglePause}
+        />
+      )}
 
       <div className="absolute left-3 right-[4.25rem] top-[4.75rem] z-20 flex items-center gap-2">
         <Link to="/b/$slug" params={{ slug: video.slug }} className="pointer-events-auto flex min-w-0 flex-1 items-center gap-2">
@@ -649,9 +662,11 @@ function VideoSlide({
             {video.is_verified ? <BadgeCheck className="size-4 fill-[#7C3AED] text-white" /> : null}
           </Link>
           {video.caption ? <p className="mt-0.5 line-clamp-3 text-[13px] leading-snug text-white/95">{video.caption}</p> : null}
-          <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-white/75">
-            <Music2 className="size-3" /> Original Sound · {video.business_name}
-          </p>
+          {!image && (
+            <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-white/75">
+              <Music2 className="size-3" /> Original Sound · {video.business_name}
+            </p>
+          )}
         </div>
       </div>
 
@@ -685,11 +700,13 @@ function VideoSlide({
           <Bookmark className={cn("size-8 drop-shadow", saved && "fill-white")} />
           <span className="text-[11px] font-bold">{compactCount(video.save_count)}</span>
         </IconAction>
-        <IconAction label={muted ? "Unmute" : "Mute"} onClick={onToggleMute}>
-          {muted ? <VolumeX className="size-6 drop-shadow" /> : <Volume2 className="size-6 drop-shadow" />}
-        </IconAction>
+        {!image && (
+          <IconAction label={muted ? "Unmute" : "Mute"} onClick={onToggleMute}>
+            {muted ? <VolumeX className="size-6 drop-shadow" /> : <Volume2 className="size-6 drop-shadow" />}
+          </IconAction>
+        )}
         <button type="button" className="pointer-events-auto text-[10px] font-bold opacity-80" onClick={onMore}>
-          {paused ? <Pause className="size-4" /> : <Play className="size-4" />}
+          {image ? <Flag className="size-4" /> : paused ? <Pause className="size-4" /> : <Play className="size-4" />}
         </button>
       </div>
     </article>

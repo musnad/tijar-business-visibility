@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sniffVideoKind, validateVideoFileMeta, MAX_VIDEO_BYTES } from "./file-guard";
+import { sniffImageKind, sniffVideoKind, validateVideoFileMeta, MAX_VIDEO_BYTES } from "./file-guard";
 
 function bytes(arr: number[]): Uint8Array {
   return Uint8Array.from(arr);
@@ -20,6 +20,15 @@ describe("sniffVideoKind", () => {
   it("rejects a renamed jpeg", () => {
     const jpeg = bytes([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(sniffVideoKind(jpeg)).toBeNull();
+  });
+});
+
+describe("sniffImageKind", () => {
+  it("detects jpeg, png and webp", () => {
+    expect(sniffImageKind(bytes([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0]))).toBe("jpeg");
+    expect(sniffImageKind(bytes([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]))).toBe("png");
+    const webp = bytes([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+    expect(sniffImageKind(webp)).toBe("webp");
   });
 });
 

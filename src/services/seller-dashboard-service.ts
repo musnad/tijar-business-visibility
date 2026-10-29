@@ -16,6 +16,7 @@ export type SellerVideoRow = {
   processing_error: string | null;
   rejection_reason: string | null;
   cover_path: string | null;
+  storage_path?: string | null;
   created_at: string;
 };
 
@@ -71,7 +72,7 @@ export async function fetchSellerVideos(businessId: string): Promise<{
   const { data, error } = await supabase
     .from("video_posts")
     .select(
-      "id, caption, status, moderation_status, published_at, like_count, view_count, save_count, processing_error, rejection_reason, cover_path, created_at",
+      "id, caption, status, moderation_status, published_at, like_count, view_count, save_count, processing_error, rejection_reason, cover_path, storage_path, created_at",
     )
     .eq("business_id", businessId)
     .order("created_at", { ascending: false })

@@ -1,6 +1,6 @@
 import type { VideoAttribution } from "@/lib/feed/rank-video-feed";
 import { assertProductsBelongToBusiness, requireShoppingTags } from "@/lib/feed/video-tag-guard";
-import { captureVideoThumbnail, inspectVideoFile } from "@/lib/video/file-guard";
+import { captureVideoThumbnail, inspectShoppingMedia } from "@/lib/video/file-guard";
 import { videoPublicStatus } from "@/lib/video/publish-status";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -15,47 +15,57 @@ export type StudioSubmitInput = {
   products: { id: string; business_id: string }[];
   attribution: VideoAttribution;
   thumbnail?: File | null;
-  rightsAttested: boolean;
+  rightsAttested?: boolean;
   asDraft?: boolean;
 };
 
+const IMAGE_EXT: Record<string, { ext: string; type: string }> = {
+  jpeg: { ext: "jpg", type: "image/jpeg" },
+  png: { ext: "png", type: "image/png" },
+  webp: { ext: "webp", type: "image/webp" },
+  gif: { ext: "gif", type: "image/gif" },
+};
+
 export async function submitStudioVideo(input: StudioSubmitInput): Promise<{ error: string | null; videoId?: string }> {
-  if (!input.rightsAttested && !input.asDraft) {
-    return { error: "Confirm you own this video or have rights to publish it." };
-  }
   const tags = requireShoppingTags(input.productIds);
   if (!tags.ok) return { error: tags.error };
   const owned = input.products.filter((p) => input.productIds.includes(p.id));
   const guard = assertProductsBelongToBusiness(input.businessId, owned);
   if (!guard.ok) return { error: guard.error };
 
-  const inspected = await inspectVideoFile(input.file);
+  const inspected = await inspectShoppingMedia(input.file);
   if (!inspected.ok) return { error: inspected.error };
 
   const supabase = getSupabaseBrowserClient();
   const id = crypto.randomUUID();
-  const ext = inspected.kind === "webm" ? "webm" : "mp4";
-  const storagePath = `${input.businessId}/${id}.${ext}`;
+  const isImage = inspected.media === "image";
+  const fileMeta = isImage
+    ? IMAGE_EXT[inspected.kind]!
+    : { ext: inspected.kind === "webm" ? "webm" : "mp4", type: inspected.kind === "webm" ? "video/webm" : "video/mp4" };
+  const storagePath = `${input.businessId}/${id}.${fileMeta.ext}`;
   const { error: upErr } = await supabase.storage.from("business-videos").upload(storagePath, input.file, {
-    contentType: inspected.kind === "webm" ? "video/webm" : "video/mp4",
+    contentType: fileMeta.type,
     upsert: false,
   });
   if (upErr) return { error: upErr.message };
 
-  let coverPath: string | null = null;
-  const thumb = input.thumbnail ?? (await blobToFile(await captureVideoThumbnail(input.file), `${id}.jpg`));
-  if (thumb) {
-    const thumbPath = `${input.businessId}/${id}.jpg`;
-    const t = await supabase.storage.from("business-videos").upload(thumbPath, thumb, {
-      contentType: "image/jpeg",
-      upsert: true,
-    });
-    if (!t.error) coverPath = thumbPath;
+  let coverPath: string | null = isImage ? storagePath : null;
+  if (!isImage) {
+    const thumb = input.thumbnail ?? (await blobToFile(await captureVideoThumbnail(input.file), `${id}.jpg`));
+    if (thumb) {
+      const thumbPath = `${input.businessId}/${id}.jpg`;
+      const t = await supabase.storage.from("business-videos").upload(thumbPath, thumb, {
+        contentType: "image/jpeg",
+        upsert: true,
+      });
+      if (!t.error) coverPath = thumbPath;
+    }
   }
 
   const playbackUrl = supabase.storage.from("business-videos").getPublicUrl(storagePath).data.publicUrl;
-  let status: string = input.asDraft ? "draft" : "processing";
-  let { error: rowErr } = await supabase.from("video_posts").insert({
+  const goLive = !input.asDraft;
+  let status: string = input.asDraft ? "draft" : "ready";
+  const row = {
     id,
     business_id: input.businessId,
     profile_id: input.profileId,
@@ -63,53 +73,29 @@ export async function submitStudioVideo(input: StudioSubmitInput): Promise<{ err
     storage_path: storagePath,
     playback_url: playbackUrl,
     cover_path: coverPath,
-    duration_ms: inspected.durationMs,
+    duration_ms: inspected.media === "image" ? null : inspected.durationMs,
     width: inspected.width,
     height: inspected.height,
     status,
     moderation_status: "pending",
-    attribution: input.attribution,
-    rights_attested_at: input.rightsAttested ? new Date().toISOString() : null,
-    published_at: null,
-  });
+    attribution: input.attribution ?? "business",
+    media_kind: isImage ? "image" : "video",
+    rights_attested_at: new Date().toISOString(),
+    published_at: goLive ? new Date().toISOString() : null,
+  };
+  let { error: rowErr } = await supabase.from("video_posts").insert(row);
+  if (rowErr && /media_kind/i.test(rowErr.message)) {
+    const { media_kind: _mk, ...withoutKind } = row;
+    rowErr = (await supabase.from("video_posts").insert(withoutKind)).error;
+  }
   if (rowErr && /rights_attested/i.test(rowErr.message)) {
-    const retry = await supabase.from("video_posts").insert({
-      id,
-      business_id: input.businessId,
-      profile_id: input.profileId,
-      caption: input.caption.trim() || null,
-      storage_path: storagePath,
-      playback_url: playbackUrl,
-      cover_path: coverPath,
-      duration_ms: inspected.durationMs,
-      width: inspected.width,
-      height: inspected.height,
-      status,
-      moderation_status: "pending",
-      attribution: input.attribution,
-      published_at: null,
-    });
-    rowErr = retry.error;
+    const { media_kind: _mk, rights_attested_at: _ra, ...withoutRights } = row;
+    rowErr = (await supabase.from("video_posts").insert(withoutRights)).error;
   }
   if (rowErr && /invalid input value for enum video_post_status/i.test(rowErr.message)) {
-    status = input.asDraft ? "uploading" : "processing";
-    const retry = await supabase.from("video_posts").insert({
-      id,
-      business_id: input.businessId,
-      profile_id: input.profileId,
-      caption: input.caption.trim() || null,
-      storage_path: storagePath,
-      playback_url: playbackUrl,
-      cover_path: coverPath,
-      duration_ms: inspected.durationMs,
-      width: inspected.width,
-      height: inspected.height,
-      status,
-      moderation_status: "pending",
-      attribution: input.attribution,
-      published_at: null,
-    });
-    rowErr = retry.error;
+    status = input.asDraft ? "uploading" : "ready";
+    const { media_kind: _mk, rights_attested_at: _ra, ...base } = row;
+    rowErr = (await supabase.from("video_posts").insert({ ...base, status })).error;
   }
   if (rowErr) return { error: rowErr.message };
 
@@ -121,20 +107,22 @@ export async function submitStudioVideo(input: StudioSubmitInput): Promise<{ err
   const { error: tagErr } = await supabase.from("video_post_products").insert(rows);
   if (tagErr) return { error: tagErr.message };
 
-  const jobInsert = await supabase.from("video_processing_jobs").insert({
-    video_post_id: id,
-    business_id: input.businessId,
-    kind: "prepare",
-    status: "queued",
-    attempts: 0,
-  });
-  if (jobInsert.error && !/does not exist|schema cache|relation/i.test(jobInsert.error.message)) {
-    return { error: jobInsert.error.message, videoId: id };
+  if (goLive && input.productIds.length > 0) {
+    await supabase
+      .from("products")
+      .update({ is_published: true, is_active: true })
+      .in("id", input.productIds)
+      .eq("business_id", input.businessId);
   }
 
-  if (!input.asDraft) {
-    const finished = await finishPrepareJob(id, input.businessId);
-    if (finished.error) return { error: finished.error, videoId: id };
+  if (!isImage && !goLive) {
+    await supabase.from("video_processing_jobs").insert({
+      video_post_id: id,
+      business_id: input.businessId,
+      kind: "prepare",
+      status: "queued",
+      attempts: 0,
+    });
   }
   return { error: null, videoId: id };
 }

@@ -39,7 +39,7 @@ export function SellerCommerceCard({
           </p>
         </div>
         <Button size="sm" className="rounded-xl" asChild>
-          <Link to="/app/videos/new">Publish video</Link>
+          <Link to="/app/videos/new">Publish</Link>
         </Button>
       </div>
 

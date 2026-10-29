@@ -24,26 +24,26 @@ export function SellerVideosScreen({ businessId }: { businessId: string }) {
   return (
     <>
       <AppPageHeader
-        title="Shopping videos"
-        subtitle="Draft, processing, pending moderation, published, rejected, or failed — from this shop only."
+        title="For You posts"
+        subtitle="Photos and videos from this shop."
         action={
           <Button className="rounded-xl font-bold" asChild>
-            <Link to="/app/videos/new">New video</Link>
+            <Link to="/app/videos/new">New post</Link>
           </Button>
         }
       />
       {query.isLoading && <p className="mt-6 text-sm text-muted-foreground">Loading…</p>}
       {query.isError && <p className="mt-6 text-sm text-destructive">Could not load videos for this business.</p>}
       {(query.data?.length ?? 0) === 0 && !query.isLoading && (
-        <p className="mt-6 text-sm text-muted-foreground">No videos yet. Publish from a catalogue item.</p>
+        <p className="mt-6 text-sm text-muted-foreground">No posts yet. Publish a photo or video.</p>
       )}
       <ul className="mt-4 space-y-3">
         {(query.data ?? []).map((v) => (
           <li key={v.id} className="flex gap-3 rounded-2xl border border-border bg-card p-3">
             <div className="size-16 overflow-hidden rounded-xl bg-muted">
-              {v.cover_path ? (
+              {(v.cover_path || v.storage_path) ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={resolveCoverSrc(v.cover_path) ?? ""} alt="" className="size-full object-cover" />
+                <img src={resolveCoverSrc(v.cover_path || v.storage_path || null) ?? ""} alt="" className="size-full object-cover" />
               ) : null}
             </div>
             <div className="min-w-0 flex-1">

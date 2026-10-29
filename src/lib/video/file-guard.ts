@@ -1,10 +1,28 @@
 /** Never trust filename or declared MIME type alone. */
 
 export const MAX_VIDEO_BYTES = 80 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 export const MAX_VIDEO_MS = 180_000;
 export const MIN_VIDEO_MS = 1_000;
 
 export type DetectedVideoKind = "mp4" | "webm";
+export type DetectedImageKind = "jpeg" | "png" | "webp" | "gif";
+
+export type ShoppingMedia =
+  | { ok: true; media: "video"; kind: DetectedVideoKind; durationMs: number; width: number; height: number }
+  | { ok: true; media: "image"; kind: DetectedImageKind; width: number; height: number }
+  | { ok: false; error: string };
+
+export function sniffImageKind(bytes: Uint8Array): DetectedImageKind | null {
+  if (bytes.length < 12) return null;
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpeg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "png";
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return "gif";
+  const riff = String.fromCharCode(bytes[0]!, bytes[1]!, bytes[2]!, bytes[3]!);
+  const four = String.fromCharCode(bytes[8]!, bytes[9]!, bytes[10]!, bytes[11]!);
+  if (riff === "RIFF" && four === "WEBP") return "webp";
+  return null;
+}
 
 export function sniffVideoKind(bytes: Uint8Array): DetectedVideoKind | null {
   if (bytes.length < 12) return null;
@@ -20,6 +38,45 @@ export function validateVideoFileMeta(file: File): { ok: true } | { ok: false; e
   if (file.size <= 0) return { ok: false, error: "The video file is empty." };
   if (file.size > MAX_VIDEO_BYTES) return { ok: false, error: "Video must be under 80 MB." };
   return { ok: true };
+}
+
+export async function inspectImageFile(file: File): Promise<
+  { ok: true; kind: DetectedImageKind; width: number; height: number } | { ok: false; error: string }
+> {
+  if (file.size <= 0) return { ok: false, error: "The photo is empty." };
+  if (file.size > MAX_IMAGE_BYTES) return { ok: false, error: "Photo must be under 12 MB." };
+  const header = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const kind = sniffImageKind(header);
+  if (!kind) return { ok: false, error: "Use a JPEG, PNG, WebP, or GIF photo." };
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const size = await readImageElement(objectUrl);
+    if (size.width < 1 || size.height < 1) return { ok: false, error: "Could not read this photo." };
+    return { ok: true, kind, ...size };
+  } catch {
+    return { ok: false, error: "Could not open this photo." };
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+export async function inspectShoppingMedia(file: File): Promise<ShoppingMedia> {
+  const header = new Uint8Array(await file.slice(0, 32).arrayBuffer());
+  if (sniffImageKind(header)) {
+    const img = await inspectImageFile(file);
+    if (!img.ok) return img;
+    return { ok: true, media: "image", kind: img.kind, width: img.width, height: img.height };
+  }
+  const video = await inspectVideoFile(file);
+  if (!video.ok) return video;
+  return {
+    ok: true,
+    media: "video",
+    kind: video.kind,
+    durationMs: video.durationMs,
+    width: video.width,
+    height: video.height,
+  };
 }
 
 export async function inspectVideoFile(file: File): Promise<{
@@ -48,6 +105,22 @@ export async function inspectVideoFile(file: File): Promise<{
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+function readImageElement(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const timer = window.setTimeout(() => reject(new Error("timeout")), 8_000);
+    img.onload = () => {
+      window.clearTimeout(timer);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      window.clearTimeout(timer);
+      reject(new Error("decode"));
+    };
+    img.src = src;
+  });
 }
 
 function readMediaElement(src: string): Promise<{ durationMs: number; width: number; height: number }> {

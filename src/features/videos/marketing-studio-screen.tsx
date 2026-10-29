@@ -62,7 +62,7 @@ export function MarketingStudioScreen({ businessId, businessName }: { businessId
         <textarea className="mt-3 min-h-28 w-full rounded-xl border px-3 py-2 text-sm" value={draft} readOnly />
       )}
       <Button className="mt-4 rounded-xl" asChild>
-        <Link to="/app/videos/new">Continue to video publish</Link>
+        <Link to="/app/videos/new">Publish photo or video</Link>
       </Button>
     </>
   );

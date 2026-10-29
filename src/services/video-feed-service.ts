@@ -1,6 +1,6 @@
 import { applyOrganicInterleave, rankVideoFeed, type RankableVideo, type ViewerSignals, type VideoAttribution } from "@/lib/feed/rank-video-feed";
-import { assertProductsBelongToBusiness, requireShoppingTags } from "@/lib/feed/video-tag-guard";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { submitStudioVideo } from "@/services/video-studio-service";
 import type { PublicProduct } from "@/types/database";
 
 export type PublicFeedVideo = {
@@ -28,7 +28,20 @@ export type PublicFeedVideo = {
   category_id: string | null;
   category_name: string | null;
   product_ids: string[];
+  media_kind?: "video" | "image" | string | null;
 };
+
+export function isImagePost(row: {
+  media_kind?: string | null;
+  storage_path?: string | null;
+  playback_url?: string | null;
+  cover_path?: string | null;
+}): boolean {
+  if (row.media_kind === "video") return false;
+  if (row.media_kind === "image") return true;
+  const main = `${row.storage_path ?? ""} ${row.playback_url ?? ""}`.toLowerCase();
+  return /\.(jpe?g|png|webp|gif)(\?|$)/.test(main);
+}
 
 export type VideoComment = {
   id: string;
@@ -62,13 +75,99 @@ export async function fetchPublicVideoFeed(): Promise<{
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
+  const fromView = await supabase
     .from("public_video_feed")
     .select("*")
     .order("published_at", { ascending: false })
     .limit(80);
-  if (error) return { videos: [], error: error.message };
-  return { videos: (data ?? []) as PublicFeedVideo[], error: null };
+  if (!fromView.error && (fromView.data?.length ?? 0) > 0) {
+    return { videos: (fromView.data ?? []) as PublicFeedVideo[], error: null };
+  }
+  if (fromView.error && !/schema cache|column|media_kind|does not exist/i.test(fromView.error.message)) {
+    const fallback = await loadFeedFromPosts();
+    if (fallback.videos.length > 0) return fallback;
+    return { videos: [], error: fromView.error.message };
+  }
+  const fallback = await loadFeedFromPosts();
+  if (fallback.videos.length > 0) return fallback;
+  return { videos: (fromView.data ?? []) as PublicFeedVideo[], error: null };
+}
+
+async function loadFeedFromPosts(): Promise<{ videos: PublicFeedVideo[]; error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const posts = await supabase
+    .from("video_posts")
+    .select(
+      "id, business_id, profile_id, caption, captions_url, cover_path, playback_url, storage_path, duration_ms, attribution, like_count, comment_count, save_count, view_count, published_at, created_at, media_kind",
+    )
+    .eq("status", "ready")
+    .order("created_at", { ascending: false })
+    .limit(80);
+  let rows = posts.data;
+  if (posts.error && /media_kind/i.test(posts.error.message)) {
+    const retry = await supabase
+      .from("video_posts")
+      .select(
+        "id, business_id, profile_id, caption, captions_url, cover_path, playback_url, storage_path, duration_ms, attribution, like_count, comment_count, save_count, view_count, published_at, created_at",
+      )
+      .eq("status", "ready")
+      .order("created_at", { ascending: false })
+      .limit(80);
+    if (retry.error) return { videos: [], error: retry.error.message };
+    rows = retry.data;
+  } else if (posts.error) {
+    return { videos: [], error: posts.error.message };
+  }
+
+  const list = rows ?? [];
+  if (list.length === 0) return { videos: [], error: null };
+
+  const businessIds = [...new Set(list.map((r) => r.business_id as string))];
+  const postIds = list.map((r) => r.id as string);
+  const [shops, tags] = await Promise.all([
+    supabase.from("public_marketplace_businesses").select("id, slug, business_name, logo_url, is_verified, verification_status, category_id, category_name").in("id", businessIds),
+    supabase.from("video_post_products").select("video_post_id, product_id, sort_order").in("video_post_id", postIds),
+  ]);
+  const shopById = new Map((shops.data ?? []).map((s) => [s.id as string, s]));
+  const tagsByPost = new Map<string, string[]>();
+  for (const tag of [...(tags.data ?? [])].sort((a, b) => Number(a.sort_order) - Number(b.sort_order))) {
+    const key = tag.video_post_id as string;
+    const cur = tagsByPost.get(key) ?? [];
+    cur.push(tag.product_id as string);
+    tagsByPost.set(key, cur);
+  }
+
+  const videos: PublicFeedVideo[] = list.map((row) => {
+    const shop = shopById.get(row.business_id as string);
+    return {
+      id: row.id as string,
+      business_id: row.business_id as string,
+      profile_id: row.profile_id as string,
+      caption: (row.caption as string | null) ?? null,
+      captions_url: (row.captions_url as string | null) ?? null,
+      cover_path: (row.cover_path as string | null) ?? null,
+      playback_url: (row.playback_url as string | null) ?? null,
+      storage_path: row.storage_path as string,
+      duration_ms: (row.duration_ms as number | null) ?? null,
+      attribution: (row.attribution as PublicFeedVideo["attribution"]) ?? "business",
+      like_count: Number(row.like_count ?? 0),
+      comment_count: Number(row.comment_count ?? 0),
+      save_count: Number(row.save_count ?? 0),
+      view_count: Number(row.view_count ?? 0),
+      published_at: (row.published_at as string | null) ?? (row.created_at as string),
+      created_at: row.created_at as string,
+      slug: (shop?.slug as string | undefined) ?? (row.business_id as string),
+      business_name: (shop?.business_name as string | undefined) ?? "TIJAR shop",
+      business_logo_url: (shop?.logo_url as string | null | undefined) ?? null,
+      is_verified: Boolean(shop?.is_verified),
+      verification_status: (shop?.verification_status as string | undefined) ?? "unverified",
+      category_id: (shop?.category_id as string | null | undefined) ?? null,
+      category_name: (shop?.category_name as string | null | undefined) ?? null,
+      product_ids: tagsByPost.get(row.id as string) ?? [],
+      media_kind: ((row as { media_kind?: string }).media_kind as PublicFeedVideo["media_kind"]) ?? null,
+    };
+  });
+  return { videos, error: null };
 }
 
 export async function fetchFeedViewerSignals(profileId: string | null): Promise<ViewerSignals> {
@@ -339,58 +438,14 @@ export async function publishShoppingVideo(input: {
   attribution: VideoAttribution;
   captionsFile?: File | null;
 }): Promise<{ error: string | null; videoId?: string }> {
-  const tags = requireShoppingTags(input.productIds);
-  if (!tags.ok) return { error: tags.error };
-  const owned = input.products.filter((p) => input.productIds.includes(p.id));
-  const guard = assertProductsBelongToBusiness(input.businessId, owned);
-  if (!guard.ok) return { error: guard.error };
-  if (!input.file.type.startsWith("video/")) return { error: "Choose an MP4 or WebM video." };
-  if (input.file.size > 80 * 1024 * 1024) return { error: "Video must be under 80 MB." };
-
-  const supabase = getSupabaseBrowserClient();
-  const id = crypto.randomUUID();
-  const ext = input.file.name.split(".").pop()?.toLowerCase() === "webm" ? "webm" : "mp4";
-  const storagePath = `${input.businessId}/${id}.${ext}`;
-  const { error: upErr } = await supabase.storage.from("business-videos").upload(storagePath, input.file, {
-    contentType: input.file.type,
-    upsert: false,
-  });
-  if (upErr) return { error: upErr.message };
-
-  let captionsUrl: string | null = null;
-  if (input.captionsFile) {
-    const capPath = `${input.businessId}/${id}.vtt`;
-    const cap = await supabase.storage.from("business-videos").upload(capPath, input.captionsFile, {
-      contentType: "text/vtt",
-      upsert: false,
-    });
-    if (!cap.error) {
-      captionsUrl = supabase.storage.from("business-videos").getPublicUrl(capPath).data.publicUrl;
-    }
-  }
-
-  const playbackUrl = supabase.storage.from("business-videos").getPublicUrl(storagePath).data.publicUrl;
-  const { error: rowErr } = await supabase.from("video_posts").insert({
-    id,
-    business_id: input.businessId,
-    profile_id: input.profileId,
-    caption: input.caption.trim() || null,
-    captions_url: captionsUrl,
-    storage_path: storagePath,
-    playback_url: playbackUrl,
-    status: "ready",
-    moderation_status: "pending",
+  return submitStudioVideo({
+    businessId: input.businessId,
+    profileId: input.profileId,
+    file: input.file,
+    caption: input.caption,
+    productIds: input.productIds,
+    products: input.products,
     attribution: input.attribution,
-    published_at: new Date().toISOString(),
+    rightsAttested: true,
   });
-  if (rowErr) return { error: rowErr.message };
-
-  const rows = input.productIds.map((productId, sort_order) => ({
-    video_post_id: id,
-    product_id: productId,
-    sort_order,
-  }));
-  const { error: tagErr } = await supabase.from("video_post_products").insert(rows);
-  if (tagErr) return { error: tagErr.message };
-  return { error: null, videoId: id };
 }
