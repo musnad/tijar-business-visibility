@@ -1,15 +1,19 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BadgeCheck,
+  Bell,
   Bookmark,
+  ChevronRight,
   Flag,
   Heart,
   MessageCircle,
+  Music2,
   Pause,
   Play,
+  Search,
   Share2,
   ShoppingBag,
   Volume2,
@@ -30,7 +34,9 @@ import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils";
 import { addToCart, fetchCart, fetchMarketplaceProducts, toggleFavoriteProduct } from "@/services/marketplace-service";
-import { ProductCard } from "@/features/marketplace/product-card";
+import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
+import { parseVariantList } from "@/lib/catalogue/variants";
+import { TijarLogo } from "@/components/brand-logo";
 import {
   blockProfile,
   fetchLiveProductsByIds,
@@ -57,11 +63,23 @@ const MUTE_KEY = "tijar-feed-muted";
 const POSITION_KEY = "tijar-for-you-video-id";
 const DATA_SAVER_KEY = "tijar-feed-data-saver";
 
-function attributionLabel(kind: PublicFeedVideo["attribution"]): string {
-  if (kind === "creator") return "Creator";
-  if (kind === "sponsored") return "Sponsored";
-  if (kind === "ai_assisted") return "AI-assisted";
-  return "Business";
+function compactCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  return String(n);
+}
+
+function variantSummary(product: PublicProduct): string | null {
+  const variants = parseVariantList(product.variants);
+  const sizes = [...new Set(variants.map((v) => v.size).filter(Boolean))];
+  const colours = [...new Set(variants.map((v) => v.colour).filter(Boolean))];
+  const attrs = product.attributes ?? {};
+  if (!sizes.length && attrs.size) sizes.push(attrs.size);
+  if (!colours.length && attrs.colour) colours.push(attrs.colour);
+  const bits: string[] = [];
+  if (sizes.length) bits.push(`Sizes: ${sizes.join(", ")}`);
+  if (colours.length) bits.push(`Colour: ${colours.join(", ")}`);
+  return bits.length ? bits.join(" · ") : null;
 }
 
 export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string }) {
@@ -180,7 +198,7 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   }, [videos.length]);
 
   useEffect(() => {
-    if (!activeId) return;
+    if (!activeId || activeId.startsWith("listing:")) return;
     void recordFeedSignal(activeId, "impression");
     void recordFeedSignal(activeId, "view");
   }, [activeId]);
@@ -196,64 +214,30 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
     return true;
   }
 
+  const taggedIds = new Set(productIds);
+  const extraListings = liveListings.filter((p) => !taggedIds.has(p.id));
+
   return (
-    <MarketplaceShell cartCount={cartCount} hideTopBar mapLayout>
-      <div className="relative mx-auto w-full max-w-lg lg:max-w-md">
-        {videos.length > 0 && liveListings.length > 0 && (
-          <div className="mb-2 rounded-2xl bg-background px-1 py-2">
-            <div className="mb-1 flex items-center justify-between px-1">
-              <p className="text-xs font-extrabold uppercase tracking-wide">Just listed</p>
-              <Link to="/shop/discover" className="text-[11px] font-semibold text-primary">
-                Discover
-              </Link>
-            </div>
-            <ul className="flex gap-2 overflow-x-auto pb-1">
-              {liveListings.slice(0, 12).map((p) => (
-                <li key={p.id} className="w-36 shrink-0">
-                  <ProductCard product={p} compact />
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+    <MarketplaceShell cartCount={cartCount} hideTopBar variant="feed">
+      <div className="relative mx-auto h-[calc(100dvh-4.25rem)] w-full max-w-lg overflow-hidden bg-black">
+        <FeedTopBar />
         {feedQuery.isLoading && (
-          <div className="flex h-[calc(100dvh-4.25rem)] items-center justify-center rounded-[1.5rem] bg-muted">
-            <p className="text-sm text-muted-foreground">Loading For You…</p>
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-white/70">Loading For You…</p>
           </div>
         )}
         {feedQuery.isError && (
-          <div className="flex h-[calc(100dvh-4.25rem)] flex-col items-center justify-center gap-3 rounded-[1.5rem] border border-dashed p-6 text-center">
-            <p className="font-bold">Could not load videos</p>
-            <p className="text-sm text-muted-foreground">Apply the video migration and try again.</p>
-            <Button onClick={() => void feedQuery.refetch()}>Retry</Button>
-          </div>
-        )}
-        {!feedQuery.isLoading && !feedQuery.isError && videos.length === 0 && (
-          <div className="flex max-h-[calc(100dvh-4.25rem)] flex-col overflow-y-auto rounded-[1.5rem] border border-dashed p-4">
-            <ShoppingBag className="mx-auto size-10 text-muted-foreground" />
-            <p className="mt-2 text-center font-extrabold">Live marketplace</p>
-            <p className="mt-1 text-center text-sm text-muted-foreground">
-              Priced products and services appear here as soon as a shop saves them. Videos show above when published.
-            </p>
-            {liveListings.length === 0 ? (
-              <Button asChild className="mx-auto mt-4 rounded-xl font-bold">
-                <Link to="/shop/discover">Open Discover</Link>
-              </Button>
-            ) : (
-              <ul className="mt-4 grid grid-cols-2 gap-2">
-                {liveListings.map((p) => (
-                  <li key={p.id}>
-                    <ProductCard product={p} compact />
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+            <p className="font-bold">Could not load the feed</p>
+            <Button onClick={() => void feedQuery.refetch()} className="rounded-full bg-[#7C3AED] hover:bg-[#6D28D9]">
+              Retry
+            </Button>
           </div>
         )}
 
         <div
           ref={scrollerRef}
-          className="h-[calc(100dvh-4.25rem)] snap-y snap-mandatory overflow-y-auto overscroll-y-contain rounded-[1.25rem] bg-black lg:h-[min(86dvh,820px)]"
+          className="h-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain"
         >
           {videos.map((video, index) => {
             const near = activeId === video.id || videos.findIndex((v) => v.id === activeId) === index - 1;
@@ -265,7 +249,13 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                 muted={muted}
                 paused={paused || reducedMotion || dataSaver}
                 preload={near && !dataSaver}
-                products={(video.product_ids ?? []).map((id) => productsById.get(id)).filter(Boolean) as PublicProduct[]}
+                products={(() => {
+                  const tagged = (video.product_ids ?? [])
+                    .map((id) => productsById.get(id))
+                    .filter(Boolean) as PublicProduct[];
+                  if (tagged.length > 0) return tagged;
+                  return liveListings.filter((p) => p.business_id === video.business_id);
+                })()}
                 liked={likedQuery.data?.has(video.id) ?? false}
                 saved={savedQuery.data?.has(video.id) ?? false}
                 following={followQuery.data?.has(video.business_id) ?? false}
@@ -337,21 +327,46 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
               />
             );
           })}
-        </div>
-
-        <div className="mt-2 flex items-center justify-between px-1 text-[11px] text-muted-foreground">
-          <label className="flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={dataSaver}
-              onChange={(e) => {
-                setDataSaver(e.target.checked);
-                localStorage.setItem(DATA_SAVER_KEY, e.target.checked ? "1" : "0");
+          {extraListings.map((product) => (
+            <ListingSlide
+              key={product.id}
+              product={product}
+              following={followQuery.data?.has(product.business_id) ?? false}
+              onFollow={async () => {
+                if (!requireUser() || !profile) return;
+                const { following, error } = await toggleFollowBusiness(profile.id, product.business_id);
+                if (error) toast.error(error);
+                else void queryClient.invalidateQueries({ queryKey: ["video-follows"] });
+              }}
+              onAdd={async () => {
+                if (!requireUser() || !profile) return;
+                if (product.sale_price == null) return;
+                const { error } = await addToCart(profile.id, {
+                  businessId: product.business_id,
+                  productId: product.id,
+                  productName: product.name,
+                  unit: product.unit,
+                  unitPrice: Number(product.sale_price),
+                  imageUrl: product.image_url,
+                });
+                if (error) toast.error(error);
+                else {
+                  toast.success("Added to cart");
+                  void queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
+                }
               }}
             />
-            Data saver
-          </label>
-          <span>Rule-based For You rank · not machine learning</span>
+          ))}
+          {!feedQuery.isLoading && videos.length === 0 && extraListings.length === 0 && (
+            <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+              <ShoppingBag className="size-10 text-white/50" />
+              <p className="font-extrabold">Nothing live yet</p>
+              <p className="text-sm text-white/70">When a shop posts a product or video, it appears here.</p>
+              <Button asChild className="rounded-full bg-[#7C3AED] font-bold hover:bg-[#6D28D9]">
+                <Link to="/shop/discover">Open Discover</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -443,6 +458,45 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   );
 }
 
+function FeedTopBar() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const tabs = [
+    { to: "/shop" as const, label: "For You" },
+    { to: "/shop/discover" as const, label: "Discover" },
+    { to: "/shop/follows" as const, label: "Following" },
+  ];
+  return (
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-2 bg-gradient-to-b from-black/70 to-transparent px-3 pb-10 pt-[max(0.6rem,env(safe-area-inset-top))]">
+      <Link to="/shop" className="pointer-events-auto mt-1 block w-[88px] shrink-0">
+        <TijarLogo compact className="brightness-0 invert" />
+      </Link>
+      <nav className="pointer-events-auto flex items-end gap-4 pt-2 text-[15px] font-semibold text-white/70">
+        {tabs.map((tab) => {
+          const active = tab.to === "/shop" ? pathname === "/shop" || pathname === "/shop/" : pathname.startsWith(tab.to);
+          return (
+            <Link
+              key={tab.to}
+              to={tab.to}
+              className={cn("relative pb-1", active && "font-extrabold text-white")}
+            >
+              {tab.label}
+              {active ? <span className="absolute inset-x-1 -bottom-0.5 h-0.5 rounded-full bg-[#A855F7]" /> : null}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="pointer-events-auto mt-1 flex items-center gap-2">
+        <Link to="/shop/discover" aria-label="Search" className="flex size-9 items-center justify-center rounded-full bg-black/25">
+          <Search className="size-5" />
+        </Link>
+        <Link to="/shop/notifications" aria-label="Notifications" className="relative flex size-9 items-center justify-center rounded-full bg-black/25">
+          <Bell className="size-5" />
+        </Link>
+      </div>
+    </header>
+  );
+}
+
 function VideoSlide({
   video,
   active,
@@ -487,8 +541,6 @@ function VideoSlide({
   const ref = useRef<HTMLVideoElement>(null);
   const src = resolveVideoSrc(video);
   const poster = resolveCoverSrc(video.cover_path) ?? undefined;
-  const primary = products[0];
-  const available = primary?.is_available !== false && primary?.sale_price != null;
 
   useEffect(() => {
     const el = ref.current;
@@ -530,7 +582,7 @@ function VideoSlide({
         />
       )}
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/40" />
 
       <button
         type="button"
@@ -539,24 +591,73 @@ function VideoSlide({
         onClick={onTogglePause}
       />
 
-      <div className="absolute left-3 top-3 z-20 flex flex-wrap gap-1.5">
-        <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-          {attributionLabel(video.attribution)}
-        </span>
-        {paused ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">
-            <Pause className="size-3" /> Paused
+      <div className="absolute left-3 right-[4.25rem] top-[4.75rem] z-20 flex items-center gap-2">
+        <Link to="/b/$slug" params={{ slug: video.slug }} className="pointer-events-auto flex min-w-0 flex-1 items-center gap-2">
+          <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-white/90">
+            {video.business_logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={video.business_logo_url} alt="" className="size-full object-cover" />
+            ) : (
+              <span className="text-sm font-extrabold text-white">{video.business_name.slice(0, 1)}</span>
+            )}
           </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-bold text-white">
-            <Play className="size-3" /> Playing
+          <span className="min-w-0 text-white">
+            <span className="flex items-center gap-1 truncate text-sm font-extrabold">
+              {video.business_name}
+              {video.is_verified ? <BadgeCheck className="size-4 shrink-0 fill-[#7C3AED] text-white" aria-label="Verified" /> : null}
+            </span>
+            <span className="block truncate text-[11px] text-white/80">
+              {video.is_verified ? "Verified Business" : "Business"}
+              {video.category_name ? ` · ${video.category_name}` : ""}
+            </span>
           </span>
-        )}
+        </Link>
+        <button
+          type="button"
+          onClick={onFollow}
+          className={cn(
+            "pointer-events-auto shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold",
+            following ? "bg-white/20 text-white" : "bg-[#7C3AED] text-white",
+          )}
+        >
+          {following ? "Following" : "Follow"}
+        </button>
       </div>
 
-      <div className="absolute bottom-4 left-3 right-16 z-20 space-y-3 text-white">
-        <Link to="/b/$slug" params={{ slug: video.slug }} className="flex items-center gap-2">
-          <span className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-white/20 text-sm font-bold">
+      <div className="absolute bottom-3 left-3 right-[4.35rem] z-20 space-y-2">
+        {products.length > 0 ? (
+          <ul className="pointer-events-auto flex snap-x gap-2 overflow-x-auto pb-1">
+            {products.map((product) => (
+              <li key={product.id} className="w-[min(100%,20.5rem)] shrink-0 snap-start">
+                <FeedProductCard product={product} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpenProducts}
+            className="pointer-events-auto rounded-full bg-[#7C3AED] px-3 py-1.5 text-xs font-extrabold text-white"
+          >
+            Shop the look
+          </button>
+        )}
+
+        <div className="text-white">
+          <Link to="/b/$slug" params={{ slug: video.slug }} className="pointer-events-auto inline-flex items-center gap-1 text-sm font-extrabold">
+            {video.business_name}
+            {video.is_verified ? <BadgeCheck className="size-4 fill-[#7C3AED] text-white" /> : null}
+          </Link>
+          {video.caption ? <p className="mt-0.5 line-clamp-3 text-[13px] leading-snug text-white/95">{video.caption}</p> : null}
+          <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-white/75">
+            <Music2 className="size-3" /> Original Sound · {video.business_name}
+          </p>
+        </div>
+      </div>
+
+      <div className="absolute bottom-4 right-2 z-20 flex flex-col items-center gap-3.5 text-white">
+        <button type="button" onClick={onFollow} className="pointer-events-auto relative" aria-label="Follow shop">
+          <span className="flex size-12 items-center justify-center overflow-hidden rounded-full ring-2 ring-white">
             {video.business_logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={video.business_logo_url} alt="" className="size-full object-cover" />
@@ -564,78 +665,184 @@ function VideoSlide({
               video.business_name.slice(0, 1)
             )}
           </span>
-          <span>
-            <span className="flex items-center gap-1 font-extrabold">
-              {video.business_name}
-              {video.is_verified ? (
-                <BadgeCheck className="size-4 text-sky-300" aria-label="Verified business" />
-              ) : null}
-            </span>
-            <span className="text-[11px] text-white/75">{video.category_name ?? "Shop"}</span>
+          <span className="absolute -bottom-1 left-1/2 flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-[#7C3AED] text-sm font-bold leading-none">
+            +
           </span>
-        </Link>
-        {video.is_verified ? (
-          <Link to="/b/$slug" params={{ slug: video.slug }} hash="verification" className="block text-[11px] text-sky-200 underline">
-            Verification details
-          </Link>
-        ) : null}
-        {video.caption ? <p className="line-clamp-3 text-sm">{video.caption}</p> : null}
-
-        {primary ? (
-          <button
-            type="button"
-            onClick={onOpenProducts}
-            className="pointer-events-auto flex w-full items-center gap-2 rounded-2xl bg-white/95 p-2 text-left text-foreground shadow"
-          >
-            <div className="size-12 overflow-hidden rounded-xl bg-muted">
-              {primary.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={primary.image_url} alt="" className="size-full object-cover" />
-              ) : null}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-extrabold">{primary.name}</p>
-              <p className="text-xs font-bold text-primary">
-                {primary.sale_price != null ? formatNgn(Number(primary.sale_price)) : "Price on request"}
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {available ? "Available" : "Unavailable"}
-                {products.length > 1 ? ` · ${products.length} products` : ""}
-              </p>
-            </div>
-            <span className="text-[11px] font-bold text-primary">View</span>
-          </button>
-        ) : null}
-      </div>
-
-      <div className="absolute bottom-4 right-2 z-20 flex flex-col items-center gap-3 text-white">
+        </button>
         <IconAction label={liked ? "Unlike" : "Like"} onClick={onLike}>
-          <Heart className={cn("size-6", liked && "fill-red-500 text-red-500")} />
-          <span className="text-[10px] font-bold">{video.like_count}</span>
+          <Heart className={cn("size-8 drop-shadow", liked && "fill-red-500 text-red-500")} />
+          <span className="text-[11px] font-bold">{compactCount(video.like_count)}</span>
         </IconAction>
         <IconAction label="Comments" onClick={onOpenComments}>
-          <MessageCircle className="size-6" />
-          <span className="text-[10px] font-bold">{video.comment_count}</span>
-        </IconAction>
-        <IconAction label={saved ? "Unsave" : "Save"} onClick={onSave}>
-          <Bookmark className={cn("size-6", saved && "fill-white")} />
+          <MessageCircle className="size-8 drop-shadow" />
+          <span className="text-[11px] font-bold">{compactCount(video.comment_count)}</span>
         </IconAction>
         <IconAction label="Share" onClick={onShare}>
-          <Share2 className="size-6" />
+          <Share2 className="size-8 drop-shadow" />
+          <span className="text-[11px] font-bold">{compactCount(Math.max(video.view_count, 0))}</span>
+        </IconAction>
+        <IconAction label={saved ? "Unsave" : "Save"} onClick={onSave}>
+          <Bookmark className={cn("size-8 drop-shadow", saved && "fill-white")} />
+          <span className="text-[11px] font-bold">{compactCount(video.save_count)}</span>
         </IconAction>
         <IconAction label={muted ? "Unmute" : "Mute"} onClick={onToggleMute}>
-          {muted ? <VolumeX className="size-6" /> : <Volume2 className="size-6" />}
+          {muted ? <VolumeX className="size-6 drop-shadow" /> : <Volume2 className="size-6 drop-shadow" />}
         </IconAction>
-        <Button
-          size="sm"
-          className="pointer-events-auto h-8 rounded-full px-2 text-[10px] font-bold"
-          variant={following ? "secondary" : "default"}
+        <button type="button" className="pointer-events-auto text-[10px] font-bold opacity-80" onClick={onMore}>
+          {paused ? <Pause className="size-4" /> : <Play className="size-4" />}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function FeedProductCard({ product }: { product: PublicProduct }) {
+  const { profile, session } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const summary = variantSummary(product);
+  const inStock = product.is_available !== false;
+
+  async function add(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!session || !profile) {
+      void navigate({ to: "/login" });
+      return;
+    }
+    if (product.sale_price == null) {
+      toast.message("This listing has no price yet.");
+      return;
+    }
+    const { error } = await addToCart(profile.id, {
+      businessId: product.business_id,
+      productId: product.id,
+      productName: product.name,
+      unit: product.unit,
+      unitPrice: Number(product.sale_price),
+      imageUrl: product.image_url,
+    });
+    if (error) toast.error(error);
+    else {
+      toast.success("Added to cart");
+      void queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
+    }
+  }
+
+  return (
+    <div className="rounded-2xl bg-white p-2.5 text-zinc-900 shadow-[0_10px_30px_rgba(0,0,0,0.28)]">
+      <div className="flex gap-2.5">
+        <div className="size-14 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
+          {product.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={product.image_url} alt="" className="size-full object-cover" />
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-1">
+            <p className="truncate text-sm font-extrabold leading-tight">{product.name}</p>
+            <ChevronRight className="mt-0.5 size-4 shrink-0 text-zinc-400" />
+          </div>
+          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm font-black text-[#7C3AED]">
+            {product.sale_price != null ? formatNgn(Number(product.sale_price)) : "Ask seller"}
+            <span
+              className={cn(
+                "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                inStock ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800",
+              )}
+            >
+              {inStock ? "In Stock" : "Unavailable"}
+            </span>
+          </p>
+          {summary ? <p className="mt-0.5 truncate text-[10px] text-zinc-500">{summary}</p> : null}
+          {product.kind === "service" ? (
+            <p className="mt-0.5 truncate text-[10px] font-semibold text-zinc-500">
+              {[serviceLabel(product), formatServiceDates(product)].filter(Boolean).join(" · ")}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <Link
+          to="/shop/p/$productId"
+          params={{ productId: product.id }}
+          className="flex h-9 items-center justify-center rounded-full border border-[#7C3AED] text-xs font-extrabold text-[#7C3AED]"
+        >
+          View Product
+        </Link>
+        <button
+          type="button"
+          onClick={(e) => void add(e)}
+          disabled={!inStock || product.sale_price == null}
+          className="flex h-9 items-center justify-center rounded-full bg-[#7C3AED] text-xs font-extrabold text-white disabled:opacity-50"
+        >
+          Add to Cart
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ListingSlide({
+  product,
+  following,
+  onFollow,
+  onAdd,
+}: {
+  product: PublicProduct;
+  following: boolean;
+  onFollow: () => void;
+  onAdd: () => void;
+}) {
+  const poster = product.image_url || product.extra_image_urls?.[0] || "";
+  const slug = product.business_slug;
+  return (
+    <article
+      data-video-id={`listing:${product.id}`}
+      className="relative h-full w-full snap-start snap-always overflow-hidden bg-zinc-950"
+    >
+      {poster ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={poster} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full items-center justify-center bg-zinc-900 text-white/40">
+          <ShoppingBag className="size-16" />
+        </div>
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/40" />
+      <div className="absolute left-3 right-[4.25rem] top-[4.75rem] z-20 flex items-center gap-2">
+        {slug ? (
+          <Link to="/b/$slug" params={{ slug }} className="pointer-events-auto min-w-0 flex-1 text-white">
+            <span className="block truncate text-sm font-extrabold">{product.business_name ?? "Shop"}</span>
+            <span className="text-[11px] text-white/80">{product.category_name ?? "Just listed"}</span>
+          </Link>
+        ) : (
+          <span className="min-w-0 flex-1 text-white">
+            <span className="block truncate text-sm font-extrabold">{product.business_name ?? "Shop"}</span>
+          </span>
+        )}
+        <button
+          type="button"
           onClick={onFollow}
+          className={cn(
+            "pointer-events-auto shrink-0 rounded-full px-3.5 py-1.5 text-xs font-extrabold",
+            following ? "bg-white/20 text-white" : "bg-[#7C3AED] text-white",
+          )}
         >
           {following ? "Following" : "Follow"}
-        </Button>
-        <button type="button" className="pointer-events-auto text-[10px] font-bold" onClick={onMore}>
-          More
+        </button>
+      </div>
+      <div className="absolute bottom-3 left-3 right-[4.35rem] z-20">
+        <FeedProductCard product={product} />
+        <p className="mt-2 line-clamp-2 text-[13px] text-white">{product.description}</p>
+      </div>
+      <div className="absolute bottom-24 right-2 z-20">
+        <button
+          type="button"
+          onClick={onAdd}
+          className="pointer-events-auto rounded-full bg-[#7C3AED] px-3 py-2 text-xs font-extrabold text-white shadow-lg"
+        >
+          Shop the look
         </button>
       </div>
     </article>

@@ -98,6 +98,7 @@ export type RecordTransactionInput = z.infer<typeof recordTransactionSchema>;
 export const customerFormSchema = z.object({
   name: z.string().min(2, "Name is required"),
   phone: z.string().max(30).optional(),
+  email: z.string().email().max(120).optional().or(z.literal("")),
   notes: z.string().max(500).optional(),
 });
 

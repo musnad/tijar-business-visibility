@@ -153,10 +153,22 @@ export async function fetchLiveProductsByIds(ids: string[]): Promise<{
 }> {
   if (ids.length === 0) return { products: [], error: null };
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("public_business_products")
-    .select("id, business_id, name, kind, description, sale_price, unit, image_url, is_available")
+    .select(
+      "id, business_id, name, kind, description, sale_price, unit, image_url, extra_image_urls, attributes, variants, is_available, business_name, business_slug, service_type, starts_on, ends_on",
+    )
     .in("id", ids);
+  if (error && /service_type|starts_on|ends_on/i.test(error.message)) {
+    const retry = await supabase
+      .from("public_business_products")
+      .select(
+        "id, business_id, name, kind, description, sale_price, unit, image_url, extra_image_urls, attributes, variants, is_available, business_name, business_slug",
+      )
+      .in("id", ids);
+    data = retry.data;
+    error = retry.error;
+  }
   if (error) return { products: [], error: error.message };
   return { products: (data ?? []) as PublicProduct[], error: null };
 }

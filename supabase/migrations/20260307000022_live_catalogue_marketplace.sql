@@ -1,6 +1,11 @@
 -- Priced catalogue items go live on For You / Discover as soon as a member saves them.
 -- Hide only flagged, suspended, or rejected shops. Map Discover still uses listings+coords.
 
+-- Safe here because feed_event_kind 'impression' was committed in 000021.
+create unique index if not exists feed_events_impression_once
+  on public.feed_events (profile_id, video_post_id)
+  where kind = 'impression' and profile_id is not null;
+
 create or replace function public.ensure_marketplace_listing(p_business_id uuid)
 returns void
 language plpgsql

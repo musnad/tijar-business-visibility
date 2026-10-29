@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Compass, PlusSquare, ShoppingBag, UserRound, Clapperboard } from "lucide-react";
+import { Compass, Home, Plus, ShoppingBag, UserRound, Clapperboard, PlusSquare } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { TijarLogo } from "@/components/brand-logo";
@@ -62,66 +62,90 @@ export function MarketplaceShell({
   hideTopBar = false,
   mapLayout = false,
   leftSlot,
+  variant = "page",
 }: {
   children: ReactNode;
   cartCount?: number;
   hideTopBar?: boolean;
   mapLayout?: boolean;
   leftSlot?: ReactNode;
+  variant?: "page" | "feed";
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { profile } = useAuth();
   const showCreate = canUseBusinessMode(profile);
+  const feed = variant === "feed";
 
-  const tabs = [
-    { to: "/shop" as const, label: "For You", icon: Clapperboard, exact: true },
-    { to: "/shop/discover" as const, label: "Discover", icon: Compass },
-    ...(showCreate ? [{ to: "/shop/create" as const, label: "Create", icon: PlusSquare }] : []),
-    { to: "/shop/browse" as const, label: "Shop", icon: ShoppingBag, badge: cartCount },
-    { to: "/shop/profile" as const, label: "Profile", icon: UserRound },
-  ];
+  const tabs = feed
+    ? [
+        { to: "/shop" as const, label: "For You", icon: Home, exact: true },
+        { to: "/shop/discover" as const, label: "Discover", icon: Compass },
+        { to: (showCreate ? "/shop/create" : "/shop/business-apply") as const, label: "", icon: Plus, fab: true },
+        { to: "/shop/browse" as const, label: "Shop", icon: ShoppingBag, badge: cartCount },
+        { to: "/shop/profile" as const, label: "Profile", icon: UserRound },
+      ]
+    : [
+        { to: "/shop" as const, label: "For You", icon: Clapperboard, exact: true },
+        { to: "/shop/discover" as const, label: "Discover", icon: Compass },
+        ...(showCreate ? [{ to: "/shop/create" as const, label: "Create", icon: PlusSquare }] : []),
+        { to: "/shop/browse" as const, label: "Shop", icon: ShoppingBag, badge: cartCount },
+        { to: "/shop/profile" as const, label: "Profile", icon: UserRound },
+      ];
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
+    <div className={cn("flex min-h-dvh flex-col", feed ? "bg-black text-white" : "bg-background text-foreground")}>
       <main
         className={cn(
-          "mx-auto w-full max-w-lg flex-1 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 lg:max-w-6xl xl:max-w-7xl",
-          mapLayout ? "px-2 pb-2" : "px-4 pb-4",
+          "mx-auto w-full flex-1",
+          feed
+            ? "max-w-lg p-0"
+            : cn(
+                "max-w-lg pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 lg:max-w-6xl xl:max-w-7xl",
+                mapLayout ? "px-2 pb-2" : "px-4 pb-4",
+              ),
         )}
       >
-        {!hideTopBar && <MarketplaceTopBar leftSlot={leftSlot} />}
+        {!hideTopBar && !feed && <MarketplaceTopBar leftSlot={leftSlot} />}
         {children}
       </main>
 
       <nav
-        className="app-bottom-nav sticky bottom-0 z-40 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-sm"
+        className={cn(
+          "sticky bottom-0 z-40 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1",
+          feed ? "border-t border-white/10 bg-black" : "app-bottom-nav border-t border-border bg-background/95 backdrop-blur-sm",
+        )}
         aria-label="Marketplace"
       >
-        <div
-          className={cn(
-            "mx-auto grid max-w-lg gap-0 px-1 sm:px-2 lg:max-w-6xl xl:max-w-7xl",
-            showCreate ? "grid-cols-5" : "grid-cols-4",
-          )}
-        >
+        <div className={cn("mx-auto grid max-w-lg gap-0 px-1", feed || showCreate ? "grid-cols-5" : "grid-cols-4")}>
           {tabs.map((tab) => {
             const active =
               "exact" in tab && tab.exact
                 ? pathname === "/shop" || pathname === "/shop/"
                 : pathname === tab.to || pathname.startsWith(`${tab.to}/`);
             const Icon = tab.icon;
+            const fab = "fab" in tab && tab.fab;
             return (
               <Link
                 key={tab.to}
                 to={tab.to}
                 className={cn(
-                  "app-tab relative flex min-h-[3.5rem] touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-semibold",
-                  active ? "app-tab-active text-primary" : "text-muted-foreground",
+                  "relative flex min-h-[3.5rem] touch-manipulation flex-col items-center justify-center gap-0.5 text-[10px] font-semibold",
+                  fab && "-mt-5",
+                  !fab && (active ? (feed ? "text-[#A855F7]" : "app-tab-active text-primary") : feed ? "text-white/55" : "text-muted-foreground"),
                 )}
               >
-                <Icon className={cn("size-5", active && "stroke-[2.5]")} />
-                {tab.label}
+                {fab ? (
+                  <span className="flex size-14 items-center justify-center rounded-full bg-[#7C3AED] text-white shadow-[0_8px_24px_rgba(124,58,237,0.45)]">
+                    <Plus className="size-7" strokeWidth={2.75} />
+                  </span>
+                ) : (
+                  <>
+                    <Icon className={cn("size-5", active && "stroke-[2.5]")} />
+                    {tab.label}
+                  </>
+                )}
                 {"badge" in tab && tab.badge && tab.badge > 0 ? (
-                  <span className="absolute right-[18%] top-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                  <span className="absolute right-[18%] top-1.5 flex size-4 items-center justify-center rounded-full bg-[#7C3AED] text-[9px] font-bold text-white">
                     {tab.badge > 9 ? "9+" : tab.badge}
                   </span>
                 ) : null}

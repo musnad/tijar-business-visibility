@@ -73,6 +73,8 @@ import { Route as AppAdminTranslateRouteImport } from './routes/app/admin/transl
 import { Route as AppBusinessEditRouteImport } from './routes/app/business/edit'
 import { Route as AppBusinessPublishRouteImport } from './routes/app/business/publish'
 import { Route as AppCustomersIndexRouteImport } from './routes/app/customers/index'
+import { Route as AppCustomersEnrollmentsRouteImport } from './routes/app/customers/enrollments'
+import { Route as AppCustomersImportRouteImport } from './routes/app/customers/import'
 import { Route as AppCustomersNewRouteImport } from './routes/app/customers/new'
 import { Route as AppLearnIndexRouteImport } from './routes/app/learn/index'
 import { Route as AppLearnLessonIdRouteImport } from './routes/app/learn/$lessonId'
@@ -408,6 +410,16 @@ const AppCustomersIndexRoute = AppCustomersIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppCustomersRouteRoute,
 } as any)
+const AppCustomersEnrollmentsRoute = AppCustomersEnrollmentsRouteImport.update({
+  id: '/enrollments',
+  path: '/enrollments',
+  getParentRoute: () => AppCustomersRouteRoute,
+} as any)
+const AppCustomersImportRoute = AppCustomersImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => AppCustomersRouteRoute,
+} as any)
 const AppCustomersNewRoute = AppCustomersNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -542,6 +554,8 @@ export interface FileRoutesByFullPath {
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
   '/app/business/publish': typeof AppBusinessPublishRoute
+  '/app/customers/enrollments': typeof AppCustomersEnrollmentsRoute
+  '/app/customers/import': typeof AppCustomersImportRoute
   '/app/customers/new': typeof AppCustomersNewRoute
   '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
   '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
@@ -618,6 +632,8 @@ export interface FileRoutesByTo {
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
   '/app/business/publish': typeof AppBusinessPublishRoute
+  '/app/customers/enrollments': typeof AppCustomersEnrollmentsRoute
+  '/app/customers/import': typeof AppCustomersImportRoute
   '/app/customers/new': typeof AppCustomersNewRoute
   '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
   '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
@@ -699,6 +715,8 @@ export interface FileRoutesById {
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
   '/app/business/publish': typeof AppBusinessPublishRoute
+  '/app/customers/enrollments': typeof AppCustomersEnrollmentsRoute
+  '/app/customers/import': typeof AppCustomersImportRoute
   '/app/customers/new': typeof AppCustomersNewRoute
   '/app/learn/$lessonId': typeof AppLearnLessonIdRoute
   '/app/onboarding/voice': typeof AppOnboardingVoiceRoute
@@ -781,6 +799,8 @@ export interface FileRouteTypes {
     | '/app/admin/translate'
     | '/app/business/edit'
     | '/app/business/publish'
+    | '/app/customers/enrollments'
+    | '/app/customers/import'
     | '/app/customers/new'
     | '/app/learn/$lessonId'
     | '/app/onboarding/voice'
@@ -857,6 +877,8 @@ export interface FileRouteTypes {
     | '/app/admin/translate'
     | '/app/business/edit'
     | '/app/business/publish'
+    | '/app/customers/enrollments'
+    | '/app/customers/import'
     | '/app/customers/new'
     | '/app/learn/$lessonId'
     | '/app/onboarding/voice'
@@ -937,6 +959,8 @@ export interface FileRouteTypes {
     | '/app/admin/translate'
     | '/app/business/edit'
     | '/app/business/publish'
+    | '/app/customers/enrollments'
+    | '/app/customers/import'
     | '/app/customers/new'
     | '/app/learn/$lessonId'
     | '/app/onboarding/voice'
@@ -1430,6 +1454,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCustomersIndexRouteImport
       parentRoute: typeof AppCustomersRouteRoute
     }
+    '/app/customers/enrollments': {
+      id: '/app/customers/enrollments'
+      path: '/enrollments'
+      fullPath: '/app/customers/enrollments'
+      preLoaderRoute: typeof AppCustomersEnrollmentsRouteImport
+      parentRoute: typeof AppCustomersRouteRoute
+    }
+    '/app/customers/import': {
+      id: '/app/customers/import'
+      path: '/import'
+      fullPath: '/app/customers/import'
+      preLoaderRoute: typeof AppCustomersImportRouteImport
+      parentRoute: typeof AppCustomersRouteRoute
+    }
     '/app/customers/new': {
       id: '/app/customers/new'
       path: '/new'
@@ -1532,12 +1570,16 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppCustomersRouteRouteChildren {
+  AppCustomersEnrollmentsRoute: typeof AppCustomersEnrollmentsRoute
+  AppCustomersImportRoute: typeof AppCustomersImportRoute
   AppCustomersNewRoute: typeof AppCustomersNewRoute
   AppCustomersIndexRoute: typeof AppCustomersIndexRoute
   AppCustomersCreditNewRoute: typeof AppCustomersCreditNewRoute
 }
 
 const AppCustomersRouteRouteChildren: AppCustomersRouteRouteChildren = {
+  AppCustomersEnrollmentsRoute: AppCustomersEnrollmentsRoute,
+  AppCustomersImportRoute: AppCustomersImportRoute,
   AppCustomersNewRoute: AppCustomersNewRoute,
   AppCustomersIndexRoute: AppCustomersIndexRoute,
   AppCustomersCreditNewRoute: AppCustomersCreditNewRoute,

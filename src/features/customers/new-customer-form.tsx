@@ -19,6 +19,7 @@ export function NewCustomerForm({ businessId }: { businessId: string }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -31,6 +32,7 @@ export function NewCustomerForm({ businessId }: { businessId: string }) {
     const parsed = customerFormSchema.safeParse({
       name: trimmed,
       phone: phone || undefined,
+      email: email || undefined,
       notes: notes || undefined,
     });
     if (!parsed.success) {
@@ -70,6 +72,14 @@ export function NewCustomerForm({ businessId }: { businessId: string }) {
           onChange={(e) => setName(e.target.value)}
           placeholder={t("app.customers.namePlaceholder")}
           autoComplete="name"
+        />
+        <Input
+          className="mt-3 min-h-12 rounded-xl"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          autoComplete="email"
         />
         <Input
           className="mt-3 min-h-12 rounded-xl"

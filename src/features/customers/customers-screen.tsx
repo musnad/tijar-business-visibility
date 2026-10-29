@@ -39,6 +39,14 @@ export function CustomersScreen({ businessId }: { businessId: string }) {
       <AppPageHeader title={t("app.customers.title")} subtitle={t("app.customers.pageSubtitle")} />
 
       <CustomerQuickActions />
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <Button variant="outline" className="min-h-11 rounded-xl font-bold" asChild>
+          <Link to="/app/customers/import">Import CSV / Excel / PDF</Link>
+        </Button>
+        <Button variant="outline" className="min-h-11 rounded-xl font-bold" asChild>
+          <Link to="/app/customers/enrollments">Course sign-ups</Link>
+        </Button>
+      </div>
 
       <div className="customers-hub-strip mt-3 flex items-center gap-2 rounded-2xl border border-amber-300/30 px-4 py-2.5 text-xs font-semibold text-amber-950 dark:text-amber-100">
         <HandCoins className="size-4 shrink-0" />

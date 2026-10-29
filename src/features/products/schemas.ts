@@ -68,6 +68,9 @@ export const productFormSchema = z.object({
   colours: z.string().max(200).optional(),
   videoUrl: z.string().max(500).optional(),
   isPublished: z.boolean().optional(),
+  serviceType: z.enum(["general", "course", "mentorship"]).optional(),
+  startsOn: z.string().optional(),
+  endsOn: z.string().optional(),
 });
 
 export type ProductFormInput = z.infer<typeof productFormSchema>;

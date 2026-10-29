@@ -9,6 +9,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { addToCart } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import type { PublicProduct } from "@/types/database";
+import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
 import { cn } from "@/lib/utils";
 
 export function ProductCard({
@@ -73,7 +74,7 @@ export function ProductCard({
         )}
         {product.kind === "service" && (
           <span className="absolute left-2 top-2 rounded-full bg-background/95 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary shadow-sm">
-            Service
+            {serviceLabel(product)}
           </span>
         )}
         <button
@@ -93,6 +94,11 @@ export function ProductCard({
             <span className="ml-1 text-[10px] font-semibold text-muted-foreground">/{product.unit}</span>
           ) : null}
         </p>
+        {formatServiceDates(product) && (
+          <p className="mt-0.5 truncate text-[10px] font-semibold text-muted-foreground">
+            {formatServiceDates(product)}
+          </p>
+        )}
         <p className="mt-1 truncate text-[11px] font-medium text-muted-foreground">
           {product.business_name ?? "TIJAR shop"}
         </p>

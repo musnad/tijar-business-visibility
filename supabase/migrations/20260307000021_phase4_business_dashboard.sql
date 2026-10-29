@@ -128,7 +128,7 @@ begin
     'impressions', (
       select count(*) from public.feed_events e
       join public.video_posts v on v.id = e.video_post_id
-      where v.business_id = p_business_id and e.kind = 'impression'
+      where v.business_id = p_business_id and e.kind::text = 'impression'
     ),
     'qualified_views', (
       select count(*) from public.feed_events e
@@ -185,16 +185,16 @@ begin
     ),
     'video_counts', (
       select jsonb_build_object(
-        'draft', count(*) filter (where status in ('draft', 'uploading')),
-        'processing', count(*) filter (where status = 'processing'),
+        'draft', count(*) filter (where status::text in ('draft', 'uploading')),
+        'processing', count(*) filter (where status::text = 'processing'),
         'pending_moderation', count(*) filter (
-          where status = 'ready' and moderation_status = 'pending'
+          where status::text = 'ready' and moderation_status = 'pending'
         ),
         'published', count(*) filter (
-          where status = 'ready' and moderation_status = 'approved' and published_at is not null
+          where status::text = 'ready' and moderation_status = 'approved' and published_at is not null
         ),
-        'rejected', count(*) filter (where status = 'rejected' or moderation_status in ('flagged', 'suspended')),
-        'failed', count(*) filter (where status = 'failed')
+        'rejected', count(*) filter (where status::text = 'rejected' or moderation_status in ('flagged', 'suspended')),
+        'failed', count(*) filter (where status::text = 'failed')
       )
       from public.video_posts
       where business_id = p_business_id
@@ -242,10 +242,8 @@ grant execute on function public.invite_business_staff(uuid, text, jsonb) to aut
 -- Public shopper feed still includes pending videos (Phase 2 policy) until a
 -- moderator flags or suspends the post. Seller dashboard treats pending as
 -- "pending moderation" and only counts published when approved + published_at.
-
-create unique index if not exists feed_events_impression_once
-  on public.feed_events (profile_id, video_post_id)
-  where kind = 'impression' and profile_id is not null;
+-- Unique impression index is in 000022 — enum labels cannot be used in an
+-- index predicate in the same transaction as ALTER TYPE ... ADD VALUE.
 
 create or replace function public.record_feed_event(p_video_id uuid, p_kind public.feed_event_kind)
 returns void
@@ -315,7 +313,7 @@ begin
   end if;
   -- No transcode worker is configured. Original file remains the playback source.
   update public.video_posts
-  set status = case when status = 'draft' then 'draft' else 'ready' end,
+  set status = case when status::text = 'draft' then status else 'ready' end,
       processing_error = null,
       updated_at = now()
   where id = p_video_id

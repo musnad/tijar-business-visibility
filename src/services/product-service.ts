@@ -77,6 +77,9 @@ type ProductInsert = {
   catalogue_category?: string | null;
   is_published?: boolean;
   currency?: string;
+  service_type?: string;
+  starts_on?: string | null;
+  ends_on?: string | null;
 };
 
 export async function createProduct(
@@ -122,6 +125,9 @@ export async function createProduct(
     catalogue_category: input.catalogueCategory?.trim() || null,
     is_published: input.isPublished ?? input.salePrice != null,
     currency: "NGN",
+    service_type: kind === "service" ? (input.serviceType ?? "general") : "general",
+    starts_on: kind === "service" && input.startsOn ? input.startsOn : null,
+    ends_on: kind === "service" && input.endsOn ? input.endsOn : null,
   };
 
   let data: unknown = null;
@@ -130,6 +136,13 @@ export async function createProduct(
   const first = await supabase.from("products").insert(fullPayload).select("*").single();
   data = first.data;
   error = first.error;
+
+  if (error && /service_type|starts_on|ends_on/i.test(error.message)) {
+    const { service_type: _st, starts_on: _so, ends_on: _eo, ...withoutService } = fullPayload;
+    const retry = await supabase.from("products").insert(withoutService).select("*").single();
+    data = retry.data;
+    error = retry.error;
+  }
 
   // Older DBs without `kind` — retry without that column so add still works.
   if (error && /kind|product_kind/i.test(error.message)) {
@@ -282,6 +295,9 @@ export async function updateProduct(
     image_url: string | null;
     is_published: boolean | null;
     video_url: string | null;
+    service_type: string;
+    starts_on: string | null;
+    ends_on: string | null;
   }>,
 ): Promise<{ error: string | null }> {
   const supabase = getSupabaseBrowserClient();

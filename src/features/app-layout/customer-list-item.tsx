@@ -44,8 +44,10 @@ export function CustomerListItem({
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold">{customer.name}</p>
-          {customer.phone && (
-            <p className="truncate text-xs text-muted-foreground">{customer.phone}</p>
+          {(customer.email || customer.phone) && (
+            <p className="truncate text-xs text-muted-foreground">
+              {[customer.email, customer.phone].filter(Boolean).join(" · ")}
+            </p>
           )}
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <StatusBadge

@@ -169,6 +169,22 @@ export type PublicProduct = {
   business_slug?: string | null;
   business_logo_url?: string | null;
   category_name?: string | null;
+  service_type?: ServiceType;
+  starts_on?: string | null;
+  ends_on?: string | null;
+};
+
+export type ServiceEnrollment = {
+  id: string;
+  business_id: string;
+  product_id: string;
+  customer_id: string | null;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  status: "requested" | "confirmed" | "cancelled" | "completed";
+  notes: string | null;
+  created_at: string;
 };
 
 export type BusinessEnquiry = {
@@ -220,6 +236,7 @@ export type Customer = {
   business_id: string;
   name: string;
   phone: string | null;
+  email?: string | null;
   notes: string | null;
   balance_owed: number;
   created_at: string;
@@ -257,6 +274,7 @@ export type Transaction = {
 };
 
 export type ProductKind = "goods" | "service";
+export type ServiceType = "general" | "course" | "mentorship";
 
 export type Product = {
   id: string;
@@ -278,6 +296,9 @@ export type Product = {
   variants?: unknown;
   currency?: string;
   catalogue_category?: string | null;
+  service_type?: ServiceType;
+  starts_on?: string | null;
+  ends_on?: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

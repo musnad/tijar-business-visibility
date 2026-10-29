@@ -74,6 +74,9 @@ export function NewProductForm({
   const [colours, setColours] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [isPublished, setIsPublished] = useState(true);
+  const [serviceType, setServiceType] = useState<"general" | "course" | "mentorship">("general");
+  const [startsOn, setStartsOn] = useState("");
+  const [endsOn, setEndsOn] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -191,6 +194,9 @@ export function NewProductForm({
       colours: colours.trim() || undefined,
       videoUrl: videoUrl.trim() || undefined,
       isPublished: publishNow,
+      serviceType: kind === "service" ? serviceType : "general",
+      startsOn: kind === "service" ? startsOn || undefined : undefined,
+      endsOn: kind === "service" ? endsOn || undefined : undefined,
     });
 
     if (!parsed.success) {
@@ -318,6 +324,23 @@ export function NewProductForm({
             {t("app.products.kindService")}
           </button>
         </div>
+        {kind === "service" && (
+          <div className="mt-3 grid grid-cols-3 gap-1">
+            {(["general", "course", "mentorship"] as const).map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setServiceType(st)}
+                className={cn(
+                  "rounded-lg py-2 text-[10px] font-bold capitalize",
+                  serviceType === st ? "bg-white/25 ring-2 ring-white/50" : "bg-white/10",
+                )}
+              >
+                {st === "general" ? "Other service" : st}
+              </button>
+            ))}
+          </div>
+        )}
 
         <label className="mt-4 block">
           <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-white/80">
@@ -392,6 +415,19 @@ export function NewProductForm({
           </p>
         )}
       </FormSection>
+
+      {kind === "service" && (serviceType === "course" || serviceType === "mentorship") && (
+        <FormSection title="Course / mentorship dates" hint="Shown on the marketplace so people know when it runs.">
+          <label className="block text-xs font-semibold text-muted-foreground">
+            Starts
+            <Input type="date" className="mt-1 min-h-12 rounded-xl bg-background" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
+          </label>
+          <label className="mt-3 block text-xs font-semibold text-muted-foreground">
+            Finishes
+            <Input type="date" className="mt-1 min-h-12 rounded-xl bg-background" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
+          </label>
+        </FormSection>
+      )}
 
       {kind === "goods" && (
         <FormSection title={t("app.products.stockSection")} hint={t("app.products.stockHint")}>

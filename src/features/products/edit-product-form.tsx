@@ -39,12 +39,18 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
   const [colours, setColours] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [serviceType, setServiceType] = useState<"general" | "course" | "mentorship">("general");
+  const [startsOn, setStartsOn] = useState("");
+  const [endsOn, setEndsOn] = useState("");
 
   useEffect(() => {
     if (!product) return;
     setName(product.name);
     setDescription(product.description || product.notes || "");
     setSalePrice(product.sale_price != null ? String(product.sale_price) : "");
+    setServiceType(product.service_type === "course" || product.service_type === "mentorship" ? product.service_type : "general");
+    setStartsOn(product.starts_on ? String(product.starts_on).slice(0, 10) : "");
+    setEndsOn(product.ends_on ? String(product.ends_on).slice(0, 10) : "");
   }, [product]);
 
   const priceNum = salePrice.trim() ? Number(salePrice) : null;
@@ -87,6 +93,9 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
       attributes: attrs,
       image_url: imageUrl,
       is_published: Number.isFinite(priceNum as number) ? true : (publish ?? product.is_published),
+      service_type: product.kind === "service" ? serviceType : "general",
+      starts_on: product.kind === "service" && startsOn ? startsOn : null,
+      ends_on: product.kind === "service" && endsOn ? endsOn : null,
     });
     setBusy(false);
     if (error) {
@@ -125,6 +134,36 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
         <Input value={name} onChange={(e) => setName(e.target.value)} className="min-h-11 rounded-xl" />
         <textarea className="min-h-24 w-full rounded-xl border px-3 py-2" value={description} onChange={(e) => setDescription(e.target.value)} />
         <Input value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="Sale price (NGN)" className="min-h-11 rounded-xl" inputMode="decimal" />
+        {product.kind === "service" && (
+          <>
+            <div className="grid grid-cols-3 gap-1">
+              {(["general", "course", "mentorship"] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setServiceType(st)}
+                  className={`rounded-lg py-2 text-[10px] font-bold capitalize ${
+                    serviceType === st ? "bg-primary text-primary-foreground" : "bg-muted"
+                  }`}
+                >
+                  {st === "general" ? "Other" : st}
+                </button>
+              ))}
+            </div>
+            {(serviceType === "course" || serviceType === "mentorship") && (
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-xs font-semibold text-muted-foreground">
+                  Starts
+                  <Input type="date" className="mt-1 min-h-11 rounded-xl" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
+                </label>
+                <label className="text-xs font-semibold text-muted-foreground">
+                  Finishes
+                  <Input type="date" className="mt-1 min-h-11 rounded-xl" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
+                </label>
+              </div>
+            )}
+          </>
+        )}
         <Input value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="Sizes (S, M, L)" className="min-h-11 rounded-xl" />
         <Input value={colours} onChange={(e) => setColours(e.target.value)} placeholder="Colours" className="min-h-11 rounded-xl" />
         <ProductPhotoField previewUrl={product.image_url} onFile={setImageFile} onClear={() => setImageFile(null)} />

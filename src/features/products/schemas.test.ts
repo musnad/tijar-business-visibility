@@ -51,6 +51,23 @@ describe("productFormSchema", () => {
     }
   });
 
+  it("accepts a priced course with dates", () => {
+    const r = productFormSchema.safeParse({
+      name: "Python mentorship",
+      kind: "service",
+      unit: "job",
+      salePrice: "25000",
+      serviceType: "mentorship",
+      startsOn: "2026-04-01",
+      endsOn: "2026-06-01",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.serviceType).toBe("mentorship");
+      expect(r.data.startsOn).toBe("2026-04-01");
+    }
+  });
+
   it("rejects empty name", () => {
     expect(productFormSchema.safeParse({ name: "  ", kind: "goods", unit: "piece" }).success).toBe(
       false,
