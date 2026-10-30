@@ -148,9 +148,9 @@ export function BusinessScreen({
           >
             <Wallet className="size-6 shrink-0 text-primary" />
             <span>
-              <span className="block font-bold">Bank account & payouts</span>
+              <span className="block font-bold">Bank account</span>
               <span className="block text-sm text-muted-foreground">
-                Buyers can transfer to your account, or pay on Flutterwave. Request a payout anytime.
+                Add the account number buyers will transfer to. You confirm each payment on Orders.
               </span>
             </span>
           </Link>

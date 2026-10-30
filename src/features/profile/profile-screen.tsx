@@ -235,7 +235,7 @@ export function ProfileScreen({
         <ProfileMenuRow
           icon={Wallet}
           title="Shop payouts"
-          subtitle="Bank details and Flutterwave wallet"
+          subtitle="The account number buyers transfer to"
           to="/app/business/payouts"
         />
         <ProfileMenuRow

@@ -13,7 +13,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import {
   fetchBusinessPayoutAccount,
   fetchOrderDetail,
-  startFlutterwavePay,
+  markBuyerTransferPaid,
   transitionOrder,
 } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
@@ -41,7 +41,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
   });
   const account = accountQuery.data;
   const awaitingPay = order?.status === "pending_payment";
-  const isPod = order?.payment_method === "pod";
+  const buyerSaidPaid = Boolean(order?.buyer_marked_paid_at);
 
   return (
     <MarketplaceShell>
@@ -156,7 +156,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
               <h2 className="text-sm font-extrabold">Transfer to this shop</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Send {formatNgn(Number(order.total))} and keep your receipt. The seller confirms when it lands.
+                Send {formatNgn(Number(order.total))} then tap Paid now. The shop confirms it into today’s sales.
               </p>
               <dl className="mt-3 space-y-1 text-sm">
                 <div className="flex justify-between gap-2">
@@ -183,27 +183,26 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               >
                 Copy account number
               </Button>
+              <Button
+                type="button"
+                className="mt-2 min-h-12 w-full rounded-xl bg-[#1F7A4D] font-bold"
+                disabled={paying || buyerSaidPaid}
+                onClick={async () => {
+                  setPaying(true);
+                  const r = await markBuyerTransferPaid(order.id);
+                  setPaying(false);
+                  if (r.error) {
+                    toast.error(r.error);
+                    return;
+                  }
+                  toast.success("Told the shop you have paid. They will confirm.");
+                  await queryClient.invalidateQueries({ queryKey: ["marketplace-order", orderId] });
+                  await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
+                }}
+              >
+                {buyerSaidPaid ? "Paid now — waiting for shop" : paying ? "Sending…" : "Paid now"}
+              </Button>
             </section>
-          ) : null}
-
-          {awaitingPay && !isPod ? (
-            <Button
-              type="button"
-              className="min-h-12 w-full rounded-xl bg-[#1F7A4D] font-bold"
-              disabled={paying}
-              onClick={async () => {
-                setPaying(true);
-                const r = await startFlutterwavePay(order.id);
-                setPaying(false);
-                if (r.error || !r.link) {
-                  toast.error(r.error ?? "Could not open Flutterwave.");
-                  return;
-                }
-                window.location.assign(r.link);
-              }}
-            >
-              {paying ? "Opening…" : "Pay online with Flutterwave"}
-            </Button>
           ) : null}
 
           {order.status === "pending_payment" && (

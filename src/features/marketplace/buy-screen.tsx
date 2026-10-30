@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Building2, Landmark, Smartphone } from "lucide-react";
+import { ArrowLeft, Building2, Landmark } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -15,14 +15,11 @@ import {
   addToCart,
   fetchBusinessPayoutAccount,
   fetchMarketplaceProduct,
+  markBuyerTransferPaid,
   placeOrders,
-  startFlutterwavePay,
 } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
-import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/context";
-
-type PayChoice = "transfer" | "flutterwave";
 
 export function BuyScreen({ productId }: { productId?: string }) {
   const { t } = useTranslation();
@@ -33,8 +30,9 @@ export function BuyScreen({ productId }: { productId?: string }) {
   const [fulfilment, setFulfilment] = useState<"pickup" | "seller_delivery">("pickup");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [note, setNote] = useState("");
-  const [pay, setPay] = useState<PayChoice>("transfer");
   const [busy, setBusy] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [paidNow, setPaidNow] = useState(false);
 
   const productQuery = useQuery({
     queryKey: ["marketplace-product", productId],
@@ -53,12 +51,8 @@ export function BuyScreen({ productId }: { productId?: string }) {
     enabled: Boolean(product?.business_id),
     queryFn: async () => (await fetchBusinessPayoutAccount(product!.business_id)).account,
   });
-  const payStatus = useQuery({
-    queryKey: ["payments-status"],
-    queryFn: async () => (await fetch("/api/payments/status")).json() as Promise<{ ready?: boolean; provider?: string }>,
-  });
-  const flutterReady = Boolean(payStatus.data?.ready && payStatus.data?.provider === "flutterwave");
   const account = accountQuery.data;
+  const hasAccount = Boolean(account?.payout_account_number);
   const total = product?.sale_price != null ? Number(product.sale_price) * qty + (fulfilment === "seller_delivery" ? 1500 : 0) : 0;
 
   function requireSignIn() {
@@ -82,12 +76,8 @@ export function BuyScreen({ productId }: { productId?: string }) {
       requireSignIn();
       return;
     }
-    if (pay === "transfer" && !account?.payout_account_number) {
-      toast.error("This shop has not added a bank account yet. Pay online or message the seller.");
-      return;
-    }
-    if (pay === "flutterwave" && !flutterReady) {
-      toast.error("Online pay is not live yet. Transfer to the shop, or wait until Flutterwave is connected.");
+    if (!hasAccount) {
+      toast.error(t("shop.buy.noAccount"));
       return;
     }
     setBusy(true);
@@ -105,14 +95,13 @@ export function BuyScreen({ productId }: { productId?: string }) {
       setBusy(false);
       return;
     }
-    const payLabel = pay === "transfer" ? "Transfer to shop" : "Flutterwave";
     const placed = await placeOrders({
       fulfilment,
-      buyerNote: [`Pay: ${payLabel}`, note].filter(Boolean).join(" · "),
+      buyerNote: ["Pay: Transfer to shop", note].filter(Boolean).join(" · "),
       buyerPhone: phone,
       idempotencyKey: crypto.randomUUID(),
-      paymentMethod: pay,
-      paymentDestination: pay === "flutterwave" ? "platform" : "seller",
+      paymentMethod: "transfer",
+      paymentDestination: "seller",
     });
     if (placed.error || placed.orders.length === 0) {
       setBusy(false);
@@ -120,23 +109,24 @@ export function BuyScreen({ productId }: { productId?: string }) {
       return;
     }
     const order = placed.orders[0]!;
+    setOrderId(order.id);
     await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
+    setBusy(false);
+    toast.success(t("shop.buy.transferReady"));
+  }
 
-    if (pay === "flutterwave") {
-      const flw = await startFlutterwavePay(order.id);
-      setBusy(false);
-      if (flw.error || !flw.link) {
-        toast.error(flw.error ?? "Order placed. Open My Orders to try Flutterwave again.");
-        void navigate({ to: "/shop/orders/$orderId", params: { orderId: order.id } });
-        return;
-      }
-      window.location.assign(flw.link);
+  async function paidNowClick() {
+    if (!orderId) return;
+    setBusy(true);
+    const r = await markBuyerTransferPaid(orderId);
+    setBusy(false);
+    if (r.error) {
+      toast.error(r.error);
       return;
     }
-
-    setBusy(false);
-    toast.success("Send the transfer using the shop account. Use the order number as the narration.");
-    void navigate({ to: "/shop/orders/$orderId", params: { orderId: order.id } });
+    setPaidNow(true);
+    toast.success(t("shop.buy.paidMarked"));
+    await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
   }
 
   return (
@@ -203,84 +193,71 @@ export function BuyScreen({ productId }: { productId?: string }) {
               <Input className="mt-1 min-h-11 rounded-xl" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("shop.buy.notePlaceholder")} />
 
               <p className="mt-5 text-sm font-extrabold text-[#0B1F4D]">{t("shop.buy.payHow")}</p>
-              <div className="mt-2 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setPay("transfer")}
-                  className={cn(
-                    "flex w-full items-start gap-3 rounded-2xl border p-3 text-left",
-                    pay === "transfer" ? "border-primary bg-primary/5" : "border-border",
-                  )}
-                >
-                  <Landmark className="mt-0.5 size-5 text-primary" />
-                  <span>
-                    <span className="block text-sm font-extrabold">{t("shop.buy.transfer")}</span>
-                    <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                      {t("shop.buy.transferHint")}
-                    </span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPay("flutterwave")}
-                  className={cn(
-                    "flex w-full items-start gap-3 rounded-2xl border p-3 text-left",
-                    pay === "flutterwave" ? "border-primary bg-primary/5" : "border-border",
-                  )}
-                >
-                  <Smartphone className="mt-0.5 size-5 text-primary" />
-                  <span>
-                    <span className="block text-sm font-extrabold">{t("shop.buy.flutterwave")}</span>
-                    <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                      {flutterReady ? t("shop.buy.flutterReady") : t("shop.buy.flutterSoon")}
-                    </span>
-                  </span>
-                </button>
+              <div className="mt-2 flex w-full items-start gap-3 rounded-2xl border border-primary bg-primary/5 p-3 text-left">
+                <Landmark className="mt-0.5 size-5 text-primary" />
+                <span>
+                  <span className="block text-sm font-extrabold">{t("shop.buy.transfer")}</span>
+                  <span className="mt-0.5 block text-[12px] text-muted-foreground">{t("shop.buy.transferHint")}</span>
+                </span>
               </div>
 
-              {pay === "transfer" ? (
-                <div className="mt-3 rounded-2xl border border-[#EEF1F5] bg-[#F8FAFC] p-3 text-sm">
-                  <p className="flex items-center gap-1.5 font-extrabold text-[#0B1F4D]">
-                    <Building2 className="size-4" />
-                    {t("shop.buy.shopAccount")}
-                  </p>
-                  {accountQuery.isLoading ? (
-                    <p className="mt-2 text-muted-foreground">Loading account…</p>
-                  ) : account?.payout_account_number ? (
-                    <dl className="mt-2 space-y-1 text-[13px]">
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-muted-foreground">{t("shop.buy.bank")}</dt>
-                        <dd className="font-bold">{account.payout_bank_name}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-muted-foreground">{t("shop.buy.accountName")}</dt>
-                        <dd className="font-bold">{account.payout_account_name}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-muted-foreground">{t("shop.buy.accountNumber")}</dt>
-                        <dd className="font-extrabold tracking-wide">{account.payout_account_number}</dd>
-                      </div>
-                    </dl>
-                  ) : (
-                    <p className="mt-2 text-[13px] text-muted-foreground">
-                      {t("shop.buy.noAccount")}
-                    </p>
-                  )}
-                </div>
-              ) : null}
+              <div className="mt-3 rounded-2xl border border-[#EEF1F5] bg-[#F8FAFC] p-3 text-sm">
+                <p className="flex items-center gap-1.5 font-extrabold text-[#0B1F4D]">
+                  <Building2 className="size-4" />
+                  {t("shop.buy.shopAccount")}
+                </p>
+                {accountQuery.isLoading ? (
+                  <p className="mt-2 text-muted-foreground">Loading account…</p>
+                ) : hasAccount ? (
+                  <dl className="mt-2 space-y-1 text-[13px]">
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-muted-foreground">{t("shop.buy.bank")}</dt>
+                      <dd className="font-bold">{account?.payout_bank_name}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-muted-foreground">{t("shop.buy.accountName")}</dt>
+                      <dd className="font-bold">{account?.payout_account_name}</dd>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-muted-foreground">{t("shop.buy.accountNumber")}</dt>
+                      <dd className="font-extrabold tracking-wide">{account?.payout_account_number}</dd>
+                    </div>
+                  </dl>
+                ) : (
+                  <p className="mt-2 text-[13px] text-muted-foreground">{t("shop.buy.noAccount")}</p>
+                )}
+              </div>
 
               <div className="mt-5 flex justify-between text-sm">
                 <span className="text-muted-foreground">{t("shop.buy.total")}</span>
                 <span className="text-lg font-extrabold text-[#0B1F4D]">{formatNgn(total)}</span>
               </div>
-              <Button
-                type="button"
-                className="mt-4 min-h-12 w-full rounded-xl bg-[#1F7A4D] font-extrabold"
-                disabled={busy}
-                onClick={() => void confirm()}
-              >
-                {busy ? t("shop.buy.working") : pay === "flutterwave" ? t("shop.buy.payFlutter") : t("shop.buy.placeTransfer")}
-              </Button>
+              {!orderId ? (
+                <Button
+                  type="button"
+                  className="mt-4 min-h-12 w-full rounded-xl bg-[#1F7A4D] font-extrabold"
+                  disabled={busy || !hasAccount}
+                  onClick={() => void confirm()}
+                >
+                  {busy ? t("shop.buy.working") : t("shop.buy.placeTransfer")}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    className="mt-4 min-h-12 w-full rounded-xl bg-[#1F7A4D] font-extrabold"
+                    disabled={busy || paidNow}
+                    onClick={() => void paidNowClick()}
+                  >
+                    {paidNow ? t("shop.buy.paidMarked") : busy ? t("shop.buy.working") : t("shop.buy.paidNow")}
+                  </Button>
+                  <Button className="mt-2 min-h-11 w-full rounded-xl" variant="outline" asChild>
+                    <Link to="/shop/orders/$orderId" params={{ orderId }}>
+                      {t("shop.buy.viewOrder")}
+                    </Link>
+                  </Button>
+                </>
+              )}
             </>
           )}
         </div>

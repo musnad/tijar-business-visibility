@@ -432,13 +432,14 @@ export function AdminConsoleScreen() {
   function exportOrders() {
     downloadAdminCsv(
       `tijar-orders-${stamp()}.csv`,
-      ["Order", "Buyer", "Email", "Shop", "Status", "Total", "Commission", "When"],
+      ["Order", "Buyer", "Email", "Shop", "Status", "Pay", "Total", "Commission", "When"],
       orders.map((order) => [
         order.order_number,
         order.buyer?.full_name,
         order.buyer?.email ?? order.buyer_phone,
         shopName(order),
         order.status,
+        order.sale_transaction_id ? "confirmed_sale" : order.buyer_marked_paid_at ? "buyer_paid_now" : order.payment_method,
         Number(order.total).toFixed(2),
         commissionOnAmount(Number(order.total), commissionRate).toFixed(2),
         order.created_at,
@@ -897,7 +898,7 @@ export function AdminConsoleScreen() {
             Marketplace checkout · {payments.length} payment records · {formatNgn(stats.payments)} captured/initiated ·
             commission {formatNgn(finance.marketplaceCommission)}
           </p>
-          <AdminTable empty="No marketplace orders yet." headers={["Order", "Buyer", "Shop", "Status", "Total", "Commission", "When"]}>
+          <AdminTable empty="No marketplace orders yet." headers={["Order", "Buyer", "Shop", "Status", "Pay", "Total", "Commission", "When"]}>
             {orderRows.map((order) => (
               <OrderRow key={order.id} order={order} rate={commissionRate} />
             ))}
@@ -1023,7 +1024,16 @@ function OrderRow({ order, rate }: { order: AdminOrder; rate: number }) {
       </td>
       <td className="px-3 py-2.5">{shopName(order)}</td>
       <td className="px-3 py-2.5">
-        <StatusPill label={order.status} tone={order.status.includes("cancel") ? "bad" : "info"} />
+        <StatusPill label={order.status} tone={order.status.includes("cancel") ? "bad" : order.sale_transaction_id ? "ok" : "info"} />
+      </td>
+      <td className="px-3 py-2.5 text-[11px] text-muted-foreground">
+        {order.sale_transaction_id
+          ? "Confirmed sale"
+          : order.buyer_marked_paid_at
+            ? "Buyer paid now"
+            : order.payment_method === "transfer"
+              ? "Transfer"
+              : (order.payment_method ?? "—")}
       </td>
       <td className="px-3 py-2.5 font-extrabold tabular-nums">{formatNgn(total)}</td>
       <td className="px-3 py-2.5 tabular-nums text-muted-foreground">{formatNgn(commissionOnAmount(total, rate))}</td>

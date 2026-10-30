@@ -9,7 +9,9 @@ alter table public.video_posts
   add constraint video_posts_media_kind_ok
   check (media_kind in ('video', 'image'));
 
-create or replace view public.public_video_feed as
+drop view if exists public.public_video_feed;
+
+create view public.public_video_feed as
 select
   v.id,
   v.business_id,

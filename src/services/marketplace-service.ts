@@ -519,6 +519,12 @@ export async function transitionOrder(
   return { error: error?.message ?? null };
 }
 
+export async function markBuyerTransferPaid(orderId: string): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.rpc("buyer_mark_transfer_paid", { p_order_id: orderId });
+  return { error: error?.message ?? null };
+}
+
 /** Kept for older screens. Always refuses to mark paid from the client. */
 export async function completeTestPayment(_orderId: string): Promise<{
   order: MarketplaceOrder | null;

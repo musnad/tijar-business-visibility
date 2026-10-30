@@ -24,11 +24,13 @@ export function SellerOrdersInboxScreen({ businessId }: { businessId: string }) 
 
   const move = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => transitionOrder(id, status),
-    onSuccess: async (r) => {
+    onSuccess: async (r, vars) => {
       if (r.error) toast.error(r.error);
       else {
-        toast.success("Status updated");
+        toast.success(vars.status === "confirmed" ? "Confirmed — recorded in today’s sales" : "Status updated");
         await queryClient.invalidateQueries({ queryKey: ["seller-orders", businessId] });
+        await queryClient.invalidateQueries({ queryKey: ["transactions"] });
+        await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       }
     },
   });
@@ -37,7 +39,7 @@ export function SellerOrdersInboxScreen({ businessId }: { businessId: string }) 
     <>
       <AppPageHeader
         title="Marketplace orders"
-        subtitle="Confirm bank transfers yourself. Flutterwave paid orders update from the webhook."
+        subtitle="When a customer taps Paid now, confirm the transfer. That records it in today’s sales."
       />
       {query.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
       {(query.data?.length ?? 0) === 0 && !query.isLoading && (
@@ -63,10 +65,13 @@ export function SellerOrdersInboxScreen({ businessId }: { businessId: string }) 
                 <p className="font-extrabold text-primary">{formatNgn(Number(o.total))}</p>
               </div>
               {o.buyer_note ? <p className="mt-2 text-xs text-muted-foreground">{o.buyer_note}</p> : null}
-              {o.payment_method ? (
-                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {o.payment_method === "transfer" ? "Direct transfer" : o.payment_method}
+              {o.buyer_marked_paid_at && o.status === "pending_payment" ? (
+                <p className="mt-2 rounded-xl bg-[#1F7A4D]/10 px-3 py-2 text-xs font-bold text-[#1F7A4D]">
+                  Customer tapped Paid now — confirm if the money is in your account.
                 </p>
+              ) : null}
+              {o.sale_transaction_id ? (
+                <p className="mt-1 text-[11px] font-semibold text-[#1F7A4D]">Recorded in daily sales</p>
               ) : null}
               {next && canSellerTransition(o.status, next) && (
                 <Button
@@ -76,7 +81,7 @@ export function SellerOrdersInboxScreen({ businessId }: { businessId: string }) 
                   onClick={() => move.mutate({ id: o.id, status: next })}
                 >
                   {o.status === "pending_payment"
-                    ? "I received the transfer"
+                    ? "Confirm payment"
                     : `Mark ${orderStatusLabel(next)}`}
                 </Button>
               )}

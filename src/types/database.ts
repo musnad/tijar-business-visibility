@@ -70,6 +70,8 @@ export type MarketplaceOrder = {
   is_order_request?: boolean;
   payment_method?: string | null;
   payment_destination?: string | null;
+  buyer_marked_paid_at?: string | null;
+  sale_transaction_id?: string | null;
   created_at: string;
 };
 

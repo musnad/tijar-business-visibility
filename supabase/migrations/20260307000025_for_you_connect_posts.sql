@@ -24,7 +24,9 @@ set published_at = coalesce(published_at, created_at, now())
 where status::text = 'ready'
   and published_at is null;
 
-create or replace view public.public_video_feed as
+drop view if exists public.public_video_feed;
+
+create view public.public_video_feed as
 select
   v.id,
   v.business_id,

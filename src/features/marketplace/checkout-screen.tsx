@@ -2,8 +2,8 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Lock, MapPin, ShieldCheck, WalletCards } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Landmark, Lock, MapPin, ShieldCheck, WalletCards } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { TijarLogo } from "@/components/brand-logo";
@@ -14,18 +14,15 @@ import { useAuth } from "@/features/auth/auth-context";
 import { isMockFeedId } from "@/features/marketplace/feed-mock";
 import { haptic } from "@/lib/haptics";
 import { clearLocalCart, listLocalCart } from "@/lib/local-cart";
-import { cn } from "@/lib/utils";
 import {
+  fetchBusinessPayoutAccount,
   fetchCart,
   listAddresses,
   placeOrders,
   saveAddress,
-  startFlutterwavePay,
 } from "@/services/marketplace-service";
 import type { CartItem } from "@/types/database";
 import { formatNgn } from "@/utils/money";
-
-type PayMethod = "flutterwave" | "transfer" | "pod";
 
 const ngnExact = new Intl.NumberFormat("en-NG", {
   style: "currency",
@@ -46,36 +43,11 @@ function checkoutKey(): string {
   return key;
 }
 
-function CardMarks() {
-  return (
-    <span className="flex items-center gap-1.5" aria-hidden>
-      <span className="rounded px-1 py-0.5 text-[9px] font-black tracking-tight text-[#1A1F71]" style={{ fontFamily: "Arial, sans-serif" }}>
-        VISA
-      </span>
-      <span className="relative inline-flex h-4 w-7 items-center justify-center">
-        <span className="absolute left-0 size-3.5 rounded-full bg-[#EB001B]" />
-        <span className="absolute right-0 size-3.5 rounded-full bg-[#F79E1B]" />
-      </span>
-      <span className="rounded bg-[#1F7A4D] px-1 py-0.5 text-[8px] font-black tracking-wide text-white">VERVE</span>
-    </span>
-  );
-}
-
 export function CheckoutScreen() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const actorId = profile?.id ?? "guest";
-  const payStatus = useQuery({
-    queryKey: ["payments-status"],
-    queryFn: async () => {
-      const res = await fetch("/api/payments/status");
-      return (await res.json()) as { ready?: boolean };
-    },
-  });
-  const paymentReady = Boolean(payStatus.data?.ready);
-
-  const [pay, setPay] = useState<PayMethod>("transfer");
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +96,17 @@ export function CheckoutScreen() {
   }, [addressQuery.data]);
 
   const items = cartQuery.data && cartQuery.data.length > 0 ? cartQuery.data : localItems;
+  const shopIds = useMemo(() => [...new Set(items.map((i) => i.business_id).filter(Boolean))], [items]);
+  const accountsQuery = useQuery({
+    queryKey: ["checkout-accounts", shopIds.join(",")],
+    enabled: shopIds.length > 0,
+    queryFn: async () => {
+      const rows = await Promise.all(shopIds.map((id) => fetchBusinessPayoutAccount(id)));
+      return rows.map((r, i) => ({ businessId: shopIds[i]!, account: r.account }));
+    },
+  });
+  const shopAccounts = accountsQuery.data ?? [];
+  const missingAccount = shopAccounts.some((r) => !r.account?.payout_account_number);
   const goods = useMemo(() => items.reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0), [items]);
   const shipping = 2_500;
   const tax = goods >= 50_000 ? 4_000 : Math.round(goods * 0.075);
@@ -146,7 +129,7 @@ export function CheckoutScreen() {
     haptic("success");
     setBusy(true);
 
-    const note = `Pay: ${pay === "flutterwave" ? "Flutterwave" : pay === "transfer" ? "Transfer to shop" : "Pay on delivery"} · ${addr.street}`;
+    const note = `Pay: Transfer to shop · ${addr.street}`;
 
     if (!profile) {
       setBusy(false);
@@ -159,9 +142,9 @@ export function CheckoutScreen() {
       toast.error("Remove unavailable demo items from your cart.");
       return;
     }
-    if (pay === "flutterwave" && !paymentReady) {
+    if (missingAccount) {
       setBusy(false);
-      toast.error("Online pay is not live yet. Transfer to the shop instead.");
+      toast.error("A shop in this cart has not added a bank account yet.");
       return;
     }
 
@@ -190,8 +173,8 @@ export function CheckoutScreen() {
       buyerNote: note,
       buyerPhone: addr.phone,
       idempotencyKey: checkoutKey(),
-      paymentMethod: pay,
-      paymentDestination: pay === "flutterwave" ? "platform" : pay === "transfer" ? "seller" : "pod",
+      paymentMethod: "transfer",
+      paymentDestination: "seller",
     });
     if (placed.error || placed.orders.length === 0) {
       setBusy(false);
@@ -204,24 +187,8 @@ export function CheckoutScreen() {
     clearLocalCart(actorId);
     await queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
     await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
-    if (pay === "flutterwave") {
-      const flw = await startFlutterwavePay(placed.orders[0]!.id);
-      setBusy(false);
-      if (flw.error || !flw.link) {
-        toast.error(flw.error ?? "Order placed. Open My Orders to try Flutterwave again.");
-        void navigate({ to: "/shop/orders/$orderId", params: { orderId: placed.orders[0]!.id } });
-        return;
-      }
-      window.location.assign(flw.link);
-      return;
-    }
-
     setBusy(false);
-    toast.success(
-      pay === "transfer"
-        ? "Order placed. Transfer to the shop account on the next screen."
-        : "Order placed. The seller will confirm. Track it in My Orders.",
-    );
+    toast.success("Order placed. Transfer to the shop account, then tap Paid now.");
     void navigate({ to: "/shop/orders/$orderId", params: { orderId: placed.orders[0]!.id } });
   }
 
@@ -305,49 +272,43 @@ export function CheckoutScreen() {
               <section className="mt-5" aria-labelledby="pay-heading">
                 <h2 id="pay-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#0B1F4D]">
                   <WalletCards className="size-4 text-[#1F7A4D]" />
-                  Payment Method
+                  Transfer to shop
                 </h2>
-                <div className="mt-2 overflow-hidden rounded-2xl border border-[#EEF1F5]" role="radiogroup" aria-label="Payment method">
-                  <PayRow
-                    selected={pay === "transfer"}
-                    onSelect={() => setPay("transfer")}
-                    title="Transfer to shop"
-                    subtitle="Pay directly into the seller’s bank account"
-                    chevron
-                  />
-                  <PayRow
-                    selected={pay === "flutterwave"}
-                    onSelect={() => setPay("flutterwave")}
-                    title="Pay online (Flutterwave)"
-                    subtitle={paymentReady ? "Card, bank, USSD — shop requests payout later" : "Goes live when Flutterwave keys are on the server"}
-                    trailing={<CardMarks />}
-                  />
-                  <PayRow
-                    selected={pay === "pod"}
-                    onSelect={() => setPay("pod")}
-                    title="Pay on Delivery"
-                    subtitle="Cash or card on delivery"
-                    chevron
-                    last
-                  />
-                </div>
-                {pay === "flutterwave" ? (
-                  <p className="mt-2 text-[12px] leading-snug text-muted-foreground">
-                    {paymentReady
-                      ? "You will finish payment on Flutterwave. TIJAR never stores card numbers. The shop can request a payout anytime."
-                      : "Online pay is not live yet. Transfer to the shop, or add Flutterwave keys on the server."}
-                  </p>
-                ) : null}
-                {pay === "transfer" ? (
-                  <p className="mt-2 text-[12px] leading-snug text-muted-foreground">
-                    After the seller confirms, they send the account to pay. Do not transfer to a number you were not given in TIJAR chat.
-                  </p>
-                ) : null}
-                {pay === "pod" ? (
-                  <p className="mt-2 text-[12px] leading-snug text-muted-foreground">
-                    Pay with cash or a POS when the order arrives. Inspect the item before you pay.
-                  </p>
-                ) : null}
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  Send the total to the account below, then tap Paid now on the order screen.
+                </p>
+                {accountsQuery.isLoading ? (
+                  <p className="mt-2 text-sm text-muted-foreground">Loading shop account…</p>
+                ) : shopAccounts.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">No shop account yet.</p>
+                ) : (
+                  shopAccounts.map((row) => (
+                    <div key={row.businessId} className="mt-2 rounded-2xl border border-[#EEF1F5] bg-[#F8FAFC] p-3.5">
+                      <p className="flex items-center gap-1.5 text-sm font-extrabold text-[#0B1F4D]">
+                        <Landmark className="size-4 text-[#1F7A4D]" />
+                        Shop account
+                      </p>
+                      {row.account?.payout_account_number ? (
+                        <dl className="mt-2 space-y-1 text-[13px]">
+                          <div className="flex justify-between gap-2">
+                            <dt className="text-[#6B7280]">Bank</dt>
+                            <dd className="font-bold">{row.account.payout_bank_name}</dd>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <dt className="text-[#6B7280]">Account name</dt>
+                            <dd className="font-bold">{row.account.payout_account_name}</dd>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <dt className="text-[#6B7280]">Account number</dt>
+                            <dd className="font-extrabold tracking-wide">{row.account.payout_account_number}</dd>
+                          </div>
+                        </dl>
+                      ) : (
+                        <p className="mt-2 text-[13px] text-muted-foreground">This shop has not added an account number yet.</p>
+                      )}
+                    </div>
+                  ))
+                )}
               </section>
 
               <section className="mt-5" aria-labelledby="sum-heading">
@@ -391,7 +352,7 @@ export function CheckoutScreen() {
               <Button
                 type="button"
                 className="mt-3 min-h-[3.15rem] w-full rounded-xl bg-[#1F7A4D] text-[16px] font-extrabold text-white hover:bg-[#1F7A4D]/90"
-                disabled={busy || items.length === 0}
+                disabled={busy || items.length === 0 || missingAccount}
                 onClick={() => void placeOrder()}
               >
                 <ShieldCheck className="mr-1.5 size-5" />
@@ -407,49 +368,5 @@ export function CheckoutScreen() {
         </div>
       </div>
     </MarketplaceShell>
-  );
-}
-
-function PayRow({
-  selected,
-  onSelect,
-  title,
-  subtitle,
-  trailing,
-  chevron,
-  last,
-}: {
-  selected: boolean;
-  onSelect: () => void;
-  title: string;
-  subtitle: string;
-  trailing?: ReactNode;
-  chevron?: boolean;
-  last?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      className={cn("flex w-full items-center gap-3 px-3 py-3 text-left", !last && "border-b border-[#EEF1F5]")}
-    >
-      <span
-        className={cn(
-          "flex size-[18px] shrink-0 items-center justify-center rounded-full border-2",
-          selected ? "border-[#1F7A4D]" : "border-[#D1D5DB]",
-        )}
-        aria-hidden
-      >
-        {selected ? <span className="size-2.5 rounded-full bg-[#1F7A4D]" /> : null}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[14px] font-extrabold text-[#0B1F4D]">{title}</span>
-        <span className="block text-[12px] text-[#9CA3AF]">{subtitle}</span>
-      </span>
-      {trailing}
-      {chevron ? <ChevronRight className="size-4 shrink-0 text-[#D1D5DB]" aria-hidden /> : null}
-    </button>
   );
 }
