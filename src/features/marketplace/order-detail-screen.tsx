@@ -207,7 +207,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
           ) : null}
 
           {order.status === "pending_payment" && (
-            <Button>
+            <Button
               type="button"
               variant="outline"
               className="min-h-12 w-full rounded-xl font-bold"
