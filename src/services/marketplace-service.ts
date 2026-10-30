@@ -14,6 +14,7 @@ import {
   listSavedProducts,
   listShopFollowers,
 } from "@/lib/shop-social";
+import { displayShopName, isBlankShopName, lookupShopProfiles } from "@/lib/shop-names";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { CheckoutQuote } from "@/lib/checkout/quote";
 import { isLivePaymentConfigured } from "@/lib/payments/adapter";
@@ -84,23 +85,40 @@ export async function fetchMarketplaceProducts(limit = 120): Promise<{
       .limit(400);
     const byId = new Map((listings ?? []).map((b) => [b.id as string, b]));
     return {
-      data: (data ?? []).map((p) => {
-        const b = byId.get(p.business_id as string);
-        return {
-          ...(p as PublicProduct),
-          business_name: (b?.business_name as string) ?? undefined,
-          business_slug: (b?.slug as string) ?? undefined,
-          is_informal: (b?.is_informal as boolean | undefined) ?? true,
-        };
-      }),
+      data: await attachProductShopNames(
+        (data ?? []).map((p) => {
+          const b = byId.get(p.business_id as string);
+          return {
+            ...(p as PublicProduct),
+            business_name: (b?.business_name as string) ?? undefined,
+            business_slug: (b?.slug as string) ?? undefined,
+            is_informal: (b?.is_informal as boolean | undefined) ?? true,
+          };
+        }),
+      ),
       error: null,
     };
   }
 
   return {
-    data: (data ?? []) as PublicProduct[],
+    data: await attachProductShopNames((data ?? []) as PublicProduct[]),
     error: null,
   };
+}
+
+async function attachProductShopNames(products: PublicProduct[]): Promise<PublicProduct[]> {
+  if (products.length === 0) return products;
+  const missing = products.filter((p) => isBlankShopName(p.business_name));
+  const found = missing.length ? await lookupShopProfiles(missing.map((p) => p.business_id)) : new Map();
+  return products.map((p) => {
+    const shop = found.get(p.business_id);
+    return {
+      ...p,
+      business_name: displayShopName(shop?.business_name ?? p.business_name),
+      business_slug: shop?.slug ?? p.business_slug,
+      business_logo_url: shop?.logo_url ?? p.business_logo_url,
+    };
+  });
 }
 
 /** Published informal businesses for marketplace landing — includes shops without products. */
@@ -257,18 +275,19 @@ export async function fetchMarketplaceProduct(productId: string): Promise<{
     if (listing?.is_informal === false) {
       return { product: null, error: "This product is not available on the informal marketplace." };
     }
-    return {
-      product: {
+    const filled = await attachProductShopNames([
+      {
         ...product,
         business_name: (listing?.business_name as string) ?? product.business_name,
         business_slug: (listing?.slug as string) ?? product.business_slug,
         is_informal: (listing?.is_informal as boolean | undefined) ?? product.is_informal ?? true,
       },
-      error: null,
-    };
+    ]);
+    return { product: filled[0] ?? product, error: null };
   }
 
-  return { product, error: null };
+  const named = await attachProductShopNames([product]);
+  return { product: named[0] ?? product, error: null };
 }
 
 async function getOrCreateActiveCart(profileId: string): Promise<{ cartId: string | null; error: string | null }> {

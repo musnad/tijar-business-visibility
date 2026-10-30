@@ -47,12 +47,23 @@ describe("filterCatalogProducts", () => {
 });
 
 describe("filterCatalogSellers", () => {
-  it("matches seller name, category and product names", () => {
+  it("matches seller name, category, location and product names", () => {
     const sellers = [
-      { id: "b1", slug: "aisha", business_name: "Aisha Foods", category_id: "c1", product_names: ["Rice 50kg"] },
+      {
+        id: "b1",
+        slug: "aisha",
+        business_name: "Aisha Foods",
+        category_id: "c1",
+        category_name: "Foodstuff",
+        product_names: ["Rice 50kg"],
+        location_text: "Sabon Gari, Kano",
+        public_location_label: "Sabon Gari market",
+      },
       { id: "b2", slug: "tailor", business_name: "Kano Tailor", category_id: "c2", product_names: ["Agbada"] },
     ];
     expect(filterCatalogSellers(sellers, "rice").map((s) => s.id)).toEqual(["b1"]);
+    expect(filterCatalogSellers(sellers, "sabon gari").map((s) => s.id)).toEqual(["b1"]);
+    expect(filterCatalogSellers(sellers, "foodstuff").map((s) => s.id)).toEqual(["b1"]);
     expect(filterCatalogSellers(sellers, "", "c2").map((s) => s.id)).toEqual(["b2"]);
   });
 });

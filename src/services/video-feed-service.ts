@@ -6,6 +6,7 @@ import {
   loadUserSocial,
   toggleFollowShopLocal,
 } from "@/lib/shop-social";
+import { displayShopName, isBlankShopName, lookupShopProfiles } from "@/lib/shop-names";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { submitStudioVideo } from "@/services/video-studio-service";
 import type { PublicProduct } from "@/types/database";
@@ -90,7 +91,7 @@ export async function fetchPublicVideoFeed(): Promise<{
     .order("published_at", { ascending: false })
     .limit(80);
   if (!fromView.error && (fromView.data?.length ?? 0) > 0) {
-    return { videos: (fromView.data ?? []) as PublicFeedVideo[], error: null };
+    return { videos: await attachShopNames((fromView.data ?? []) as PublicFeedVideo[]), error: null };
   }
   if (fromView.error && !/schema cache|column|media_kind|does not exist/i.test(fromView.error.message)) {
     const fallback = await loadFeedFromPosts();
@@ -99,7 +100,7 @@ export async function fetchPublicVideoFeed(): Promise<{
   }
   const fallback = await loadFeedFromPosts();
   if (fallback.videos.length > 0) return fallback;
-  return { videos: (fromView.data ?? []) as PublicFeedVideo[], error: null };
+  return { videos: await attachShopNames((fromView.data ?? []) as PublicFeedVideo[]), error: null };
 }
 
 async function loadFeedFromPosts(): Promise<{ videos: PublicFeedVideo[]; error: string | null }> {
@@ -166,7 +167,7 @@ async function loadFeedFromPosts(): Promise<{ videos: PublicFeedVideo[]; error: 
       published_at: (row.published_at as string | null) ?? (row.created_at as string),
       created_at: row.created_at as string,
       slug: (shop?.slug as string | undefined) ?? (row.business_id as string),
-      business_name: (shop?.business_name as string | undefined) ?? "TIJAR shop",
+      business_name: displayShopName((shop?.business_name as string | undefined) ?? null),
       business_logo_url: (shop?.logo_url as string | null | undefined) ?? null,
       is_verified: Boolean(shop?.is_verified),
       verification_status: (shop?.verification_status as string | undefined) ?? "unverified",
@@ -176,7 +177,25 @@ async function loadFeedFromPosts(): Promise<{ videos: PublicFeedVideo[]; error: 
       media_kind: ((row as { media_kind?: string }).media_kind as PublicFeedVideo["media_kind"]) ?? null,
     };
   });
-  return { videos, error: null };
+  return { videos: await attachShopNames(videos), error: null };
+}
+
+async function attachShopNames(videos: PublicFeedVideo[]): Promise<PublicFeedVideo[]> {
+  const missingIds = videos.filter((v) => isBlankShopName(v.business_name)).map((v) => v.business_id);
+  const found = missingIds.length ? await lookupShopProfiles(missingIds) : new Map();
+  return videos.map((video) => {
+    const shop = found.get(video.business_id);
+    return {
+      ...video,
+      business_name: displayShopName(shop?.business_name ?? video.business_name),
+      slug: shop?.slug || video.slug,
+      business_logo_url: shop?.logo_url ?? video.business_logo_url,
+      is_verified: shop?.is_verified ?? video.is_verified,
+      verification_status: shop?.verification_status ?? video.verification_status,
+      category_id: shop?.category_id ?? video.category_id,
+      category_name: shop?.category_name ?? video.category_name,
+    };
+  });
 }
 
 export async function fetchFeedViewerSignals(profileId: string | null): Promise<ViewerSignals> {
@@ -278,7 +297,24 @@ export async function fetchLiveProductsByIds(ids: string[]): Promise<{
     error = retry.error;
   }
   if (error) return { products: [], error: error.message };
-  return { products: (data ?? []) as PublicProduct[], error: null };
+  return { products: await attachProductShopNames((data ?? []) as PublicProduct[]), error: null };
+}
+
+async function attachProductShopNames(products: PublicProduct[]): Promise<PublicProduct[]> {
+  const missing = products.filter((p) => isBlankShopName(p.business_name));
+  if (missing.length === 0) {
+    return products.map((p) => ({ ...p, business_name: displayShopName(p.business_name) }));
+  }
+  const found = await lookupShopProfiles(missing.map((p) => p.business_id));
+  return products.map((p) => {
+    const shop = found.get(p.business_id);
+    return {
+      ...p,
+      business_name: displayShopName(shop?.business_name ?? p.business_name),
+      business_slug: shop?.slug ?? p.business_slug,
+      business_logo_url: shop?.logo_url ?? p.business_logo_url,
+    };
+  });
 }
 
 export async function fetchMyLikedVideoIds(profileId: string): Promise<Set<string>> {

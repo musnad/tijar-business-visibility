@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Camera, CheckCircle2, Clock3, LocateFixed, Store, XCircle } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, Clock3, ImagePlus, LocateFixed, Store, XCircle } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -21,7 +21,8 @@ import {
 export function BusinessApplyScreen() {
   const { profile, session } = useAuth();
   const navigate = useNavigate();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const libraryRef = useRef<HTMLInputElement>(null);
 
   const [businessName, setBusinessName] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -259,30 +260,49 @@ export function BusinessApplyScreen() {
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <h2 className="text-sm font-extrabold">Shop photo</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Clear photo of your shop front, stall, or products.
+            Snap a new photo or pick one from your gallery — shop front, stall, or products.
           </p>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="relative mt-3 flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-border bg-muted/40"
-          >
+          <div className="relative mt-3 flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-border bg-muted/40">
             {shopPreview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={shopPreview} alt="" className="size-full object-cover" />
             ) : (
               <span className="flex flex-col items-center gap-2 text-muted-foreground">
                 <Camera className="size-8" />
-                <span className="text-sm font-semibold">Tap to add shop image</span>
+                <span className="text-sm font-semibold">Add a shop photo</span>
               </span>
             )}
-          </button>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button type="button" className="min-h-11 rounded-xl font-bold" onClick={() => cameraRef.current?.click()}>
+              <Camera className="mr-1.5 size-4" />
+              Snap
+            </Button>
+            <Button type="button" variant="outline" className="min-h-11 rounded-xl font-bold" onClick={() => libraryRef.current?.click()}>
+              <ImagePlus className="mr-1.5 size-4" />
+              From gallery
+            </Button>
+          </div>
           <input
-            ref={fileRef}
+            ref={cameraRef}
             type="file"
             accept="image/*"
             capture="environment"
             className="hidden"
-            onChange={(e) => onPickShop(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              onPickShop(e.target.files?.[0] ?? null);
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={libraryRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              onPickShop(e.target.files?.[0] ?? null);
+              e.target.value = "";
+            }}
           />
         </section>
 

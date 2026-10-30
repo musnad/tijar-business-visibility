@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
+import { displayShopName } from "@/lib/shop-names";
 import { cn } from "@/lib/utils";
 import { addToCart, fetchCart, fetchMarketplaceProducts, toggleFavoriteProduct } from "@/services/marketplace-service";
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
@@ -1035,7 +1036,7 @@ function ListingSlide({
   const { t } = useTranslation();
   const poster = product.image_url || product.extra_image_urls?.[0] || "";
   const slug = product.business_slug;
-  const shop = product.business_name ?? "Shop";
+  const shop = displayShopName(product.business_name);
   return (
     <article
       data-video-id={`listing:${product.id}`}

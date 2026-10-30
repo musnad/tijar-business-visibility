@@ -105,7 +105,7 @@ export function ShopHomeScreen() {
       ]
         .join(" ")
         .toLowerCase();
-      return hay.includes(q);
+      return q.split(/\s+/).filter(Boolean).every((word) => hay.includes(word));
     });
   }, [allShops, query, sectorFilter]);
 
@@ -147,7 +147,7 @@ export function ShopHomeScreen() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search shops, trades, areas…"
+              placeholder="Search by shop name, area, or category…"
               className="min-h-12 rounded-2xl border-0 bg-background pl-10 text-base text-foreground shadow-sm"
               aria-label="Search businesses"
             />

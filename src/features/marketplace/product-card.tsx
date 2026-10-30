@@ -12,6 +12,7 @@ import { addToCart } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import type { PublicProduct } from "@/types/database";
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
+import { displayShopName } from "@/lib/shop-names";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -113,7 +114,7 @@ export function ProductCard({
           </p>
         )}
         <p className="mt-1 truncate text-[11px] font-medium text-muted-foreground">
-          {product.business_name ?? "TIJAR shop"}
+          {displayShopName(product.business_name)}
         </p>
         {product.sale_price != null ? (
           <button

@@ -16,6 +16,7 @@ import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedu
 import { parseVariantList } from "@/lib/catalogue/variants";
 import { haptic } from "@/lib/haptics";
 import { useTranslation } from "@/lib/i18n/context";
+import { displayShopName } from "@/lib/shop-names";
 import { cn } from "@/lib/utils";
 import { isProductLiked, likeProduct, isProductSaved } from "@/lib/shop-social";
 import { useDoubleTap } from "@/lib/use-double-tap";
@@ -361,7 +362,7 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-medium text-muted-foreground">Seller</p>
                   <p className="flex items-center gap-1 font-extrabold text-[color:var(--brand-navy,#001B3A)]">
-                    <span className="truncate">{product.business_name ?? "TIJAR shop"}</span>
+                    <span className="truncate">{displayShopName(product.business_name)}</span>
                     <BadgeCheck className="size-4 shrink-0 fill-primary text-white" aria-label="Verified seller" />
                   </p>
                 </div>

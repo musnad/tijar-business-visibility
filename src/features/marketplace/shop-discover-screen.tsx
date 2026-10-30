@@ -397,6 +397,53 @@ export function ShopDiscoverScreen() {
 
           {geoMessage ? <p className="px-4 pb-2 text-[11px] text-muted-foreground">{geoMessage}</p> : null}
 
+          {query.trim() && filteredSellers.length > 0 && tab !== "sellers" ? (
+            <section className="pb-2" aria-label={t("shop.explore.sellers")}>
+              <div className="flex items-center justify-between px-4 pb-2">
+                <h2 className="text-[13px] font-extrabold tracking-tight">{t("shop.explore.sellers")}</h2>
+                <button
+                  type="button"
+                  className="text-[12px] font-bold text-primary"
+                  onClick={() => {
+                    haptic();
+                    setTab("sellers");
+                  }}
+                >
+                  {t("shop.explore.seeAll")}
+                </button>
+              </div>
+              <ul className="space-y-2 px-4 pb-2">
+                {filteredSellers.slice(0, 4).map((shop) => (
+                  <li key={shop.id}>
+                    <Link
+                      to="/b/$slug"
+                      params={{ slug: shop.slug }}
+                      className="flex min-h-[3.5rem] items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2"
+                    >
+                      {shop.logo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={shop.logo_url} alt="" className="size-10 shrink-0 rounded-xl object-cover" />
+                      ) : (
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[color:var(--brand-navy,#001B3A)] text-sm font-extrabold text-white">
+                          {shop.business_name.slice(0, 1)}
+                        </span>
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-extrabold">{shop.business_name}</span>
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {shop.category_name ?? t("shop.explore.marketplaceShop")}
+                          {shop.public_location_label || shop.location_text
+                            ? ` · ${shop.public_location_label ?? shop.location_text}`
+                            : ""}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {tab === "products" && !query && featuredShops.length > 0 ? (
             <section className="pb-2" aria-label={t("shop.explore.shops")}>
               <div className="flex items-center justify-between px-4 pb-2">

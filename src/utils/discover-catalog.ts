@@ -24,6 +24,8 @@ export type CatalogSeller = {
   category_id?: string | null;
   category_name?: string | null;
   product_names?: string[];
+  location_text?: string | null;
+  public_location_label?: string | null;
 };
 
 export type CatalogFilters = {
@@ -76,7 +78,14 @@ export function filterCatalogSellers<T extends CatalogSeller>(sellers: T[], quer
   return sellers.filter((s) => {
     if (categoryId && s.category_id !== categoryId) return false;
     return matchesWords(
-      haystack([s.business_name, s.description, s.category_name, ...(s.product_names ?? [])]),
+      haystack([
+        s.business_name,
+        s.description,
+        s.category_name,
+        s.location_text,
+        s.public_location_label,
+        ...(s.product_names ?? []),
+      ]),
       query,
     );
   });
@@ -106,7 +115,10 @@ export function catalogSuggestions(input: {
     if (c.toLowerCase().includes(q)) push({ label: c, kind: "category" });
   }
   for (const s of input.sellers) {
-    if (s.business_name.toLowerCase().includes(q)) push({ label: s.business_name, kind: "seller" });
+    const loc = `${s.public_location_label ?? ""} ${s.location_text ?? ""}`.toLowerCase();
+    if (s.business_name.toLowerCase().includes(q) || loc.includes(q) || (s.category_name ?? "").toLowerCase().includes(q)) {
+      push({ label: s.business_name, kind: "seller" });
+    }
   }
   for (const p of input.products) {
     if (!p.name.toLowerCase().includes(q)) continue;
