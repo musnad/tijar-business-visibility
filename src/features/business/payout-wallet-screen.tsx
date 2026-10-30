@@ -72,8 +72,8 @@ export function PayoutWalletScreen({ business }: { business: Business }) {
   return (
     <>
       <AppPageHeader
-        title="Shop payouts"
-        subtitle={`${business.business_name} — add the account buyers transfer to, then confirm sales on Orders.`}
+        title="Bank account"
+        subtitle={`${business.business_name} — this is the account number buyers transfer to.`}
       />
 
       <section className="mt-5 rounded-2xl border border-border bg-card p-4">

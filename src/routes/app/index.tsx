@@ -10,6 +10,7 @@ import { CreditSummaryCard } from "@/features/dashboard/credit-summary-card";
 import { DashboardQuickActions } from "@/features/dashboard/quick-actions";
 import { HealthInsightsCard } from "@/features/dashboard/health-insights-card";
 import { DashboardRecentTransactions } from "@/features/dashboard/recent-transactions";
+import { BankAccountCard } from "@/features/business/bank-account-card";
 import { DashboardSummaryCard } from "@/features/dashboard/summary-card";
 import { SellerCommerceCard } from "@/features/dashboard/seller-commerce-card";
 import { fetchBusinessHealthDashboard } from "@/services/business-health-service";
@@ -82,6 +83,7 @@ function AppHomeContent() {
       {business && (
         <>
           <DashboardHero firstName={firstName} business={business} />
+          <BankAccountCard business={business} />
           <DashboardSummaryCard
             sales={analytics?.current.sales ?? 0}
             expenses={analytics?.current.expenses ?? 0}

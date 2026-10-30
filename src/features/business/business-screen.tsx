@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AppPageHeader } from "@/features/app-layout/app-page-header";
 import { MiniStatCard } from "@/features/app-layout/mini-stat-card";
 import { StatusBadge } from "@/features/app-layout/status-badge";
+import { BankAccountCard } from "@/features/business/bank-account-card";
 import { BusinessQuickActions } from "@/features/business/business-quick-actions";
 import { KycSubmitCard } from "@/features/business/kyc-submit-card";
 import { translateDnaList, translateDnaSlug } from "@/features/business/translate-dna-label";
@@ -142,18 +143,7 @@ export function BusinessScreen({
           </div>
 
           <BusinessQuickActions />
-          <Link
-            to="/app/business/payouts"
-            className="mt-3 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4"
-          >
-            <Wallet className="size-6 shrink-0 text-primary" />
-            <span>
-              <span className="block font-bold">Bank account</span>
-              <span className="block text-sm text-muted-foreground">
-                Add the account number buyers will transfer to. You confirm each payment on Orders.
-              </span>
-            </span>
-          </Link>
+          <BankAccountCard business={business} />
           <KycSubmitCard business={business} />
 
           <Link

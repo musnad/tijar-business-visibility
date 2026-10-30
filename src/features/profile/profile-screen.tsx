@@ -23,6 +23,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/features/auth/auth-service";
+import { BankAccountCard } from "@/features/business/bank-account-card";
 import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
 import { ProfileAvatarField } from "@/features/profile/profile-avatar-field";
 import { ProfileMenuRow } from "@/features/profile/profile-menu-row";
@@ -213,6 +214,8 @@ export function ProfileScreen({
         </div>
       )}
 
+      {business ? <BankAccountCard business={business} /> : null}
+
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <ProfileMenuRow
           icon={ClipboardList}
@@ -236,12 +239,6 @@ export function ProfileScreen({
           icon={Wallet}
           title={t("app.profile.menuWallet")}
           subtitle={t("app.profile.menuWalletHint")}
-          to="/app/transactions"
-        />
-        <ProfileMenuRow
-          icon={Wallet}
-          title="Shop payouts"
-          subtitle="The account number buyers transfer to"
           to="/app/business/payouts"
         />
         <ProfileMenuRow
