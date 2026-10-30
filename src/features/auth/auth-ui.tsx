@@ -237,16 +237,23 @@ export function AuthOrDivider() {
   );
 }
 
-export function GoogleAuthButton({ onClick }: { onClick?: () => void }) {
+export function GoogleAuthButton({
+  onClick,
+  loading,
+}: {
+  onClick?: () => void;
+  loading?: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <button
       type="button"
+      disabled={loading}
       onClick={onClick}
-      className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-[26px] border border-[#c5d0db] bg-white text-sm font-medium text-[#001B3A] shadow-sm hover:bg-[#fafbfc]"
+      className="flex min-h-[52px] w-full items-center justify-center gap-3 rounded-2xl border border-[#d7dee8] bg-white text-sm font-semibold text-[#0B1F4D] shadow-[0_1px_0_rgba(11,31,77,0.04)] transition hover:bg-[#f8fafc] disabled:opacity-60"
     >
       <GoogleGIcon className="size-5 shrink-0" />
-      {t("auth.continueGoogle")}
+      {loading ? "…" : t("auth.continueGoogle")}
     </button>
   );
 }

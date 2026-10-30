@@ -145,10 +145,14 @@ function isAppChromePath(pathname: string): boolean {
   return (
     pathname.startsWith("/app") ||
     pathname.startsWith("/shop") ||
+    pathname.startsWith("/b/") ||
     pathname === "/login" ||
     pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
     pathname.startsWith("/login/") ||
-    pathname.startsWith("/register/")
+    pathname.startsWith("/register/") ||
+    pathname.startsWith("/auth/")
   );
 }
 
@@ -165,7 +169,29 @@ function RootLayout() {
 
   const showMarketingShell = !isAppChromePath(pathname) && !isLoggedInProductSurface;
 
-  const shopFeed = pathname === "/shop" || pathname === "/shop/";
+  const shopFeed =
+    pathname === "/shop" ||
+    pathname === "/shop/" ||
+    pathname === "/shop/discover" ||
+    pathname === "/shop/create" ||
+    pathname === "/shop/business-apply" ||
+    pathname === "/shop/enquiries" ||
+    pathname.startsWith("/shop/enquiries/") ||
+    pathname === "/shop/profile" ||
+    pathname === "/shop/settings" ||
+    pathname === "/shop/help" ||
+    pathname === "/shop/edit-profile" ||
+    pathname.startsWith("/shop/p/") ||
+    pathname.startsWith("/b/") ||
+    pathname === "/shop/buy" ||
+    pathname === "/shop/orders" ||
+    pathname.startsWith("/shop/orders/") ||
+    pathname === "/shop/favorites" ||
+    pathname === "/shop/follows" ||
+    pathname === "/shop/followers" ||
+    pathname === "/shop/cart" ||
+    pathname === "/shop/checkout" ||
+    pathname === "/shop/studio";
 
   return (
     <div className={shopFeed ? "h-dvh overflow-hidden bg-background text-foreground" : "min-h-screen bg-background text-foreground"}>

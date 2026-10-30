@@ -1095,18 +1095,21 @@ html.tijar-android-webview .app-bottom-nav {
   background: linear-gradient(145deg, #001b3a 0%, #003556 45%, #00a896 100%);
 }
 
-@media (max-width: 1023px) {
-  .web-auth-brand {
-    min-height: auto;
-    padding-bottom: 2rem;
-  }
+.web-auth-root {
+  background:
+    radial-gradient(ellipse at top left, rgba(31, 122, 77, 0.14), transparent 46%),
+    radial-gradient(ellipse at bottom right, rgba(11, 31, 77, 0.1), transparent 42%),
+    #f4f7fb;
+}
 
-  .web-auth-root main {
-    margin-top: -1.5rem;
+@keyframes tijar-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
-
-  .web-auth-panel {
-    box-shadow: 0 -8px 32px rgba(0, 27, 58, 0.12);
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 

@@ -17,6 +17,8 @@ export type StudioSubmitInput = {
   thumbnail?: File | null;
   rightsAttested?: boolean;
   asDraft?: boolean;
+  durationHintMs?: number;
+  onProgress?: (pct: number, label: string) => void;
 };
 
 const IMAGE_EXT: Record<string, { ext: string; type: string }> = {
@@ -27,13 +29,16 @@ const IMAGE_EXT: Record<string, { ext: string; type: string }> = {
 };
 
 export async function submitStudioVideo(input: StudioSubmitInput): Promise<{ error: string | null; videoId?: string }> {
+  const report = (pct: number, label: string) => input.onProgress?.(pct, label);
+  report(8, "Checking product and media…");
+
   const tags = requireShoppingTags(input.productIds);
   if (!tags.ok) return { error: tags.error };
   const owned = input.products.filter((p) => input.productIds.includes(p.id));
   const guard = assertProductsBelongToBusiness(input.businessId, owned);
   if (!guard.ok) return { error: guard.error };
 
-  const inspected = await inspectShoppingMedia(input.file);
+  const inspected = await inspectShoppingMedia(input.file, { durationHintMs: input.durationHintMs });
   if (!inspected.ok) return { error: inspected.error };
 
   const supabase = getSupabaseBrowserClient();
@@ -43,11 +48,13 @@ export async function submitStudioVideo(input: StudioSubmitInput): Promise<{ err
     ? IMAGE_EXT[inspected.kind]!
     : { ext: inspected.kind === "webm" ? "webm" : "mp4", type: inspected.kind === "webm" ? "video/webm" : "video/mp4" };
   const storagePath = `${input.businessId}/${id}.${fileMeta.ext}`;
+  report(28, "Uploading to TIJAR…");
   const { error: upErr } = await supabase.storage.from("business-videos").upload(storagePath, input.file, {
     contentType: fileMeta.type,
     upsert: false,
   });
   if (upErr) return { error: upErr.message };
+  report(62, "Saving your post…");
 
   let coverPath: string | null = isImage ? storagePath : null;
   if (!isImage) {
@@ -104,6 +111,7 @@ export async function submitStudioVideo(input: StudioSubmitInput): Promise<{ err
     product_id: productId,
     sort_order,
   }));
+  report(82, "Linking product to the marketplace…");
   const { error: tagErr } = await supabase.from("video_post_products").insert(rows);
   if (tagErr) return { error: tagErr.message };
 
@@ -114,6 +122,7 @@ export async function submitStudioVideo(input: StudioSubmitInput): Promise<{ err
       .in("id", input.productIds)
       .eq("business_id", input.businessId);
   }
+  report(100, "Live on For You");
 
   if (!isImage && !goLive) {
     await supabase.from("video_processing_jobs").insert({

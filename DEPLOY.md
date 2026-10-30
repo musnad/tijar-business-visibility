@@ -26,7 +26,7 @@ Copy from `.env.example` → set in hosting UI (Vercel, Railway, Render, etc.).
    |------|--------|
    | `VITE_SUPABASE_URL` | Same as in your local `.env.local` |
    | `VITE_SUPABASE_ANON_KEY` | Same anon/publishable key as local |
-   | `VITE_PUBLIC_APP_URL` | `https://tijar-two.vercel.app` |
+   | `VITE_PUBLIC_APP_URL` | `https://www.tijar.ng` |
    | `VITE_APP_ENV` | `production` |
    | `OPENAI_API_KEY` | `sk-…` from OpenAI (server-only; powers translate + voice AI) |
    | `ELEVENLABS_API_KEY` | `sk_…` from ElevenLabs (personal voice clone for speak-back) |
@@ -51,9 +51,12 @@ Repo includes `vercel.json` with `"framework": "tanstack-start"` per [Vercel’s
 
 In [Supabase Dashboard](https://supabase.com/dashboard) → **Authentication → URL configuration**:
 
-- **Site URL:** `https://tijar-two.vercel.app` (or your custom domain)
+- **Site URL:** `https://www.tijar.ng`
 - **Redirect URLs:** add  
-  `https://tijar-two.vercel.app/**`  
+  `https://www.tijar.ng/auth/callback`  
+  `https://www.tijar.ng/reset-password`  
+  `https://www.tijar.ng/**`  
+  `https://tijar.ng/**`  
   `http://localhost:3000/**` (for local dev)
 
 ## 3. Database

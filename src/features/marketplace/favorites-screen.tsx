@@ -11,13 +11,12 @@ import { useAuth } from "@/features/auth/auth-context";
 import { fetchFavoriteProducts } from "@/services/marketplace-service";
 
 export function FavoritesScreen() {
-  const { session, profile } = useAuth();
+  const { profile } = useAuth();
 
   const favQuery = useQuery({
-    queryKey: ["marketplace-favorites", profile?.id],
-    enabled: Boolean(profile?.id),
+    queryKey: ["marketplace-favorites", profile?.id ?? "guest"],
     queryFn: async () => {
-      const res = await fetchFavoriteProducts(profile!.id);
+      const res = await fetchFavoriteProducts(profile?.id ?? "guest");
       if (res.error) throw new Error(res.error);
       return res.products;
     },
@@ -25,18 +24,10 @@ export function FavoritesScreen() {
 
   return (
     <MarketplaceShell>
-      <h1 className="text-xl font-extrabold">Saved items</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Products you hearted while shopping.</p>
+      <h1 className="text-xl font-extrabold">Saved Products</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Items you saved or added to cart.</p>
 
-      {!session ? (
-        <p className="mt-4 text-sm">
-          <Link to="/login" className="font-bold text-primary">
-            Sign in
-          </Link>{" "}
-          to see saved products.
-        </p>
-      ) : (
-        <>
+      <>
           {favQuery.isLoading && (
             <p className="mt-4 text-sm text-muted-foreground">Loading saved items…</p>
           )}
@@ -45,7 +36,7 @@ export function FavoritesScreen() {
               <Heart className="mx-auto size-8 text-muted-foreground" />
               <p className="mt-2 font-semibold">Nothing saved yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Tap the heart on a product to save it here.
+                Add to cart or tap the heart on a product to save it here.
               </p>
               <Button className="mt-4 rounded-xl font-bold" asChild>
                 <Link to="/shop">Browse products</Link>
@@ -57,8 +48,7 @@ export function FavoritesScreen() {
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
-        </>
-      )}
+      </>
     </MarketplaceShell>
   );
 }

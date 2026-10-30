@@ -45,9 +45,34 @@ export async function signOut() {
 
 export async function sendPasswordReset(email: string) {
   const supabase = getSupabaseBrowserClient();
-  const redirectTo = absoluteAppUrl("/login");
+  const redirectTo = absoluteAppUrl("/reset-password");
   return supabase.auth.resetPasswordForEmail(email.trim(), {
     redirectTo: redirectTo.startsWith("http") ? redirectTo : undefined,
+  });
+}
+
+export async function updateAccountPassword(password: string) {
+  const supabase = getSupabaseBrowserClient();
+  return supabase.auth.updateUser({ password });
+}
+
+export async function signInWithGoogle(input?: { next?: string; accountMode?: "customer" | "business" }) {
+  const supabase = getSupabaseBrowserClient();
+  if (typeof window !== "undefined") {
+    if (input?.accountMode) {
+      window.sessionStorage.setItem("tijar-google-account-mode", input.accountMode);
+    }
+    if (input?.next) {
+      window.sessionStorage.setItem("tijar-oauth-next", input.next);
+    }
+  }
+  const redirectTo = absoluteAppUrl("/auth/callback");
+  return supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: redirectTo.startsWith("http") ? redirectTo : undefined,
+      queryParams: { prompt: "select_account" },
+    },
   });
 }
 

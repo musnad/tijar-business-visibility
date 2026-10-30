@@ -4,6 +4,7 @@ import { nkenneKeyFingerprint, readNkenneConfig } from "@/lib/nkenne/client";
 import { checkRateLimit } from "@/lib/nkenne/rate-limit";
 import { elevenLabsKeyFingerprint } from "@/lib/elevenlabs/client";
 import { openaiKeyFingerprint, readOpenAiConfig } from "@/lib/openai/client";
+import { readXaiConfig, xaiKeyFingerprint } from "@/lib/xai/client";
 import {
   fetchBusinessCategoriesServer,
   isSupabaseEnvPresent,
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/api/supabase-health")({
         const openai = readOpenAiConfig();
         const openaiFinger = openaiKeyFingerprint(openai.apiKey);
         const elevenFinger = elevenLabsKeyFingerprint();
+        const xaiFinger = xaiKeyFingerprint(readXaiConfig().apiKey);
 
         let nkenneProbe: { ok: boolean; providerStatus: number | null; message: string } | null = null;
         const wantsProbe = new URL(request.url).searchParams.get("nkenne") === "1";
@@ -83,6 +85,10 @@ export const Route = createFileRoute("/api/supabase-health")({
               ELEVENLABS_API_KEY_FORMAT_OK: elevenFinger.formatOk,
               ELEVENLABS_API_KEY_LENGTH: elevenFinger.length,
               ELEVENLABS_API_KEY_HINT: elevenFinger.hint,
+              XAI_API_KEY: xaiFinger.present,
+              XAI_API_KEY_FORMAT_OK: xaiFinger.formatOk,
+              XAI_API_KEY_LENGTH: xaiFinger.length,
+              XAI_API_KEY_HINT: xaiFinger.hint,
             },
             nkenneProbe,
           },

@@ -5,8 +5,8 @@ import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { PasswordToggle, authIcons } from "@/features/auth/auth-ui";
-import { signInWithEmail, sendPasswordReset } from "@/features/auth/auth-service";
+import { AuthOrDivider, GoogleAuthButton, PasswordToggle, authIcons } from "@/features/auth/auth-ui";
+import { signInWithEmail, signInWithGoogle } from "@/features/auth/auth-service";
 import { WebAuthLayout } from "@/features/auth/web-auth-layout";
 import { WebAuthField, WebPrimaryButton } from "@/features/auth/web-auth-fields";
 import { loginSchema } from "@/features/onboarding/schemas";
@@ -26,6 +26,7 @@ export function WebLoginForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,14 +54,13 @@ export function WebLoginForm() {
     void navigate({ to: resolveAppEntry(profile, true) });
   }
 
-  async function onForgot() {
-    if (!email.includes("@")) {
-      toast.error(t("app.login.email"));
-      return;
+  async function onGoogle() {
+    setGoogleLoading(true);
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setGoogleLoading(false);
+      toast.error(error.message || t("auth.googleFailed"));
     }
-    const { error } = await sendPasswordReset(email);
-    if (error) toast.error(error.message);
-    else toast.success(t("app.login.resetSent"));
   }
 
   if (configLoading) {
@@ -92,7 +92,9 @@ export function WebLoginForm() {
         </p>
       }
     >
-      <form className="space-y-5" onSubmit={onSubmit}>
+      <GoogleAuthButton loading={googleLoading} onClick={() => void onGoogle()} />
+      <AuthOrDivider />
+      <form className="space-y-4" onSubmit={onSubmit}>
         <WebAuthField
           id="web-login-email"
           label={t("app.register.email")}
@@ -125,20 +127,16 @@ export function WebLoginForm() {
             />
             {t("auth.rememberMe")}
           </label>
-          <button
-            type="button"
-            className="text-sm font-semibold text-[#2AA86A] hover:underline"
-            onClick={() => void onForgot()}
-          >
+          <Link to="/forgot-password" className="text-sm font-semibold text-[#1F7A4D] hover:underline">
             {t("auth.forgotPassword")}
-          </button>
+          </Link>
         </div>
         <WebPrimaryButton loading={loading} variant="navy">
           {t("auth.logIn")}
           <ArrowRight className="size-4" />
         </WebPrimaryButton>
       </form>
-      <p className="mt-6 border-t border-[#eceff3] pt-6 text-center text-sm text-[#5a6578]">
+      <p className="mt-5 text-center text-sm text-[#6B7280]">
         {t("auth.noAccount")}{" "}
         <Link to="/register" className="font-semibold text-[#1B8A52] hover:underline">
           {t("auth.signUp")}

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { markPasswordRecovery } from "@/lib/auth-recovery";
 import { ensureSupabasePublicEnv } from "@/lib/supabase/bootstrap-env";
 import { getSupabaseBrowserClient, primeSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isSupabaseEnvPresent } from "@/lib/supabase/runtime-env";
@@ -83,7 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "PASSWORD_RECOVERY") markPasswordRecovery();
       setSession(nextSession);
     });
 

@@ -1,4 +1,12 @@
+import { isMockFeedId } from "@/features/marketplace/feed-mock";
 import { applyOrganicInterleave, rankVideoFeed, type RankableVideo, type ViewerSignals, type VideoAttribution } from "@/lib/feed/rank-video-feed";
+import {
+  isFollowingShop,
+  listFollowedShopIds,
+  loadUserSocial,
+  toggleFollowShopLocal,
+  toggleVideoLikeLocal,
+} from "@/lib/shop-social";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { submitStudioVideo } from "@/services/video-studio-service";
 import type { PublicProduct } from "@/types/database";
@@ -275,9 +283,10 @@ export async function fetchLiveProductsByIds(ids: string[]): Promise<{
 }
 
 export async function fetchMyLikedVideoIds(profileId: string): Promise<Set<string>> {
+  const local = loadUserSocial(profileId).likedVideos;
   const supabase = getSupabaseBrowserClient();
   const { data } = await supabase.from("video_likes").select("video_post_id").eq("profile_id", profileId);
-  return new Set((data ?? []).map((r) => r.video_post_id as string));
+  return new Set([...local, ...((data ?? []).map((r) => r.video_post_id as string))]);
 }
 
 export async function fetchMySavedVideoIds(profileId: string): Promise<Set<string>> {
@@ -287,12 +296,17 @@ export async function fetchMySavedVideoIds(profileId: string): Promise<Set<strin
 }
 
 export async function fetchMyFollowedBusinessIds(profileId: string): Promise<Set<string>> {
+  const local = listFollowedShopIds(profileId);
+  if (!profileId || profileId === "guest") return new Set(local);
   const supabase = getSupabaseBrowserClient();
   const { data } = await supabase.from("business_follows").select("business_id").eq("profile_id", profileId);
-  return new Set((data ?? []).map((r) => r.business_id as string));
+  return new Set([...local, ...((data ?? []).map((r) => r.business_id as string))]);
 }
 
 export async function toggleVideoLike(profileId: string, videoId: string): Promise<{ liked: boolean; error: string | null }> {
+  if (isMockFeedId(videoId)) {
+    return { liked: toggleVideoLikeLocal(profileId, videoId), error: null };
+  }
   const supabase = getSupabaseBrowserClient();
   const { data: existing } = await supabase
     .from("video_likes")
@@ -328,7 +342,11 @@ export async function toggleVideoSave(profileId: string, videoId: string): Promi
 export async function toggleFollowBusiness(
   profileId: string,
   businessId: string,
+  actorName?: string | null,
 ): Promise<{ following: boolean; error: string | null }> {
+  if (isMockFeedId(businessId)) {
+    return { following: toggleFollowShopLocal(profileId, businessId, { name: actorName }), error: null };
+  }
   const supabase = getSupabaseBrowserClient();
   const { data: existing } = await supabase
     .from("business_follows")
@@ -342,9 +360,15 @@ export async function toggleFollowBusiness(
       .delete()
       .eq("profile_id", profileId)
       .eq("business_id", businessId);
+    if (!error && isFollowingShop(profileId, businessId)) {
+      toggleFollowShopLocal(profileId, businessId, { name: actorName });
+    }
     return { following: false, error: error?.message ?? null };
   }
   const { error } = await supabase.from("business_follows").insert({ profile_id: profileId, business_id: businessId });
+  if (!error && !isFollowingShop(profileId, businessId)) {
+    toggleFollowShopLocal(profileId, businessId, { name: actorName });
+  }
   return { following: true, error: error?.message ?? null };
 }
 

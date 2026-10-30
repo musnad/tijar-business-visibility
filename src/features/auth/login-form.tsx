@@ -17,7 +17,7 @@ import {
   WelcomeBackHeading,
   authIcons,
 } from "@/features/auth/auth-ui";
-import { signInWithEmail, sendPasswordReset } from "@/features/auth/auth-service";
+import { signInWithEmail, signInWithGoogle } from "@/features/auth/auth-service";
 import { loginSchema } from "@/features/onboarding/schemas";
 import { resolveAppEntry } from "@/features/auth/route-guards";
 import { useTranslation } from "@/lib/i18n/context";
@@ -31,6 +31,7 @@ export function LoginForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,18 +59,13 @@ export function LoginForm() {
     void navigate({ to: resolveAppEntry(profile, true) });
   }
 
-  async function onForgot() {
-    if (!email.includes("@")) {
-      toast.error(t("app.login.email"));
-      return;
+  async function onGoogle() {
+    setGoogleLoading(true);
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setGoogleLoading(false);
+      toast.error(error.message || t("auth.googleFailed"));
     }
-    const { error } = await sendPasswordReset(email);
-    if (error) toast.error(error.message);
-    else toast.success(t("app.login.resetSent"));
-  }
-
-  function onGoogle() {
-    toast.message(t("auth.googleSoon"));
   }
 
   return (
@@ -78,6 +74,8 @@ export function LoginForm() {
       <WelcomeBackHeading />
       <form onSubmit={onSubmit}>
         <AuthCard className="space-y-4">
+          <GoogleAuthButton loading={googleLoading} onClick={() => void onGoogle()} />
+          <AuthOrDivider />
           <AuthField
             id="login-email"
             label={t("auth.emailOrPhone")}
@@ -103,11 +101,9 @@ export function LoginForm() {
           <RememberForgotRow
             remember={rememberMe}
             onRemember={setRememberMe}
-            onForgot={() => void onForgot()}
+            onForgot={() => void navigate({ to: "/forgot-password" })}
           />
           <GradientLoginButton loading={loading}>{t("auth.logIn")}</GradientLoginButton>
-          <AuthOrDivider />
-          <GoogleAuthButton onClick={onGoogle} />
         </AuthCard>
       </form>
       <p className="mt-6 text-center text-sm text-[#5a6578]">

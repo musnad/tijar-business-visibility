@@ -9,6 +9,12 @@ export function formatNgn(amount: number): string {
   return ngn.format(amount);
 }
 
+/** Percent off vs a compare-at price. Null when there is no real discount. */
+export function percentOff(sale: number, compareAt: number | null | undefined): number | null {
+  if (compareAt == null || compareAt <= sale || compareAt <= 0 || sale < 0) return null;
+  return Math.round(((compareAt - sale) / compareAt) * 100);
+}
+
 /** Compact labels for charts and overview rows (e.g. ₦450k). */
 export function formatNgnCompact(amount: number): string {
   const abs = Math.abs(amount);

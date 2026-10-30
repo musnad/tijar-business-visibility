@@ -8,16 +8,18 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { OrderTrackTimeline } from "@/features/marketplace/order-track-timeline";
+import { useAuth } from "@/features/auth/auth-context";
 import { fetchOrderDetail, transitionOrder } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import { formatOrderWhen, orderStatusLabel } from "@/utils/order-tracking";
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const detailQuery = useQuery({
-    queryKey: ["marketplace-order", orderId],
+    queryKey: ["marketplace-order", orderId, profile?.id ?? "guest"],
     queryFn: async () => {
-      const res = await fetchOrderDetail(orderId);
+      const res = await fetchOrderDetail(orderId, profile?.id ?? "guest");
       if (res.error) throw new Error(res.error);
       return res;
     },

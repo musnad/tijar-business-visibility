@@ -1,3 +1,20 @@
+import { isMockFeedId, MOCK_PRODUCTS } from "@/features/marketplace/feed-mock";
+import {
+  addLocalCartItem,
+  isLocalCartId,
+  listLocalCart,
+  removeLocalCartItem,
+  updateLocalCartQuantity,
+} from "@/lib/local-cart";
+import {
+  ensureSavedProduct,
+  getLocalOrder,
+  listFollowedShopsAsBusinesses,
+  listLocalOrders,
+  listSavedProducts,
+  listShopFollowers,
+  toggleSavedProduct,
+} from "@/lib/shop-social";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { CheckoutQuote } from "@/lib/checkout/quote";
 import { isLivePaymentConfigured } from "@/lib/payments/adapter";
@@ -202,6 +219,9 @@ export async function fetchMarketplaceProduct(productId: string): Promise<{
   product: PublicProduct | null;
   error: string | null;
 }> {
+  const mock = MOCK_PRODUCTS.find((p) => p.id === productId);
+  if (isMockFeedId(productId) && mock) return { product: mock, error: null };
+
   const supabase = getSupabaseBrowserClient();
   let { data, error } = await supabase
     .from("public_business_products")
@@ -220,8 +240,8 @@ export async function fetchMarketplaceProduct(productId: string): Promise<{
     error = null;
   }
 
-  if (error) return { product: null, error: error.message };
-  if (!data) return { product: null, error: null };
+  if (error) return { product: mock ?? null, error: mock ? null : error.message };
+  if (!data) return { product: mock ?? null, error: mock ? null : "This product is not available." };
 
   const product = data as PublicProduct;
   if (product.is_informal === false) {
@@ -270,20 +290,32 @@ async function getOrCreateActiveCart(profileId: string): Promise<{ cartId: strin
   return { cartId: data.id as string, error: null };
 }
 
+async function fetchLiveCartItems(profileId: string): Promise<CartItem[] | null> {
+  const { cartId, error: cartError } = await getOrCreateActiveCart(profileId);
+  if (cartError || !cartId) return null;
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.from("cart_items").select("*").eq("cart_id", cartId).order("created_at");
+  if (error) return null;
+  return (data ?? []) as CartItem[];
+}
+
 export async function fetchCart(profileId: string): Promise<{
   items: CartItem[];
   error: string | null;
 }> {
-  const { cartId, error: cartError } = await getOrCreateActiveCart(profileId);
-  if (cartError || !cartId) return { items: [], error: cartError };
-  const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("cart_items")
-    .select("*")
-    .eq("cart_id", cartId)
-    .order("created_at");
-  if (error) return { items: [], error: error.message };
-  return { items: (data ?? []) as CartItem[], error: null };
+  const local = listLocalCart(profileId);
+  if (!profileId || profileId === "guest") return { items: local, error: null };
+
+  const live = await Promise.race([
+    fetchLiveCartItems(profileId),
+    new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), 1800);
+    }),
+  ]);
+  if (!live) return { items: local, error: null };
+  const liveIds = new Set(live.map((i) => `${i.product_id}:${i.variant_id ?? ""}`));
+  const extras = local.filter((i) => !liveIds.has(`${i.product_id}:${i.variant_id ?? ""}`));
+  return { items: [...extras, ...live], error: null };
 }
 
 export async function addToCart(
@@ -300,6 +332,11 @@ export async function addToCart(
     variantLabel?: string | null;
   },
 ): Promise<{ error: string | null }> {
+  addLocalCartItem(profileId, input);
+  rememberSavedFromCart(profileId, input);
+  if (isMockFeedId(input.productId) || !profileId || profileId === "guest") {
+    return { error: null };
+  }
   const supabase = getSupabaseBrowserClient();
   const qty = input.quantity ?? 1;
   const rpc = await supabase.rpc("add_marketplace_cart_item", {
@@ -351,19 +388,62 @@ export async function addToCart(
   return { error: error?.message ?? null };
 }
 
-export async function updateCartItemQuantity(itemId: string, quantity: number): Promise<{ error: string | null }> {
+function rememberSavedFromCart(
+  profileId: string,
+  input: {
+    businessId: string;
+    productId: string;
+    productName: string;
+    unit: string;
+    unitPrice: number;
+    imageUrl?: string | null;
+  },
+) {
+  const catalog = MOCK_PRODUCTS.find((p) => p.id === input.productId);
+  ensureSavedProduct(
+    profileId,
+    catalog ?? {
+      id: input.productId,
+      business_id: input.businessId,
+      name: input.productName,
+      kind: "goods",
+      description: null,
+      sale_price: input.unitPrice,
+      unit: input.unit,
+      image_url: input.imageUrl ?? null,
+      is_available: true,
+    },
+  );
+}
+
+export async function updateCartItemQuantity(
+  itemId: string,
+  quantity: number,
+  profileId?: string | null,
+): Promise<{ error: string | null }> {
+  if (isLocalCartId(itemId) || !profileId || profileId === "guest") {
+    updateLocalCartQuantity(itemId, quantity, profileId);
+    return { error: null };
+  }
   const supabase = getSupabaseBrowserClient();
   if (quantity <= 0) {
     const { error } = await supabase.from("cart_items").delete().eq("id", itemId);
+    if (!error) updateLocalCartQuantity(itemId, 0, profileId);
     return { error: error?.message ?? null };
   }
   const { error } = await supabase.from("cart_items").update({ quantity }).eq("id", itemId);
+  if (!error) updateLocalCartQuantity(itemId, quantity, profileId);
   return { error: error?.message ?? null };
 }
 
-export async function removeCartItem(itemId: string): Promise<{ error: string | null }> {
+export async function removeCartItem(itemId: string, profileId?: string | null): Promise<{ error: string | null }> {
+  if (isLocalCartId(itemId) || !profileId || profileId === "guest") {
+    removeLocalCartItem(itemId, profileId);
+    return { error: null };
+  }
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase.from("cart_items").delete().eq("id", itemId);
+  if (!error) removeLocalCartItem(itemId, profileId);
   return { error: error?.message ?? null };
 }
 
@@ -434,22 +514,27 @@ export async function completeTestPayment(_orderId: string): Promise<{
   return { order: null, error: "Use the payment webhook — the app cannot mark an order paid." };
 }
 
-export async function fetchMyOrders(): Promise<{ orders: MarketplaceOrder[]; error: string | null }> {
+export async function fetchMyOrders(profileId?: string | null): Promise<{ orders: MarketplaceOrder[]; error: string | null }> {
+  const local = listLocalOrders(profileId);
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("orders")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(100);
-  if (error) return { orders: [], error: error.message };
-  return { orders: (data ?? []) as MarketplaceOrder[], error: null };
+  if (error) return { orders: local, error: local.length ? null : error.message };
+  const live = (data ?? []) as MarketplaceOrder[];
+  const ids = new Set(live.map((o) => o.id));
+  return { orders: [...local.filter((o) => !ids.has(o.id)), ...live], error: null };
 }
 
-export async function fetchOrderDetail(orderId: string): Promise<{
+export async function fetchOrderDetail(orderId: string, profileId?: string | null): Promise<{
   order: MarketplaceOrder | null;
   items: MarketplaceOrderItem[];
   error: string | null;
 }> {
+  const local = getLocalOrder(profileId, orderId) ?? getLocalOrder("guest", orderId);
+  if (local) return { ...local, error: null };
   const supabase = getSupabaseBrowserClient();
   const { data: order, error } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
   if (error) return { order: null, items: [], error: error.message };
@@ -502,6 +587,10 @@ export async function toggleFavoriteProduct(
   profileId: string,
   productId: string,
 ): Promise<{ favorited: boolean; error: string | null }> {
+  const catalog = MOCK_PRODUCTS.find((p) => p.id === productId);
+  if (isMockFeedId(productId) && catalog) {
+    return { favorited: toggleSavedProduct(profileId, catalog), error: null };
+  }
   const supabase = getSupabaseBrowserClient();
   const { data: existing } = await supabase
     .from("marketplace_favorites")
@@ -517,6 +606,7 @@ export async function toggleFavoriteProduct(
     profile_id: profileId,
     product_id: productId,
   });
+  if (!error && catalog) ensureSavedProduct(profileId, catalog);
   return { favorited: true, error: error?.message ?? null };
 }
 
@@ -524,6 +614,7 @@ export async function fetchFavoriteProducts(profileId: string): Promise<{
   products: PublicProduct[];
   error: string | null;
 }> {
+  const local = listSavedProducts(profileId);
   const supabase = getSupabaseBrowserClient();
   const { data: favs, error } = await supabase
     .from("marketplace_favorites")
@@ -532,27 +623,26 @@ export async function fetchFavoriteProducts(profileId: string): Promise<{
     .not("product_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(60);
-  if (error) return { products: [], error: error.message };
+  if (error) return { products: local, error: local.length ? null : error.message };
   const ids = (favs ?? []).map((f) => f.product_id as string).filter(Boolean);
-  if (ids.length === 0) return { products: [], error: null };
+  if (ids.length === 0) return { products: local, error: null };
 
   const catalog = await fetchMarketplaceProducts(200);
-  if (catalog.error) return { products: [], error: catalog.error };
-  const byId = new Map(catalog.data.map((p) => [p.id, p]));
-  return {
-    products: ids.map((id) => byId.get(id)).filter((p): p is PublicProduct => Boolean(p)),
-    error: null,
-  };
+  const byId = new Map((catalog.data ?? []).map((p) => [p.id, p]));
+  const live = ids.map((id) => byId.get(id)).filter((p): p is PublicProduct => Boolean(p));
+  const seen = new Set(live.map((p) => p.id));
+  return { products: [...local.filter((p) => !seen.has(p.id)), ...live], error: null };
 }
 
 export async function countFavoriteProducts(profileId: string): Promise<number> {
+  const local = listSavedProducts(profileId).length;
   const supabase = getSupabaseBrowserClient();
   const { count } = await supabase
     .from("marketplace_favorites")
     .select("id", { count: "exact", head: true })
     .eq("profile_id", profileId)
     .not("product_id", "is", null);
-  return count ?? 0;
+  return Math.max(local, count ?? 0);
 }
 
 export type BusinessUpgradeRequest = {
@@ -722,15 +812,45 @@ export async function fetchFollowedBusinesses(profileId: string): Promise<{
     .from("business_follows")
     .select("business_id")
     .eq("profile_id", profileId);
-  if (error) return { shops: [], error: error.message };
+  const localShops = listFollowedShopsAsBusinesses(profileId);
+  if (error) return { shops: localShops, error: localShops.length ? null : error.message };
   const ids = (follows ?? []).map((f) => f.business_id as string);
-  if (ids.length === 0) return { shops: [], error: null };
+  if (ids.length === 0) return { shops: localShops, error: null };
   const { data, error: listError } = await supabase
     .from("public_business_listings")
     .select(MARKETPLACE_SHOP_SELECT)
     .in("id", ids);
-  if (listError) return { shops: [], error: listError.message };
-  return { shops: (data ?? []) as PublicBusiness[], error: null };
+  if (listError) return { shops: localShops, error: localShops.length ? null : listError.message };
+  const live = (data ?? []) as PublicBusiness[];
+  const seen = new Set(live.map((s) => s.id));
+  return { shops: [...localShops.filter((s) => !seen.has(s.id)), ...live], error: null };
+}
+
+export async function fetchShopFollowers(
+  businessId: string,
+): Promise<{ people: ReturnType<typeof listShopFollowers>; error: string | null }> {
+  const local = listShopFollowers(businessId);
+  if (isMockFeedId(businessId)) return { people: local, error: null };
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("business_follows")
+    .select("profile_id, created_at")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) return { people: local, error: local.length ? null : error.message };
+  const ids = (data ?? []).map((r) => r.profile_id as string);
+  if (ids.length === 0) return { people: local, error: null };
+  const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+  const names = new Map((profiles ?? []).map((p) => [p.id as string, p.full_name as string]));
+  const live = ids.map((id) => ({
+    id,
+    name: names.get(id) ?? "Shopper",
+    handle: (names.get(id) ?? "shopper").replace(/[^a-zA-Z0-9]/g, "").toLowerCase(),
+    kind: "person" as const,
+  }));
+  const seen = new Set(live.map((p) => p.id));
+  return { people: [...live, ...local.filter((p) => !seen.has(p.id))], error: null };
 }
 
 export async function fetchNotificationPreferences(profileId: string): Promise<{

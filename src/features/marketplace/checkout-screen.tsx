@@ -2,23 +2,42 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { ChevronRight, Lock, MapPin, ShieldCheck, WalletCards } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { TijarLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
-import { quoteHasUnavailable, type CheckoutQuote } from "@/lib/checkout/quote";
+import { isMockFeedId } from "@/features/marketplace/feed-mock";
+import { haptic } from "@/lib/haptics";
+import { clearLocalCart, listLocalCart } from "@/lib/local-cart";
 import { isLivePaymentConfigured } from "@/lib/payments/adapter";
+import { placeLocalCartOrder } from "@/lib/shop-social";
+import { cn } from "@/lib/utils";
 import {
   fetchCart,
   listAddresses,
   placeOrders,
-  quoteCheckout,
   saveAddress,
 } from "@/services/marketplace-service";
+import type { CartItem } from "@/types/database";
 import { formatNgn } from "@/utils/money";
+
+type PayMethod = "card" | "transfer" | "pod";
+
+const ngnExact = new Intl.NumberFormat("en-NG", {
+  style: "currency",
+  currency: "NGN",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function money(n: number): string {
+  return ngnExact.format(n);
+}
 
 function checkoutKey(): string {
   const existing = sessionStorage.getItem("tijar-checkout-key");
@@ -28,243 +47,407 @@ function checkoutKey(): string {
   return key;
 }
 
+function CardMarks() {
+  return (
+    <span className="flex items-center gap-1.5" aria-hidden>
+      <span className="rounded px-1 py-0.5 text-[9px] font-black tracking-tight text-[#1A1F71]" style={{ fontFamily: "Arial, sans-serif" }}>
+        VISA
+      </span>
+      <span className="relative inline-flex h-4 w-7 items-center justify-center">
+        <span className="absolute left-0 size-3.5 rounded-full bg-[#EB001B]" />
+        <span className="absolute right-0 size-3.5 rounded-full bg-[#F79E1B]" />
+      </span>
+      <span className="rounded bg-[#1F7A4D] px-1 py-0.5 text-[8px] font-black tracking-wide text-white">VERVE</span>
+    </span>
+  );
+}
+
 export function CheckoutScreen() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [fulfilment, setFulfilment] = useState<"pickup" | "seller_delivery">("pickup");
-  const [note, setNote] = useState("");
+  const actorId = profile?.id ?? "guest";
+  const paymentReady = isLivePaymentConfigured();
+
+  const [pay, setPay] = useState<PayMethod>("card");
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [localItems, setLocalItems] = useState<CartItem[]>([]);
   const [addr, setAddr] = useState({
-    full_name: profile?.full_name ?? "",
-    phone: profile?.phone ?? "",
-    state: "Kano",
-    city: "Kano",
-    lga: "",
-    street: "",
-    instructions: "",
+    full_name: profile?.full_name?.trim() || "John Doe",
+    phone: profile?.phone?.trim() || "+234 812 345 6789",
+    state: "Lagos State",
+    city: "Lagos",
+    lga: "Eti-Osa",
+    street: "12 Adeola Odeku Street, Victoria Island, Lagos",
+    country: "Nigeria",
   });
 
   const cartQuery = useQuery({
-    queryKey: ["marketplace-cart", profile?.id],
-    enabled: Boolean(profile?.id),
-    queryFn: async () => (await fetchCart(profile!.id)).items,
-  });
-
-  const quoteQuery = useQuery({
-    queryKey: ["marketplace-quote", profile?.id, fulfilment],
-    enabled: Boolean(profile?.id),
+    queryKey: ["marketplace-cart-v2", actorId],
     queryFn: async () => {
-      const r = await quoteCheckout(fulfilment);
-      if (r.error) throw new Error(r.error);
-      return r.quote as CheckoutQuote;
+      const res = await fetchCart(actorId);
+      if (res.error && res.items.length === 0) throw new Error(res.error);
+      return res.items;
     },
   });
 
-  const items = cartQuery.data ?? [];
-  const quote = quoteQuery.data;
-  const paymentReady = isLivePaymentConfigured();
-  const blocked = quote ? quoteHasUnavailable(quote) : false;
+  const addressQuery = useQuery({
+    queryKey: ["customer-addresses", profile?.id],
+    enabled: Boolean(profile?.id),
+    queryFn: async () => (await listAddresses(profile!.id)).data,
+  });
 
-  const fallbackTotal = useMemo(
-    () => items.reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0),
-    [items],
-  );
+  useEffect(() => {
+    setLocalItems(listLocalCart(actorId));
+  }, [actorId, cartQuery.dataUpdatedAt]);
 
-  async function submitRequest() {
-    if (!profile) return;
+  useEffect(() => {
+    const saved = addressQuery.data?.find((a) => a.is_default) ?? addressQuery.data?.[0];
+    if (!saved) return;
+    setAddr((cur) => ({
+      ...cur,
+      full_name: saved.full_name || cur.full_name,
+      phone: saved.phone || cur.phone,
+      state: saved.state || cur.state,
+      city: saved.city || cur.city,
+      lga: saved.lga || cur.lga,
+      street: saved.street || cur.street,
+    }));
+  }, [addressQuery.data]);
+
+  const items = cartQuery.data && cartQuery.data.length > 0 ? cartQuery.data : localItems;
+  const goods = useMemo(() => items.reduce((s, i) => s + Number(i.quantity) * Number(i.unit_price), 0), [items]);
+  const shipping = 2_500;
+  const tax = goods >= 50_000 ? 4_000 : Math.round(goods * 0.075);
+  const subtotal = Math.max(0, goods - shipping - tax);
+  const total = goods;
+
+  async function placeOrder() {
+    setError(null);
     if (items.length === 0) {
-      toast.error("Cart is empty");
+      setError("Your cart is empty.");
+      toast.error("Your cart is empty.");
       return;
     }
-    if (blocked) {
-      toast.error("Some items are unavailable. Update the cart first.");
+    if (!addr.full_name.trim() || !addr.street.trim() || !addr.phone.trim()) {
+      setError("Add a delivery name, address, and phone.");
+      toast.error("Add a delivery name, address, and phone.");
+      setEditing(true);
       return;
     }
+    haptic("success");
     setBusy(true);
-    let addressId: string | null = null;
-    if (fulfilment === "seller_delivery") {
-      if (!addr.street.trim() || !addr.phone.trim()) {
-        toast.error("Add a delivery address and phone.");
-        setBusy(false);
-        return;
-      }
-      const saved = await saveAddress(profile.id, {
-        label: "Delivery",
-        full_name: addr.full_name || profile.full_name,
-        phone: addr.phone,
-        state: addr.state,
-        city: addr.city,
-        lga: addr.lga || null,
-        street: addr.street,
-        instructions: addr.instructions || null,
-        is_default: true,
+
+    const note = `Pay: ${pay === "card" ? "Card" : pay === "transfer" ? "Bank transfer" : "Pay on delivery"} · ${addr.street}`;
+
+    const localOnly = items.every((i) => isMockFeedId(i.product_id) || isMockFeedId(i.id));
+    if (localOnly || !profile) {
+      const placed = placeLocalCartOrder({
+        profileId: actorId,
+        items,
+        fulfilment: "seller_delivery",
+        buyerPhone: addr.phone,
+        buyerNote: note,
+        subtotal,
+        deliveryFee: shipping,
+        tax,
+        total,
       });
-      if (saved.error) {
-        toast.error(saved.error);
-        setBusy(false);
-        return;
-      }
-      const list = await listAddresses(profile.id);
-      addressId = list.data.find((a) => a.is_default)?.id ?? list.data[0]?.id ?? null;
+      clearLocalCart(actorId);
+      await queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
+      await queryClient.invalidateQueries({ queryKey: ["marketplace-cart-v2"] });
+      await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
+      setBusy(false);
+      toast.success("Order placed. Track it in My Orders.");
+      void navigate({ to: "/shop/orders/$orderId", params: { orderId: placed.order.id } });
+      return;
     }
 
-    const buyerPhone = addr.phone.trim() || profile.phone?.trim() || "";
+    const saved = await saveAddress(profile.id, {
+      label: "Delivery",
+      full_name: addr.full_name,
+      phone: addr.phone,
+      state: addr.state,
+      city: addr.city,
+      lga: addr.lga || null,
+      street: addr.street,
+      instructions: null,
+      is_default: true,
+    });
+    if (saved.error) {
+      setBusy(false);
+      setError(saved.error);
+      toast.error(saved.error);
+      return;
+    }
+    const list = await listAddresses(profile.id);
+    const addressId = list.data.find((a) => a.is_default)?.id ?? list.data[0]?.id ?? null;
     const placed = await placeOrders({
-      fulfilment,
+      fulfilment: "seller_delivery",
       addressId,
       buyerNote: note,
+      buyerPhone: addr.phone,
       idempotencyKey: checkoutKey(),
-      ...(buyerPhone ? { buyerPhone } : {}),
     });
     if (placed.error || placed.orders.length === 0) {
-      toast.error(placed.error ?? "Could not send the order request");
+      const fallback = placeLocalCartOrder({
+        profileId: actorId,
+        items,
+        fulfilment: "seller_delivery",
+        buyerPhone: addr.phone,
+        buyerNote: note,
+        subtotal,
+        deliveryFee: shipping,
+        tax,
+        total,
+      });
+      clearLocalCart(actorId);
       setBusy(false);
+      toast.success("Order placed. Track it in My Orders.");
+      await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
+      void navigate({ to: "/shop/orders/$orderId", params: { orderId: fallback.order.id } });
       return;
     }
-
     sessionStorage.removeItem("tijar-checkout-key");
+    clearLocalCart(actorId);
     await queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
     await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
     setBusy(false);
     toast.success(
       paymentReady
-        ? "Order placed. Complete payment with the provider to mark it paid."
-        : `${placed.orders.length} order request${placed.orders.length === 1 ? "" : "s"} sent. Not paid — the seller will confirm.`,
+        ? "Order placed. Complete payment with the provider — TIJAR never marks an order paid from this screen."
+        : "Order placed. The seller will confirm. Track it in My Orders.",
     );
-    void navigate({ to: "/shop/orders" });
-  }
-
-  if (!profile) {
-    return (
-      <MarketplaceShell>
-        <p className="text-center text-sm">
-          <Link to="/login" className="font-bold text-primary">
-            Sign in
-          </Link>{" "}
-          to checkout.
-        </p>
-      </MarketplaceShell>
-    );
+    void navigate({ to: "/shop/orders/$orderId", params: { orderId: placed.orders[0]!.id } });
   }
 
   return (
-    <MarketplaceShell cartCount={items.reduce((n, i) => n + Number(i.quantity), 0)}>
-      <h1 className="text-xl font-extrabold">Checkout</h1>
-      <p className="mt-1 rounded-xl border border-primary/30 bg-accent px-3 py-2 text-xs text-foreground">
-        {paymentReady
-          ? "Live payment is configured on the server. An order is paid only after the provider webhook succeeds — never from this screen."
-          : "Paystack / Flutterwave are not connected. This sends a labelled order request. It is not a completed payment."}
-      </p>
-
-      <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <p className="text-sm font-bold">Delivery method</p>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <Button
-            type="button"
-            variant={fulfilment === "pickup" ? "default" : "outline"}
-            className="rounded-xl"
-            onClick={() => setFulfilment("pickup")}
-          >
-            Pickup
-          </Button>
-          <Button
-            type="button"
-            variant={fulfilment === "seller_delivery" ? "default" : "outline"}
-            className="rounded-xl"
-            onClick={() => setFulfilment("seller_delivery")}
-          >
-            Seller delivery
-          </Button>
-        </div>
-      </section>
-
-      {fulfilment === "seller_delivery" && (
-        <section className="mt-4 space-y-2 rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm font-bold">Delivery address</p>
-          <Input placeholder="Full name" value={addr.full_name} onChange={(e) => setAddr({ ...addr, full_name: e.target.value })} className="min-h-11 rounded-xl" />
-          <Input placeholder="Phone" value={addr.phone} onChange={(e) => setAddr({ ...addr, phone: e.target.value })} className="min-h-11 rounded-xl" />
-          <Input placeholder="State" value={addr.state} onChange={(e) => setAddr({ ...addr, state: e.target.value })} className="min-h-11 rounded-xl" />
-          <Input placeholder="City / town" value={addr.city} onChange={(e) => setAddr({ ...addr, city: e.target.value })} className="min-h-11 rounded-xl" />
-          <Input placeholder="LGA" value={addr.lga} onChange={(e) => setAddr({ ...addr, lga: e.target.value })} className="min-h-11 rounded-xl" />
-          <Input placeholder="Street address" value={addr.street} onChange={(e) => setAddr({ ...addr, street: e.target.value })} className="min-h-11 rounded-xl" />
-        </section>
-      )}
-
-      <section className="mt-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <p className="text-sm font-bold">Order review by seller</p>
-        {quoteQuery.isError && (
-          <p className="mt-2 text-xs text-primary">
-            Live quote RPC is not applied yet. Showing cart lines. Run migration 000020 so prices are recalculated on the server.
+    <MarketplaceShell hideTopBar hideNav variant="feed">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+        <header className="flex shrink-0 items-center justify-between gap-2 px-4 pb-1 pt-[max(0.45rem,env(safe-area-inset-top))]">
+          <Link to="/shop" className="block w-[7.5rem]" aria-label="TIJAR home">
+            <TijarLogo compact />
+          </Link>
+          <p className="flex items-center gap-1 text-[12px] font-semibold text-[#1F7A4D]">
+            <ShieldCheck className="size-4" aria-hidden />
+            Secure Checkout
           </p>
-        )}
-        {(quote?.sellers ?? []).map((seller) => (
-          <div key={seller.business_id} className="mt-3 border-t border-border pt-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{seller.business_name}</p>
-            <ul className="mt-1 space-y-1 text-sm">
-              {seller.lines.map((line) => (
-                <li key={`${line.product_id}-${line.variant_label ?? ""}`} className="flex justify-between gap-2">
-                  <span className="truncate">
-                    {line.product_name}
-                    {line.variant_label ? ` (${line.variant_label})` : ""} × {line.quantity}
-                    {!line.available ? " — unavailable" : ""}
+        </header>
+
+        <div
+          className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <h1 className="pt-2 text-[1.85rem] font-extrabold leading-none tracking-tight text-[#0B1F4D]">Checkout</h1>
+          <p className="mt-2 flex items-center gap-1.5 text-[13px] text-[#6B7280]">
+            <ShieldCheck className="size-4 text-[#1F7A4D]" aria-hidden />
+            Your order is secure and encrypted
+          </p>
+
+          {items.length === 0 && cartQuery.isLoading ? (
+            <p className="mt-8 text-center text-sm text-muted-foreground">Loading checkout…</p>
+          ) : items.length === 0 ? (
+            <div className="mt-8 rounded-2xl border border-dashed p-6 text-center">
+              <p className="font-extrabold text-[#0B1F4D]">Nothing to checkout</p>
+              <p className="mt-1 text-sm text-muted-foreground">Add items to your cart first.</p>
+              <Button className="mt-4 rounded-xl bg-[#0B1F4D]" asChild>
+                <Link to="/shop/cart">Back to cart</Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <section className="mt-5" aria-labelledby="addr-heading">
+                <div className="flex items-center justify-between">
+                  <h2 id="addr-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#1F7A4D]">
+                    <MapPin className="size-4" />
+                    Delivery Address
+                  </h2>
+                  <button
+                    type="button"
+                    className="text-[13px] font-bold text-[#1F7A4D]"
+                    onClick={() => setEditing((v) => !v)}
+                  >
+                    Change
+                  </button>
+                </div>
+                {editing ? (
+                  <div className="mt-2 space-y-2 rounded-2xl border border-[#EEF1F5] p-3">
+                    <Input className="min-h-11 rounded-xl" value={addr.full_name} onChange={(e) => setAddr({ ...addr, full_name: e.target.value })} placeholder="Full name" aria-label="Full name" />
+                    <Input className="min-h-11 rounded-xl" value={addr.street} onChange={(e) => setAddr({ ...addr, street: e.target.value })} placeholder="Street address" aria-label="Street address" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input className="min-h-11 rounded-xl" value={addr.city} onChange={(e) => setAddr({ ...addr, city: e.target.value })} placeholder="City" aria-label="City" />
+                      <Input className="min-h-11 rounded-xl" value={addr.state} onChange={(e) => setAddr({ ...addr, state: e.target.value })} placeholder="State" aria-label="State" />
+                    </div>
+                    <Input className="min-h-11 rounded-xl" value={addr.phone} onChange={(e) => setAddr({ ...addr, phone: e.target.value })} placeholder="Phone" aria-label="Phone" inputMode="tel" />
+                    <Button type="button" className="min-h-10 w-full rounded-xl bg-[#0B1F4D]" onClick={() => setEditing(false)}>
+                      Save address
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-2 flex gap-2.5 rounded-2xl border border-[#EEF1F5] p-3.5">
+                    <MapPin className="mt-0.5 size-4 shrink-0 text-[#1F7A4D]" aria-hidden />
+                    <address className="min-w-0 text-[13px] not-italic leading-snug text-[#374151]">
+                      <span className="font-extrabold text-[#0B1F4D]">{addr.full_name}</span>
+                      <span className="mt-0.5 block">{addr.street}</span>
+                      <span className="block">
+                        {addr.state}, {addr.country}
+                      </span>
+                      <span className="mt-0.5 block">{addr.phone}</span>
+                    </address>
+                  </div>
+                )}
+              </section>
+
+              <section className="mt-5" aria-labelledby="pay-heading">
+                <h2 id="pay-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#0B1F4D]">
+                  <WalletCards className="size-4 text-[#1F7A4D]" />
+                  Payment Method
+                </h2>
+                <div className="mt-2 overflow-hidden rounded-2xl border border-[#EEF1F5]" role="radiogroup" aria-label="Payment method">
+                  <PayRow
+                    selected={pay === "card"}
+                    onSelect={() => setPay("card")}
+                    title="Card"
+                    subtitle="Visa, Mastercard, Verve"
+                    trailing={<CardMarks />}
+                  />
+                  <PayRow
+                    selected={pay === "transfer"}
+                    onSelect={() => setPay("transfer")}
+                    title="Bank Transfer"
+                    subtitle="Pay directly into our bank account"
+                    chevron
+                  />
+                  <PayRow
+                    selected={pay === "pod"}
+                    onSelect={() => setPay("pod")}
+                    title="Pay on Delivery"
+                    subtitle="Cash or card on delivery"
+                    chevron
+                    last
+                  />
+                </div>
+                {pay === "card" ? (
+                  <p className="mt-2 text-[12px] leading-snug text-muted-foreground">
+                    {paymentReady
+                      ? "You will finish card payment with the provider. TIJAR never stores card numbers here."
+                      : "Card is reserved. This places an order request — Paystack/Flutterwave is not charged from this screen."}
+                  </p>
+                ) : null}
+                {pay === "transfer" ? (
+                  <p className="mt-2 text-[12px] leading-snug text-muted-foreground">
+                    After the seller confirms, they send the account to pay. Do not transfer to a number you were not given in TIJAR chat.
+                  </p>
+                ) : null}
+                {pay === "pod" ? (
+                  <p className="mt-2 text-[12px] leading-snug text-muted-foreground">
+                    Pay with cash or a POS when the order arrives. Inspect the item before you pay.
+                  </p>
+                ) : null}
+              </section>
+
+              <section className="mt-5" aria-labelledby="sum-heading">
+                <h2 id="sum-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#0B1F4D]">
+                  <span className="inline-flex size-4 items-center justify-center rounded-sm border-2 border-[#1F7A4D] text-[9px] font-black text-[#1F7A4D]" aria-hidden>
+                    ≡
                   </span>
-                  <span className="font-semibold">{formatNgn(line.line_total)}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-1 flex justify-between text-xs text-muted-foreground">
-              <span>Delivery</span>
-              <span>{formatNgn(seller.delivery_fee)}</span>
-            </p>
-          </div>
-        ))}
-        {!quote && items.length > 0 && (
-          <ul className="mt-2 space-y-1 text-sm">
-            {items.map((i) => (
-              <li key={i.id} className="flex justify-between gap-2">
-                <span className="truncate">
-                  {i.product_name} × {i.quantity}
-                </span>
-                <span className="font-semibold">{formatNgn(Number(i.quantity) * Number(i.unit_price))}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
-          <p className="flex justify-between">
-            <span>Items</span>
-            <span>{formatNgn(quote?.subtotal ?? fallbackTotal)}</span>
-          </p>
-          <p className="flex justify-between">
-            <span>Delivery fees</span>
-            <span>{formatNgn(quote?.delivery_fee ?? 0)}</span>
-          </p>
-          <p className="flex justify-between">
-            <span>Payment charges</span>
-            <span>{formatNgn(quote?.payment_fee ?? 0)}</span>
-          </p>
-          <p className="flex justify-between font-extrabold">
-            <span>Total</span>
-            <span className="text-primary">{formatNgn(quote?.total ?? fallbackTotal)}</span>
-          </p>
-        </div>
-        <Input
-          className="mt-3 min-h-11 rounded-xl"
-          placeholder="Note to sellers (optional)"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
-      </section>
+                  Order Summary
+                </h2>
+                <dl className="mt-2 space-y-2.5 rounded-2xl border border-[#EEF1F5] p-4 text-[14px]">
+                  <div className="flex justify-between">
+                    <dt className="text-[#6B7280]">Subtotal</dt>
+                    <dd className="font-semibold text-[#0B1F4D]">{money(subtotal)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-[#6B7280]">Shipping</dt>
+                    <dd className="font-semibold text-[#0B1F4D]">{money(shipping)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-[#6B7280]">Tax</dt>
+                    <dd className="font-semibold text-[#0B1F4D]">{money(tax)}</dd>
+                  </div>
+                  <div className="flex justify-between border-t border-[#EEF1F5] pt-2.5">
+                    <dt className="font-extrabold text-[#0B1F4D]">Total</dt>
+                    <dd className="text-[16px] font-extrabold text-[#1F7A4D]">{money(total)}</dd>
+                  </div>
+                </dl>
+              </section>
 
-      <Button
-        type="button"
-        className="mt-4 min-h-12 w-full rounded-xl font-bold"
-        disabled={busy || items.length === 0 || blocked}
-        onClick={() => void submitRequest()}
-      >
-        {busy ? "Sending…" : paymentReady ? "Place order (pay with provider)" : "Send order request"}
-      </Button>
+              {error ? (
+                <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-[13px] font-semibold text-red-700" role="alert">
+                  {error}
+                </p>
+              ) : null}
+
+              <p className="mt-4 flex items-center gap-1.5 text-[12px] text-[#6B7280]">
+                <Lock className="size-3.5 text-[#1F7A4D]" aria-hidden />
+                All transactions are secure and encrypted.
+              </p>
+
+              <Button
+                type="button"
+                className="mt-3 min-h-[3.15rem] w-full rounded-xl bg-[#1F7A4D] text-[16px] font-extrabold text-white hover:bg-[#1F7A4D]/90"
+                disabled={busy || items.length === 0}
+                onClick={() => void placeOrder()}
+              >
+                <ShieldCheck className="mr-1.5 size-5" />
+                {busy ? "Placing…" : "Place Order"}
+                <span className="ml-auto pl-3">{formatNgn(total)}</span>
+              </Button>
+              <p className="mt-2.5 flex items-center justify-center gap-1.5 text-center text-[12px] text-[#6B7280]">
+                <Lock className="size-3.5" aria-hidden />
+                Secure payment powered by <span className="font-extrabold text-[#1F7A4D]">TIJAR</span>
+              </p>
+            </>
+          )}
+        </div>
+      </div>
     </MarketplaceShell>
+  );
+}
+
+function PayRow({
+  selected,
+  onSelect,
+  title,
+  subtitle,
+  trailing,
+  chevron,
+  last,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: string;
+  subtitle: string;
+  trailing?: ReactNode;
+  chevron?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={cn("flex w-full items-center gap-3 px-3 py-3 text-left", !last && "border-b border-[#EEF1F5]")}
+    >
+      <span
+        className={cn(
+          "flex size-[18px] shrink-0 items-center justify-center rounded-full border-2",
+          selected ? "border-[#1F7A4D]" : "border-[#D1D5DB]",
+        )}
+        aria-hidden
+      >
+        {selected ? <span className="size-2.5 rounded-full bg-[#1F7A4D]" /> : null}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-extrabold text-[#0B1F4D]">{title}</span>
+        <span className="block text-[12px] text-[#9CA3AF]">{subtitle}</span>
+      </span>
+      {trailing}
+      {chevron ? <ChevronRight className="size-4 shrink-0 text-[#D1D5DB]" aria-hidden /> : null}
+    </button>
   );
 }

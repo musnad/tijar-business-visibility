@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { sniffImageKind, sniffVideoKind, validateVideoFileMeta, MAX_VIDEO_BYTES } from "./file-guard";
+import {
+  sniffImageKind,
+  sniffVideoKind,
+  usableVideoDurationMs,
+  validateVideoFileMeta,
+  MAX_VIDEO_BYTES,
+} from "./file-guard";
 
 function bytes(arr: number[]): Uint8Array {
   return Uint8Array.from(arr);
@@ -29,6 +35,14 @@ describe("sniffImageKind", () => {
     expect(sniffImageKind(bytes([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]))).toBe("png");
     const webp = bytes([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
     expect(sniffImageKind(webp)).toBe("webp");
+  });
+});
+
+describe("usableVideoDurationMs", () => {
+  it("does not treat Infinity as longer than 30s", () => {
+    expect(usableVideoDurationMs(Number.POSITIVE_INFINITY)).toBeNull();
+    expect(usableVideoDurationMs(Number.POSITIVE_INFINITY, 3_200)).toBe(3_200);
+    expect(usableVideoDurationMs(3.1)).toBe(3100);
   });
 });
 

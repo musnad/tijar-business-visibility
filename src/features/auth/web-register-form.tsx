@@ -4,8 +4,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { PasswordToggle, authIcons } from "@/features/auth/auth-ui";
-import { signUpWithEmail } from "@/features/auth/auth-service";
+import { AuthOrDivider, GoogleAuthButton, PasswordToggle, authIcons } from "@/features/auth/auth-ui";
+import { signInWithGoogle, signUpWithEmail } from "@/features/auth/auth-service";
 import { WebAuthLayout } from "@/features/auth/web-auth-layout";
 import { WebAuthField, WebAuthSelect, WebPrimaryButton } from "@/features/auth/web-auth-fields";
 import { registerSchema } from "@/features/onboarding/schemas";
@@ -37,6 +37,7 @@ export function WebRegisterForm() {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -83,6 +84,22 @@ export function WebRegisterForm() {
     void navigate({ to: "/login" });
   }
 
+  async function onGoogle() {
+    if (!agreeTerms) {
+      toast.error("You must agree to the terms");
+      return;
+    }
+    setGoogleLoading(true);
+    const { error } = await signInWithGoogle({
+      accountMode,
+      next: accountMode === "customer" ? "/shop" : "/app/onboarding",
+    });
+    if (error) {
+      setGoogleLoading(false);
+      toast.error(error.message || t("auth.googleFailed"));
+    }
+  }
+
   if (configLoading) {
     return (
       <WebAuthLayout
@@ -120,6 +137,8 @@ export function WebRegisterForm() {
         </p>
       }
     >
+      <GoogleAuthButton loading={googleLoading} onClick={() => void onGoogle()} />
+      <AuthOrDivider />
       <form className="space-y-4" onSubmit={onSubmit}>
         <div>
           <p className="mb-2 text-sm font-semibold text-[#001B3A]">I want to…</p>
@@ -222,7 +241,7 @@ export function WebRegisterForm() {
         </label>
         <WebPrimaryButton loading={loading}>{t("auth.createAccount")}</WebPrimaryButton>
       </form>
-      <p className="mt-6 border-t border-[#eceff3] pt-6 text-center text-sm text-[#5a6578]">
+      <p className="mt-5 text-center text-sm text-[#6B7280]">
         {t("auth.hasAccount")}{" "}
         <Link to="/login" className="font-semibold text-[#1B8A52] hover:underline">
           {t("auth.logIn")}

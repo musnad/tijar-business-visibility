@@ -31,15 +31,14 @@ function statusBadgeClass(status: string): string {
 }
 
 export function OrdersScreen() {
-  const { session } = useAuth();
+  const { profile } = useAuth();
   const [tab, setTab] = useState<Tab>("active");
   const [query, setQuery] = useState("");
 
   const ordersQuery = useQuery({
-    queryKey: ["marketplace-orders"],
-    enabled: Boolean(session),
+    queryKey: ["marketplace-orders", profile?.id ?? "guest"],
     queryFn: async () => {
-      const res = await fetchMyOrders();
+      const res = await fetchMyOrders(profile?.id ?? "guest");
       if (res.error) throw new Error(res.error);
       return res.orders;
     },
@@ -54,19 +53,6 @@ export function OrdersScreen() {
       return o.order_number.toLowerCase().includes(q) || o.status.toLowerCase().includes(q);
     });
   }, [ordersQuery.data, tab, query]);
-
-  if (!session) {
-    return (
-      <MarketplaceShell>
-        <p className="text-center text-sm">
-          <Link to="/login" className="font-bold text-primary">
-            Sign in
-          </Link>{" "}
-          to see your orders.
-        </p>
-      </MarketplaceShell>
-    );
-  }
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "active", label: "Active" },

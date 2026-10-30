@@ -2,8 +2,10 @@
 
 export const MAX_VIDEO_BYTES = 80 * 1024 * 1024;
 export const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
-export const MAX_VIDEO_MS = 180_000;
-export const MIN_VIDEO_MS = 1_000;
+export const MIN_VIDEO_MS = 3_000;
+export const MAX_VIDEO_MS = 30_000;
+export const MIN_VIDEO_SEC = 3;
+export const MAX_VIDEO_SEC = 30;
 
 export type DetectedVideoKind = "mp4" | "webm";
 export type DetectedImageKind = "jpeg" | "png" | "webp" | "gif";
@@ -60,14 +62,17 @@ export async function inspectImageFile(file: File): Promise<
   }
 }
 
-export async function inspectShoppingMedia(file: File): Promise<ShoppingMedia> {
+export async function inspectShoppingMedia(
+  file: File,
+  opts?: { durationHintMs?: number },
+): Promise<ShoppingMedia> {
   const header = new Uint8Array(await file.slice(0, 32).arrayBuffer());
   if (sniffImageKind(header)) {
     const img = await inspectImageFile(file);
     if (!img.ok) return img;
     return { ok: true, media: "image", kind: img.kind, width: img.width, height: img.height };
   }
-  const video = await inspectVideoFile(file);
+  const video = await inspectVideoFile(file, opts);
   if (!video.ok) return video;
   return {
     ok: true,
@@ -79,7 +84,21 @@ export async function inspectShoppingMedia(file: File): Promise<ShoppingMedia> {
   };
 }
 
-export async function inspectVideoFile(file: File): Promise<{
+/** MediaRecorder WebM often reports Infinity; that is not a 30s clip. */
+export function usableVideoDurationMs(mediaSeconds: number, hintMs?: number): number | null {
+  const fromMedia =
+    Number.isFinite(mediaSeconds) && mediaSeconds > 0 && mediaSeconds <= 120
+      ? Math.round(mediaSeconds * 1000)
+      : null;
+  const fromHint =
+    hintMs != null && Number.isFinite(hintMs) && hintMs > 0 && hintMs <= 120_000 ? Math.round(hintMs) : null;
+  return fromMedia ?? fromHint;
+}
+
+export async function inspectVideoFile(
+  file: File,
+  opts?: { durationHintMs?: number },
+): Promise<{
   ok: true;
   kind: DetectedVideoKind;
   durationMs: number;
@@ -95,11 +114,18 @@ export async function inspectVideoFile(file: File): Promise<{
   }
   const objectUrl = URL.createObjectURL(file);
   try {
-    const stats = await readMediaElement(objectUrl);
-    if (stats.durationMs < MIN_VIDEO_MS) return { ok: false, error: "Video is too short." };
-    if (stats.durationMs > MAX_VIDEO_MS) return { ok: false, error: "Video must be 3 minutes or less." };
+    const stats = await readMediaElement(objectUrl, opts?.durationHintMs);
+    if (stats.durationMs == null) {
+      return { ok: false, error: `Could not read video length. Record ${MIN_VIDEO_SEC}–${MAX_VIDEO_SEC} seconds.` };
+    }
+    if (stats.durationMs < MIN_VIDEO_MS) {
+      return { ok: false, error: `Video must be at least ${MIN_VIDEO_SEC} seconds.` };
+    }
+    if (stats.durationMs > MAX_VIDEO_MS) {
+      return { ok: false, error: `Video must be ${MAX_VIDEO_SEC} seconds or less.` };
+    }
     if (stats.width < 1 || stats.height < 1) return { ok: false, error: "Could not read video dimensions." };
-    return { ok: true, kind, ...stats };
+    return { ok: true, kind, durationMs: stats.durationMs, width: stats.width, height: stats.height };
   } catch {
     return { ok: false, error: "Could not decode this video in the browser." };
   } finally {
@@ -123,26 +149,59 @@ function readImageElement(src: string): Promise<{ width: number; height: number 
   });
 }
 
-function readMediaElement(src: string): Promise<{ durationMs: number; width: number; height: number }> {
+function readMediaElement(
+  src: string,
+  hintMs?: number,
+): Promise<{ durationMs: number | null; width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const el = document.createElement("video");
     el.preload = "metadata";
     el.muted = true;
     el.playsInline = true;
-    const timer = window.setTimeout(() => {
-      el.src = "";
-      reject(new Error("timeout"));
-    }, 12_000);
-    el.onloadedmetadata = () => {
-      window.clearTimeout(timer);
+    const finish = (seconds: number) => {
       resolve({
-        durationMs: Math.round((el.duration || 0) * 1000),
+        durationMs: usableVideoDurationMs(seconds, hintMs),
         width: el.videoWidth,
         height: el.videoHeight,
       });
     };
+    const timer = window.setTimeout(() => {
+      el.src = "";
+      const hinted = usableVideoDurationMs(Number.NaN, hintMs);
+      if (hinted != null) {
+        resolve({ durationMs: hinted, width: el.videoWidth, height: el.videoHeight });
+        return;
+      }
+      reject(new Error("timeout"));
+    }, 12_000);
+    el.onloadedmetadata = () => {
+      const raw = el.duration;
+      if (Number.isFinite(raw) && raw > 0 && raw <= 120) {
+        window.clearTimeout(timer);
+        finish(raw);
+        return;
+      }
+      // Chrome WebM from MediaRecorder: duration is Infinity until a far seek.
+      const onSeeked = () => {
+        window.clearTimeout(timer);
+        finish(el.duration);
+      };
+      el.addEventListener("seeked", onSeeked, { once: true });
+      el.addEventListener("durationchange", onSeeked, { once: true });
+      try {
+        el.currentTime = 1e10;
+      } catch {
+        window.clearTimeout(timer);
+        finish(raw);
+      }
+    };
     el.onerror = () => {
       window.clearTimeout(timer);
+      const hinted = usableVideoDurationMs(Number.NaN, hintMs);
+      if (hinted != null) {
+        resolve({ durationMs: hinted, width: 0, height: 0 });
+        return;
+      }
       reject(new Error("decode"));
     };
     el.src = src;
@@ -160,7 +219,8 @@ export async function captureVideoThumbnail(file: File): Promise<Blob | null> {
       video.onloadeddata = () => resolve();
       video.onerror = () => reject(new Error("thumb"));
     });
-    video.currentTime = Math.min(0.4, (video.duration || 1) * 0.1);
+    const dur = Number.isFinite(video.duration) ? video.duration : 1;
+    video.currentTime = Math.min(0.4, dur * 0.1);
     await new Promise<void>((resolve) => {
       video.onseeked = () => resolve();
     });

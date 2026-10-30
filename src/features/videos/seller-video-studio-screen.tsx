@@ -2,33 +2,103 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ImagePlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  ArrowRight,
+  Camera,
+  Check,
+  CircleHelp,
+  Globe,
+  Menu,
+  Pencil,
+  Play,
+  Plus,
+  ShoppingBag,
+  SwitchCamera,
+  Tag,
+  Video,
+  Volume2,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { TijarLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AppPageHeader } from "@/features/app-layout/app-page-header";
-import { inspectShoppingMedia } from "@/lib/video/file-guard";
+import { haptic } from "@/lib/haptics";
+import { inspectShoppingMedia, MAX_VIDEO_SEC, MIN_VIDEO_SEC } from "@/lib/video/file-guard";
+import { cn } from "@/lib/utils";
 import { listProducts } from "@/services/product-service";
 import { submitStudioVideo } from "@/services/video-studio-service";
 import type { Product } from "@/types/database";
 import { formatNgn } from "@/utils/money";
 
+const CAPTION_MAX = 500;
+
+function skuOf(product: Product): string {
+  const letters = product.name
+    .split(/\s+/)
+    .map((w) => w[0] ?? "")
+    .join("")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 3);
+  const tail = product.id.replace(/-/g, "").slice(-4).toUpperCase();
+  return `${letters || "SKU"}-${tail}`;
+}
+
+function fmtTime(sec: number): string {
+  const s = Math.max(0, Math.floor(sec));
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
 export function SellerVideoStudioScreen({
   businessId,
   profileId,
+  embedded = false,
+  autoCamera = false,
+  initialProductId,
 }: {
   businessId: string;
   profileId: string;
+  embedded?: boolean;
+  autoCamera?: boolean;
+  initialProductId?: string;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const liveRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recordTimerRef = useRef<number | null>(null);
+  const recordSecRef = useRef(0);
+  const autoStarted = useRef(false);
+
   const [file, setFile] = useState<File | null>(null);
   const [kind, setKind] = useState<"image" | "video" | null>(null);
+  const [durationSec, setDurationSec] = useState(0);
+  const [currentSec, setCurrentSec] = useState(0);
   const [caption, setCaption] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [productId, setProductId] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
+  const [camLive, setCamLive] = useState(false);
+  const [facing, setFacing] = useState<"user" | "environment">("environment");
+  const [recording, setRecording] = useState(false);
+  const [recordSec, setRecordSec] = useState(0);
+  const [permNote, setPermNote] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ pct: number; label: string } | null>(null);
+  const [step, setStep] = useState<"compose" | "review">("compose");
+  const [errors, setErrors] = useState<{ product?: string; media?: string; caption?: string }>({});
 
   const productsQuery = useQuery({
     queryKey: ["create-products", businessId],
@@ -40,138 +110,687 @@ export function SellerVideoStudioScreen({
   });
 
   const products = productsQuery.data ?? [];
+  const product = products.find((p) => p.id === productId) ?? null;
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
+    if (products.length === 0) return;
+    setProductId((cur) => {
+      if (cur && products.some((p) => p.id === cur)) return cur;
+      if (initialProductId && products.some((p) => p.id === initialProductId)) return initialProductId;
+      return products[0]!.id;
+    });
+  }, [products, initialProductId]);
+
+  useEffect(() => {
+    return () => stopStream();
+  }, []);
+
+  useEffect(() => {
+    if (!camLive || !streamRef.current || !liveRef.current) return;
+    liveRef.current.srcObject = streamRef.current;
+    liveRef.current.muted = true;
+    liveRef.current.playsInline = true;
+    void liveRef.current.play().catch(() => undefined);
+  }, [camLive]);
+
+  function stopStream() {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (liveRef.current) liveRef.current.srcObject = null;
+    if (recordTimerRef.current) window.clearInterval(recordTimerRef.current);
+    recordTimerRef.current = null;
+    setCamLive(false);
+    setRecording(false);
+  }
 
   async function onFile(next: File | null) {
     setFile(null);
     setKind(null);
+    setDurationSec(0);
+    setCurrentSec(0);
+    setErrors((e) => ({ ...e, media: undefined }));
     if (!next) return;
-    const result = await inspectShoppingMedia(next);
+    setInspecting(true);
+    const hint = recordSecRef.current > 0 ? recordSecRef.current * 1000 : undefined;
+    const result = await inspectShoppingMedia(next, { durationHintMs: hint });
+    setInspecting(false);
     if (!result.ok) {
+      setErrors((e) => ({ ...e, media: result.error }));
       toast.error(result.error);
       return;
     }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (liveRef.current) liveRef.current.srcObject = null;
+    setCamLive(false);
     setFile(next);
     setKind(result.media);
+    if (result.media === "video") setDurationSec(result.durationMs / 1000);
+    haptic("light");
   }
 
-  async function publish() {
-    if (!file) {
-      toast.error("Add a photo or video.");
+  function addTag(raw: string) {
+    const value = raw.trim().replace(/^#/, "").replace(/\s+/g, " ").slice(0, 28);
+    if (!value) return;
+    setTags((cur) => (cur.includes(value) || cur.length >= 8 ? cur : [...cur, value]));
+    setTagDraft("");
+  }
+
+  function validate(): boolean {
+    const next: typeof errors = {};
+    if (!productId) next.product = "Select the product this post will sell.";
+    if (!file) next.media = `Record or upload a video (${MIN_VIDEO_SEC}–${MAX_VIDEO_SEC} seconds).`;
+    if (caption.length > CAPTION_MAX) next.caption = `Caption must be ${CAPTION_MAX} characters or less.`;
+    setErrors(next);
+    if (next.product) toast.error(next.product);
+    else if (next.media) toast.error(next.media);
+    else if (next.caption) toast.error(next.caption);
+    return Object.keys(next).length === 0;
+  }
+
+  function goNext() {
+    if (!validate()) return;
+    setStep("review");
+  }
+
+  async function openCamera(nextFacing: "user" | "environment" = facing) {
+    setPermNote(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPermNote("This browser cannot open the camera. Use the Camera or Upload button.");
+      cameraInputRef.current?.click();
       return;
     }
-    if (selected.length === 0) {
-      toast.error("Tap one product this post is selling.");
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: nextFacing }, width: { ideal: 720 }, height: { ideal: 1280 } },
+        audio: true,
+      });
+      streamRef.current = stream;
+      setFacing(nextFacing);
+      setCamLive(true);
+      setFile(null);
+      setKind(null);
+      requestAnimationFrame(() => {
+        const el = liveRef.current;
+        if (!el) return;
+        el.srcObject = stream;
+        el.muted = true;
+        el.playsInline = true;
+        void el.play().catch(() => undefined);
+      });
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        setPermNote("Camera permission was denied. Allow camera and mic, or upload a file.");
+      } else if (name === "NotFoundError") {
+        setPermNote("No camera found. Upload a video instead.");
+      } else {
+        setPermNote("Could not start the camera. Upload a video instead.");
+      }
+      cameraInputRef.current?.click();
+    }
+  }
+
+  function startClip() {
+    const stream = streamRef.current;
+    if (!stream) {
+      void openCamera();
+      return;
+    }
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ? "video/webm;codecs=vp9"
+      : MediaRecorder.isTypeSupported("video/webm")
+        ? "video/webm"
+        : "";
+    const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    chunksRef.current = [];
+    rec.ondataavailable = (ev) => {
+      if (ev.data.size) chunksRef.current.push(ev.data);
+    };
+    rec.onstop = () => {
+      setRecording(false);
+      if (recordTimerRef.current) window.clearInterval(recordTimerRef.current);
+      const blob = new Blob(chunksRef.current, { type: rec.mimeType || "video/webm" });
+      const recorded = new File([blob], `tijar-clip-${Date.now()}.webm`, { type: blob.type });
+      void onFile(recorded);
+    };
+    recorderRef.current = rec;
+    rec.start(200);
+    setRecording(true);
+    setRecordSec(0);
+    recordSecRef.current = 0;
+    recordTimerRef.current = window.setInterval(() => {
+      setRecordSec((s) => {
+        const n = s + 1;
+        recordSecRef.current = n;
+        if (n >= MAX_VIDEO_SEC) {
+          if (rec.state !== "inactive") rec.stop();
+          return n;
+        }
+        return n;
+      });
+    }, 1000);
+  }
+
+  function stopRecord() {
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      if (recordSecRef.current < MIN_VIDEO_SEC) {
+        toast.error(`Keep recording until ${MIN_VIDEO_SEC} seconds.`);
+        return;
+      }
+      recorderRef.current.stop();
+    }
+  }
+
+  useEffect(() => {
+    if (!autoCamera || autoStarted.current) return;
+    autoStarted.current = true;
+    void openCamera();
+  }, [autoCamera]);
+
+  async function publish() {
+    if (!validate() || !file || !productId) {
+      setStep("compose");
       return;
     }
     setBusy(true);
+    setProgress({ pct: 4, label: "Preparing…" });
+    const hashtags = tags.map((t) => `#${t.replace(/\s+/g, "")}`).join(" ");
+    const fullCaption = [caption.trim(), hashtags].filter(Boolean).join(" ");
     const r = await submitStudioVideo({
       businessId,
       profileId,
       file,
-      caption,
-      productIds: selected,
+      caption: fullCaption,
+      productIds: [productId],
       products: products.map((p) => ({ id: p.id, business_id: p.business_id })),
       attribution: "business",
       rightsAttested: true,
+      onProgress: (pct, label) => setProgress({ pct, label }),
     });
     setBusy(false);
     if (r.error) {
+      setProgress(null);
       toast.error(r.error);
       return;
     }
-    toast.success("Posted to For You.");
+    haptic("success");
+    toast.success("Posted to For You with Buy Now for this product.");
     if (r.videoId) sessionStorage.setItem("tijar-for-you-video-id", r.videoId);
     await queryClient.invalidateQueries({ queryKey: ["video-feed"] });
     await queryClient.invalidateQueries({ queryKey: ["for-you-listings"] });
     await queryClient.invalidateQueries({ queryKey: ["seller-videos"] });
+    await queryClient.invalidateQueries({ queryKey: ["marketplace-products"] });
     void navigate({ to: "/shop", search: r.videoId ? { v: r.videoId } : {} });
   }
 
   return (
-    <>
-      <AppPageHeader title="Post to For You" subtitle="Photo or video, one product, publish." />
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+      {!embedded ? (
+        <header className="relative flex shrink-0 items-center justify-between px-3 pb-1 pt-[max(0.45rem,env(safe-area-inset-top))]">
+          <button
+            type="button"
+            className="flex size-10 items-center justify-center rounded-full text-[#0B1F4D]"
+            aria-label="Menu"
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <Menu className="size-6" />
+          </button>
+          <div className="flex max-w-[11.5rem] flex-col items-center">
+            <TijarLogo compact className="mx-auto" />
+            <p className="mt-0.5 text-center text-[8px] font-extrabold tracking-[0.16em] text-[#0B1F4D]">
+              SELL GLOBAL. GROW FASTER.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="flex size-10 items-center justify-center rounded-full border border-[#E5E7EB] text-[#0B1F4D]"
+            aria-label="Help"
+            onClick={() => setHelpOpen((v) => !v)}
+          >
+            <CircleHelp className="size-5" />
+          </button>
+          {menuOpen ? (
+            <div className="absolute left-3 top-14 z-20 w-48 overflow-hidden rounded-2xl border border-[#EEF1F5] bg-white py-1 shadow-lg">
+              <Link to="/shop" className="block px-3 py-2.5 text-sm font-semibold text-[#0B1F4D]" onClick={() => setMenuOpen(false)}>
+                For You
+              </Link>
+              <Link to="/app/products" className="block px-3 py-2.5 text-sm font-semibold text-[#0B1F4D]" onClick={() => setMenuOpen(false)}>
+                Catalogue
+              </Link>
+              <Link to="/app" className="block px-3 py-2.5 text-sm font-semibold text-[#0B1F4D]" onClick={() => setMenuOpen(false)}>
+                Dashboard
+              </Link>
+            </div>
+          ) : null}
+        </header>
+      ) : null}
 
-      <label className="mt-4 flex min-h-44 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-primary/40 bg-card text-center">
-        {previewUrl && kind === "image" ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={previewUrl} alt="" className="max-h-80 w-full object-contain" />
-        ) : previewUrl && kind === "video" ? (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video src={previewUrl} controls className="max-h-80 w-full bg-black object-contain" />
+      <div
+        className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        {helpOpen ? (
+          <div className="mt-2 rounded-2xl border border-[#EEF1F5] bg-[#F8FAF9] p-3 text-[12px] leading-relaxed text-[#4B5563]">
+            Tag one live product. The post goes to For You with Buy Now into checkout. Videos must be {MIN_VIDEO_SEC}–{MAX_VIDEO_SEC} seconds. TIJAR does not collect card numbers here.
+          </div>
+        ) : null}
+
+        {step === "review" ? (
+          <ReviewStep
+            product={product}
+            previewUrl={previewUrl}
+            kind={kind}
+            caption={caption}
+            tags={tags}
+            busy={busy}
+            progress={progress}
+            onBack={() => setStep("compose")}
+            onPublish={() => void publish()}
+          />
         ) : (
           <>
-            <ImagePlus className="size-8 text-primary" />
-            <p className="mt-2 text-sm font-bold">Add photo or video</p>
-            <p className="mt-1 text-xs text-muted-foreground">JPEG, PNG, WebP, MP4 or WebM</p>
+            <div className="flex items-start gap-2.5 pt-3">
+              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#1F7A4D] text-white">
+                <Plus className="size-5" strokeWidth={2.5} />
+              </span>
+              <div>
+                <h1 className="text-[1.35rem] font-extrabold leading-tight tracking-tight text-[#0B1F4D]">
+                  Create Post / Create Video
+                </h1>
+                <p className="mt-0.5 text-[13px] text-[#6B7280]">Showcase your product and reach global buyers.</p>
+              </div>
+            </div>
+
+            <section className="mt-5" aria-labelledby="product-heading">
+              <h2 id="product-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#0B1F4D]">
+                <ShoppingBag className="size-4 text-[#1F7A4D]" />
+                Select Product
+              </h2>
+              {productsQuery.isLoading ? (
+                <p className="mt-2 text-sm text-muted-foreground">Loading your catalogue…</p>
+              ) : products.length === 0 ? (
+                <div className="mt-2 rounded-2xl border border-dashed border-[#D1D5DB] p-4 text-center">
+                  <p className="text-sm font-bold text-[#0B1F4D]">Add a product first</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground">Posts must sell a SKU from your shop.</p>
+                  <Button className="mt-3 min-h-10 rounded-xl bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90" asChild>
+                    <Link to="/app/products/new">Add product</Link>
+                  </Button>
+                </div>
+              ) : product && !picking ? (
+                <div className={cn("mt-2 rounded-2xl border p-3", errors.product ? "border-red-300" : "border-[#EEF1F5]")}>
+                  <div className="flex items-center gap-3">
+                    {product.image_url ? (
+                      // eslint-disable-next-line @next-next/no-img-element
+                      <img src={product.image_url} alt="" className="size-16 rounded-xl object-cover" />
+                    ) : (
+                      <span className="size-16 rounded-xl bg-muted" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-extrabold text-[#0B1F4D]">{product.name}</p>
+                      <p className="text-[12px] text-[#9CA3AF]">SKU: {skuOf(product)}</p>
+                      {product.sale_price != null ? (
+                        <p className="text-[12px] font-semibold text-[#1F7A4D]">{formatNgn(Number(product.sale_price))}</p>
+                      ) : null}
+                    </div>
+                    <span className="flex size-7 items-center justify-center rounded-full bg-[#1F7A4D] text-white" aria-hidden>
+                      <Check className="size-4" strokeWidth={3} />
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="mt-2 text-[13px] font-bold text-[#1F7A4D]"
+                    onClick={() => setPicking(true)}
+                  >
+                    Change Product ›
+                  </button>
+                </div>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {products.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-2xl border p-3 text-left",
+                          p.id === productId ? "border-[#1F7A4D] bg-[#F3FBF6]" : "border-[#EEF1F5]",
+                        )}
+                        onClick={() => {
+                          setProductId(p.id);
+                          setPicking(false);
+                          setErrors((e) => ({ ...e, product: undefined }));
+                        }}
+                      >
+                        {p.image_url ? (
+                          // eslint-disable-next-line @next-next/no-img-element
+                          <img src={p.image_url} alt="" className="size-14 rounded-xl object-cover" />
+                        ) : (
+                          <span className="size-14 rounded-xl bg-muted" />
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-extrabold text-[#0B1F4D]">{p.name}</span>
+                          <span className="block text-[12px] text-[#9CA3AF]">SKU: {skuOf(p)}</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {errors.product ? <p className="mt-1 text-[12px] font-semibold text-red-600">{errors.product}</p> : null}
+            </section>
+
+            <section className="mt-5" aria-labelledby="video-heading">
+              <h2 id="video-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#0B1F4D]">
+                <Video className="size-4 text-[#1F7A4D]" />
+                Add Video
+              </h2>
+              <div className={cn("relative mt-2 overflow-hidden rounded-2xl bg-[#111827]", errors.media && "ring-2 ring-red-400")}>
+                {camLive ? (
+                  <>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video ref={liveRef} className="aspect-[16/9] w-full object-cover" playsInline muted autoPlay />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-white/30">
+                        <div
+                          className="h-full rounded-full bg-[#1F7A4D]"
+                          style={{ width: `${Math.min(100, (recordSec / MAX_VIDEO_SEC) * 100)}%` }}
+                        />
+                      </div>
+                      <p className="mt-1.5 text-center text-[12px] font-semibold text-white">
+                        {recording
+                          ? `${fmtTime(recordSec)} / 00:${String(MAX_VIDEO_SEC).padStart(2, "0")} · min ${MIN_VIDEO_SEC}s`
+                          : "Camera live · tap Record clip"}
+                      </p>
+                    </div>
+                    {recording ? (
+                      <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white">
+                        <span className="size-1.5 animate-pulse rounded-full bg-white" />
+                        REC
+                      </span>
+                    ) : null}
+                  </>
+                ) : previewUrl && kind === "video" ? (
+                  <>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video
+                      ref={videoRef}
+                      src={previewUrl}
+                      className="aspect-[16/9] w-full object-cover"
+                      playsInline
+                      onTimeUpdate={(e) => setCurrentSec(e.currentTarget.currentTime)}
+                      onLoadedMetadata={(e) => setDurationSec(e.currentTarget.duration || durationSec)}
+                    />
+                    <button
+                      type="button"
+                      className="absolute left-3 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white"
+                      aria-label="Play preview"
+                      onClick={() => {
+                        const el = videoRef.current;
+                        if (!el) return;
+                        if (el.paused) void el.play();
+                        else el.pause();
+                      }}
+                    >
+                      <Play className="size-5 fill-white" />
+                    </button>
+                    <p className="absolute bottom-8 left-4 text-[11px] font-semibold text-white">
+                      {fmtTime(currentSec)} / {fmtTime(durationSec)}
+                    </p>
+                    <Volume2 className="absolute bottom-8 right-4 size-4 text-white" aria-hidden />
+                    <div className="absolute inset-x-3 bottom-3 h-1.5 overflow-hidden rounded-full bg-white/30">
+                      <div
+                        className="h-full rounded-full bg-[#1F7A4D]"
+                        style={{ width: `${durationSec ? Math.min(100, (currentSec / durationSec) * 100) : 0}%` }}
+                      />
+                    </div>
+                  </>
+                ) : previewUrl && kind === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={previewUrl} alt="" className="aspect-[16/9] w-full object-cover" />
+                ) : (
+                  <button
+                    type="button"
+                    className="flex aspect-[16/9] w-full flex-col items-center justify-center bg-gradient-to-br from-[#1F2937] to-[#111827] text-white"
+                    onClick={() => void openCamera()}
+                  >
+                    <Camera className="size-10 opacity-90" />
+                    <p className="mt-2 text-sm font-semibold">{inspecting ? "Checking video…" : "Open camera"}</p>
+                    <p className="mt-1 text-[11px] text-white/70">
+                      {MIN_VIDEO_SEC}–{MAX_VIDEO_SEC} seconds
+                    </p>
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="video/mp4,video/webm,image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
+                />
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="video/*"
+                  capture="environment"
+                  className="sr-only"
+                  onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+              <p className="mt-2 flex items-center gap-1.5 text-[12px] text-[#6B7280]">
+                <span className="text-[#1F7A4D]" aria-hidden>
+                  ↻
+                </span>
+                Direct camera or upload · {MIN_VIDEO_SEC} to {MAX_VIDEO_SEC} seconds
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {camLive ? (
+                  <>
+                    <Button
+                      type="button"
+                      className="min-h-11 rounded-xl bg-[#1F7A4D] font-bold text-white hover:bg-[#1F7A4D]/90"
+                      onClick={() => (recording ? stopRecord() : startClip())}
+                      disabled={inspecting}
+                    >
+                      {recording ? (recordSec < MIN_VIDEO_SEC ? `Record ${MIN_VIDEO_SEC - recordSec}s more` : "Stop") : "Record clip"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 rounded-xl border-[#D1D5DB] font-bold text-[#0B1F4D]"
+                      onClick={() => void openCamera(facing === "environment" ? "user" : "environment")}
+                      disabled={recording || inspecting}
+                    >
+                      <SwitchCamera className="size-4" />
+                      Flip
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      className="min-h-11 rounded-xl bg-[#1F7A4D] font-bold text-white hover:bg-[#1F7A4D]/90"
+                      onClick={() => void openCamera()}
+                      disabled={inspecting}
+                    >
+                      <Camera className="size-4" />
+                      Camera
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 rounded-xl border-[#D1D5DB] font-bold text-[#0B1F4D]"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={inspecting}
+                    >
+                      Upload
+                    </Button>
+                  </>
+                )}
+              </div>
+              {camLive ? (
+                <button
+                  type="button"
+                  className="mt-2 text-[12px] font-semibold text-[#6B7280]"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  Use device camera app
+                </button>
+              ) : null}
+              {permNote ? <p className="mt-2 text-[12px] font-semibold text-amber-800">{permNote}</p> : null}
+              {errors.media ? <p className="mt-1 text-[12px] font-semibold text-red-600">{errors.media}</p> : null}
+            </section>
+
+            <section className="mt-5" aria-labelledby="caption-heading">
+              <h2 id="caption-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#0B1F4D]">
+                <Pencil className="size-4 text-[#1F7A4D]" />
+                Caption
+              </h2>
+              <div className="relative mt-2">
+                <textarea
+                  value={caption}
+                  maxLength={CAPTION_MAX}
+                  rows={4}
+                  placeholder="Timeless leather. Everyday elegance. Handcrafted for the modern lifestyle."
+                  className="w-full resize-none rounded-2xl border border-[#EEF1F5] px-3 py-3 text-[14px] leading-relaxed text-[#0B1F4D] outline-none placeholder:text-[#9CA3AF] focus-visible:ring-2 focus-visible:ring-[#1F7A4D]/30"
+                  onChange={(e) => setCaption(e.target.value)}
+                />
+                <p className="mt-1 text-right text-[11px] text-[#9CA3AF]">
+                  {caption.length}/{CAPTION_MAX}
+                </p>
+              </div>
+              <p className="text-[12px] text-[#9CA3AF]">Add details, features, or a story buyers will love.</p>
+              {errors.caption ? <p className="mt-1 text-[12px] font-semibold text-red-600">{errors.caption}</p> : null}
+            </section>
+
+            <section className="mt-5" aria-labelledby="tags-heading">
+              <h2 id="tags-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#0B1F4D]">
+                <Tag className="size-4 text-[#1F7A4D]" />
+                Tags
+              </h2>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-2xl border border-[#EEF1F5] px-2 py-2">
+                {tags.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-full border border-[#E5E7EB] px-2.5 py-1 text-[12px] font-semibold text-[#0B1F4D]"
+                    onClick={() => setTags((cur) => cur.filter((x) => x !== t))}
+                    aria-label={`Remove ${t}`}
+                  >
+                    {t}
+                    <X className="size-3 text-[#9CA3AF]" />
+                  </button>
+                ))}
+                <Input
+                  value={tagDraft}
+                  className="h-8 min-w-[7rem] flex-1 border-0 shadow-none focus-visible:ring-0"
+                  placeholder={tags.length ? "" : "leather handbag"}
+                  aria-label="Add tag"
+                  onChange={(e) => setTagDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      addTag(tagDraft);
+                    }
+                  }}
+                  onBlur={() => addTag(tagDraft)}
+                />
+              </div>
+              <p className="mt-1.5 text-[12px] text-[#9CA3AF]">Add tags to help buyers find your product.</p>
+            </section>
+
+            <Button
+              type="button"
+              className="mt-6 min-h-[3.15rem] w-full rounded-xl bg-[#1F7A4D] text-[16px] font-extrabold text-white hover:bg-[#1F7A4D]/90"
+              onClick={goNext}
+            >
+              Next
+              <ArrowRight className="size-5" />
+            </Button>
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[12px] text-[#6B7280]">
+              <Globe className="size-3.5" aria-hidden />
+              TIJAR – Trusted by sellers worldwide.
+            </p>
           </>
         )}
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-          capture="environment"
-          className="sr-only"
-          onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
-        />
-      </label>
-
-      <Input
-        className="mt-4 min-h-12 rounded-xl"
-        placeholder="Caption (optional)"
-        value={caption}
-        maxLength={220}
-        onChange={(e) => setCaption(e.target.value)}
-      />
-
-      <p className="mt-4 text-sm font-bold">Selling</p>
-      {products.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">
-          Add a product first.{" "}
-          <Link to="/app/products/new" className="font-semibold text-primary">
-            New product
-          </Link>
-        </p>
-      ) : (
-        <ul className="mt-2 space-y-2">
-          {products.map((p) => (
-            <ProductPick
-              key={p.id}
-              product={p}
-              checked={selected.includes(p.id)}
-              onToggle={() => {
-                setSelected((cur) => (cur.includes(p.id) ? cur.filter((id) => id !== p.id) : [...cur, p.id]));
-              }}
-            />
-          ))}
-        </ul>
-      )}
-
-      <p className="mt-3 text-[11px] text-muted-foreground">By publishing, you confirm you own this photo or video.</p>
-      <Button type="button" className="mt-3 min-h-12 w-full rounded-xl font-bold" disabled={busy} onClick={() => void publish()}>
-        {busy ? "Posting…" : "Publish"}
-      </Button>
-    </>
+      </div>
+    </div>
   );
 }
 
-function ProductPick({ product, checked, onToggle }: { product: Product; checked: boolean; onToggle: () => void }) {
+function ReviewStep({
+  product,
+  previewUrl,
+  kind,
+  caption,
+  tags,
+  busy,
+  progress,
+  onBack,
+  onPublish,
+}: {
+  product: Product | null;
+  previewUrl: string | null;
+  kind: "image" | "video" | null;
+  caption: string;
+  tags: string[];
+  busy: boolean;
+  progress: { pct: number; label: string } | null;
+  onBack: () => void;
+  onPublish: () => void;
+}) {
   return (
-    <li>
-      <label className="flex items-center gap-3 rounded-xl border border-border p-2 text-sm">
-        <input type="checkbox" checked={checked} onChange={onToggle} />
-        {product.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.image_url} alt="" className="size-10 rounded-lg object-cover" />
+    <div className="pt-3">
+      <h1 className="text-[1.35rem] font-extrabold text-[#0B1F4D]">Post to marketplace</h1>
+      <p className="mt-1 text-[13px] text-[#6B7280]">
+        This goes live on For You with Buy Now for {product?.name ?? "the tagged product"}.
+      </p>
+      {previewUrl ? (
+        kind === "video" ? (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video src={previewUrl} className="mt-4 aspect-[16/9] w-full rounded-2xl object-cover" controls playsInline />
         ) : (
-          <span className="size-10 rounded-lg bg-muted" />
-        )}
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold">{product.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {product.sale_price != null ? formatNgn(Number(product.sale_price)) : "No price"}
-          </span>
-        </span>
-      </label>
-    </li>
+          // eslint-disable-next-line @next-next/no-img-element
+          <img src={previewUrl} alt="" className="mt-4 aspect-[16/9] w-full rounded-2xl object-cover" />
+        )
+      ) : null}
+      {product ? (
+        <p className="mt-3 text-sm font-extrabold text-[#0B1F4D]">
+          {product.name} · SKU {skuOf(product)}
+        </p>
+      ) : null}
+      {caption ? <p className="mt-2 text-sm text-[#4B5563]">{caption}</p> : null}
+      {tags.length ? (
+        <p className="mt-2 text-[12px] text-[#6B7280]">{tags.map((t) => `#${t.replace(/\s+/g, "")}`).join(" ")}</p>
+      ) : null}
+      {progress ? (
+        <div className="mt-4">
+          <div className="h-2 overflow-hidden rounded-full bg-[#E5E7EB]">
+            <div className="h-full rounded-full bg-[#1F7A4D] transition-all" style={{ width: `${progress.pct}%` }} />
+          </div>
+          <p className="mt-1.5 text-[12px] font-semibold text-[#1F7A4D]">{progress.label}</p>
+        </div>
+      ) : null}
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <Button type="button" variant="outline" className="min-h-12 rounded-xl font-bold" disabled={busy} onClick={onBack}>
+          Back
+        </Button>
+        <Button
+          type="button"
+          className="min-h-12 rounded-xl bg-[#1F7A4D] font-extrabold text-white hover:bg-[#1F7A4D]/90"
+          disabled={busy}
+          onClick={onPublish}
+        >
+          {busy ? "Posting…" : "Post to For You"}
+        </Button>
+      </div>
+    </div>
   );
 }

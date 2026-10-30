@@ -1,16 +1,25 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 
-import { Button } from "@/components/ui/button";
 import { AppPageHeader } from "@/features/app-layout/app-page-header";
-import { fetchBusinessEnquiries, replyToEnquiry } from "@/services/discover-service";
+import { useAuth } from "@/features/auth/auth-context";
+import { fetchShopInbox } from "@/services/shop-chat-service";
+import { fetchBusinessEnquiries } from "@/services/discover-service";
 
 export function SellerInboxScreen({ businessId }: { businessId: string }) {
-  const queryClient = useQueryClient();
-  const query = useQuery({
+  const { profile } = useAuth();
+  const chats = useQuery({
+    queryKey: ["seller-shop-chats", businessId, profile?.id],
+    enabled: Boolean(profile?.id),
+    queryFn: async () => {
+      const r = await fetchShopInbox(profile!.id, [businessId]);
+      if (r.error) throw new Error(r.error);
+      return r.rows.filter((row) => row.business_id === businessId);
+    },
+  });
+  const enquiries = useQuery({
     queryKey: ["seller-enquiries", businessId],
     queryFn: async () => {
       const r = await fetchBusinessEnquiries(businessId);
@@ -21,63 +30,40 @@ export function SellerInboxScreen({ businessId }: { businessId: string }) {
 
   return (
     <>
-      <AppPageHeader title="Customer enquiries" subtitle="Messages sent to this shop. You cannot see another business's inbox." />
-      {query.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
-      {(query.data?.length ?? 0) === 0 && !query.isLoading && (
-        <p className="mt-4 text-sm text-muted-foreground">No enquiries yet.</p>
+      <AppPageHeader title="Inbox" subtitle="Chats from shoppers. Reply in Messages." />
+      {chats.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
+      {(chats.data?.length ?? 0) === 0 && !chats.isLoading && (
+        <p className="mt-4 text-sm text-muted-foreground">No shop chats yet. Customers message you from a product or your storefront.</p>
       )}
       <ul className="mt-4 space-y-3">
-        {(query.data ?? []).map((row) => (
-          <li key={row.id} className="rounded-2xl border border-border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
-            <p className="mt-1 font-bold">{row.customer_name}</p>
-            {row.customer_phone && <p className="text-xs">{row.customer_phone}</p>}
-            <p className="mt-2 text-sm">{row.message}</p>
-            {row.seller_reply ? (
-              <p className="mt-2 rounded-xl bg-muted px-3 py-2 text-sm">Reply: {row.seller_reply}</p>
-            ) : (
-              <EnquiryReply
-                onSend={async (text) => {
-                  const r = await replyToEnquiry(row.id, businessId, text);
-                  if (r.error) {
-                    toast.error(r.error);
-                    return;
-                  }
-                  toast.success("Reply saved");
-                  await queryClient.invalidateQueries({ queryKey: ["seller-enquiries", businessId] });
-                }}
-              />
-            )}
+        {(chats.data ?? []).map((row) => (
+          <li key={row.id}>
+            <Link
+              to="/shop/enquiries/$conversationId"
+              params={{ conversationId: row.id }}
+              className="block rounded-2xl border border-border bg-card p-4"
+            >
+              <p className="font-bold">{row.customer_name}</p>
+              <p className="mt-1 truncate text-sm text-muted-foreground">{row.last_preview || "Open chat"}</p>
+            </Link>
           </li>
         ))}
       </ul>
+      {(enquiries.data?.length ?? 0) > 0 && (
+        <section className="mt-8">
+          <h2 className="text-sm font-extrabold">Older enquiries</h2>
+          <ul className="mt-3 space-y-3">
+            {enquiries.data?.map((row) => (
+              <li key={row.id} className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString()}</p>
+                <p className="mt-1 font-bold">{row.customer_name}</p>
+                <p className="mt-2 text-sm">{row.message}</p>
+                {row.seller_reply ? <p className="mt-2 rounded-xl bg-muted px-3 py-2 text-sm">Reply: {row.seller_reply}</p> : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </>
-  );
-}
-
-function EnquiryReply({ onSend }: { onSend: (text: string) => Promise<void> }) {
-  const [text, setText] = useState("");
-  const send = useMutation({
-    mutationFn: () => onSend(text),
-    onSuccess: () => setText(""),
-  });
-  return (
-    <form
-      className="mt-3 flex gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        send.mutate();
-      }}
-    >
-      <input
-        className="min-h-10 flex-1 rounded-xl border px-3 text-sm"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Reply to this customer"
-      />
-      <Button size="sm" className="rounded-xl" disabled={send.isPending}>
-        Send
-      </Button>
-    </form>
   );
 }

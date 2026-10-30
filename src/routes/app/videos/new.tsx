@@ -13,7 +13,7 @@ function Page() {
     <RequireAuth>
       <SellerPage>
         {({ businessId, profileId }) => (
-          <SellerVideoStudioScreen businessId={businessId} profileId={profileId} />
+          <SellerVideoStudioScreen businessId={businessId} profileId={profileId} embedded />
         )}
       </SellerPage>
     </RequireAuth>

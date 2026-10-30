@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Camera, CheckCircle2, Clock3, LocateFixed, Store, XCircle } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -62,48 +62,62 @@ export function BusinessApplyScreen() {
 
   if (!session || !profile) {
     return (
-      <MarketplaceShell>
+      <ApplyShell>
         <div className="rounded-2xl border border-border bg-card p-6 text-center">
           <p className="font-bold">Sign in to apply for a business account</p>
           <Button className="mt-4 rounded-xl font-bold" asChild>
             <Link to="/login">Sign in</Link>
           </Button>
         </div>
-      </MarketplaceShell>
+      </ApplyShell>
     );
   }
 
   if (canUseBusinessMode(profile) && !isCustomerOnly(profile)) {
     return (
-      <MarketplaceShell>
+      <ApplyShell>
         <div className="rounded-2xl border border-border bg-card p-6 text-center">
           <CheckCircle2 className="mx-auto size-10 text-primary" />
           <p className="mt-3 font-extrabold">Your business account is ready</p>
-          <p className="mt-1 text-sm text-muted-foreground">Open the dashboard to manage your shop.</p>
+          <p className="mt-1 text-sm text-muted-foreground">You can post products from Sell, or open the dashboard.</p>
           <Button className="mt-4 rounded-xl font-bold" asChild>
+            <Link to="/shop/create">Start selling</Link>
+          </Button>
+          <Button variant="outline" className="mt-2 w-full rounded-xl font-bold" asChild>
             <Link to="/app">Open business dashboard</Link>
           </Button>
         </div>
-      </MarketplaceShell>
+      </ApplyShell>
     );
   }
 
   const existing = existingQuery.data;
+  if (existing?.status === "approved") {
+    return (
+      <ApplyShell>
+        <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+          <CheckCircle2 className="mx-auto size-10 text-primary" />
+          <p className="mt-3 text-lg font-extrabold">Approved</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            You can now create your business account and start selling.
+          </p>
+          <Button className="mt-5 rounded-xl font-bold" asChild>
+            <Link to="/app">Create business account</Link>
+          </Button>
+        </div>
+      </ApplyShell>
+    );
+  }
+
   if (existing?.status === "pending") {
     return (
-      <MarketplaceShell>
-        <Link
-          to="/shop/profile"
-          className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground"
-        >
-          <ArrowLeft className="size-4" /> Profile
-        </Link>
+      <ApplyShell>
         <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
           <Clock3 className="mx-auto size-10 text-primary" />
           <p className="mt-3 text-lg font-extrabold">Request sent</p>
           <p className="mt-2 text-sm text-muted-foreground">
             Your business application for <strong>{existing.business_name}</strong> is waiting for
-            admin approval. You can keep shopping meanwhile.
+            admin approval. Selling stays locked until then.
           </p>
           {existing.shop_image_url && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -117,7 +131,7 @@ export function BusinessApplyScreen() {
             <Link to="/shop">Continue shopping</Link>
           </Button>
         </div>
-      </MarketplaceShell>
+      </ApplyShell>
     );
   }
 
@@ -202,16 +216,16 @@ export function BusinessApplyScreen() {
     }
     toast.success("Application sent — waiting for admin approval.");
     void existingQuery.refetch();
-    void navigate({ to: "/shop/profile" });
+    void navigate({ to: "/shop/create" });
   }
 
   return (
-    <MarketplaceShell>
+    <ApplyShell>
       <Link
-        to="/shop/profile"
+        to="/shop/create"
         className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground"
       >
-        <ArrowLeft className="size-4" /> Profile
+        <ArrowLeft className="size-4" /> Sell
       </Link>
 
       <section className="dashboard-summary-card rounded-2xl p-5 text-primary-foreground shadow-lg">
@@ -425,6 +439,19 @@ export function BusinessApplyScreen() {
           {busy ? "Sending request…" : "Send request for approval"}
         </Button>
       </form>
+    </ApplyShell>
+  );
+}
+
+function ApplyShell({ children }: { children: ReactNode }) {
+  return (
+    <MarketplaceShell hideTopBar variant="feed">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 pb-8 pt-[max(0.75rem,env(safe-area-inset-top))] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        {children}
+      </div>
     </MarketplaceShell>
   );
 }

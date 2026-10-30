@@ -2,34 +2,125 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Clock, Flag, Info, MapPin, MessageCircle, Navigation, Phone, Share2 } from "lucide-react";
-import { useState } from "react";
+import { BadgeCheck, Bell, Camera, Clock, Flag, Heart, MapPin, MessageCircle, Navigation, Phone, Plus, Star } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TijarLogo } from "@/components/brand-logo";
 import { useAuth } from "@/features/auth/auth-context";
+import { usePrimaryBusiness } from "@/hooks/use-primary-business";
+import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
+import { isMockFeedId } from "@/features/marketplace/feed-mock";
 import { TranslateText } from "@/features/translate/translate-text";
 import { VoiceTranslate } from "@/features/translate/voice-translate";
 import { useTranslation } from "@/lib/i18n/context";
 import { getMapsProvider } from "@/lib/maps/provider";
 import { nkenneLanguageForLocale } from "@/lib/nkenne/languages";
-import { addToCart, reportListing } from "@/services/marketplace-service";
+import { cn } from "@/lib/utils";
+import { useStartShopChat } from "@/features/marketplace/use-start-shop-chat";
+import { reportListing } from "@/services/marketplace-service";
 import { fetchStorefront, submitEnquiry } from "@/services/discover-service";
-import { fetchMyFollowedBusinessIds, resolveCoverSrc, resolveVideoSrc, toggleFollowBusiness } from "@/services/video-feed-service";
+import { fetchMyBusinessIds } from "@/services/shop-chat-service";
+import { isFollowingShop } from "@/lib/shop-social";
+import { fetchMyFollowedBusinessIds, toggleFollowBusiness } from "@/services/video-feed-service";
+import type { PublicProduct } from "@/types/database";
 import { formatNgn } from "@/utils/money";
+
+const SAVED_SHOPS_KEY = "tijar-saved-shops";
+
+type StoreTab = "featured" | "collections" | "about";
+
+function readIdList(key: string): string[] {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeIdList(key: string, ids: string[]) {
+  localStorage.setItem(key, JSON.stringify(ids));
+}
+
+function compactCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+  return String(n);
+}
+
+function productBadge(p: PublicProduct): string | null {
+  const badge = p.attributes?.badge?.trim();
+  return badge || null;
+}
+
+function StoreProductCard({ product: p, canPost }: { product: PublicProduct; canPost?: boolean }) {
+  const badge = productBadge(p);
+  return (
+    <div>
+      <Link
+        to="/shop/p/$productId"
+        params={{ productId: p.id }}
+        className="block overflow-hidden rounded-2xl bg-white text-left shadow-[0_1px_0_rgba(11,31,77,0.04)]"
+      >
+        <div className="relative aspect-[4/3] overflow-hidden bg-[#F3F4F6]">
+          {p.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.image_url} alt={p.name} className="size-full object-cover" />
+          ) : null}
+          {badge ? (
+            <span
+              className={cn(
+                "absolute left-2 top-2 rounded-md px-2 py-0.5 text-[10px] font-extrabold text-white",
+                badge.toLowerCase() === "new" ? "bg-[#1F7A4D]" : "bg-[#0B1F4D]",
+              )}
+            >
+              {badge}
+            </span>
+          ) : null}
+        </div>
+        <div className="px-1.5 pb-2 pt-2">
+          <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-[#0B1F4D]">{p.name}</p>
+          <p className="mt-0.5 text-[15px] font-extrabold text-[#1F7A4D]">
+            {p.sale_price != null ? formatNgn(p.sale_price) : "On request"}
+          </p>
+        </div>
+      </Link>
+      {canPost ? (
+        <Link
+          to="/shop/create"
+          search={{ camera: true, productId: p.id }}
+          className="mt-1.5 flex min-h-9 items-center justify-center rounded-xl bg-[#1F7A4D] text-[12px] font-extrabold text-white"
+        >
+          Post this
+        </Link>
+      ) : null}
+    </div>
+  );
+}
 
 export function StorefrontScreen({ slug }: { slug: string }) {
   const { t, locale } = useTranslation();
   const voiceLang = nkenneLanguageForLocale(locale) ?? "English";
   const { session, profile } = useAuth();
+  const primaryBusiness = usePrimaryBusiness(profile?.id);
   const navigate = useNavigate();
+  const startChat = useStartShopChat();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [tab, setTab] = useState<StoreTab>("featured");
+  const [pull, setPull] = useState(0);
+  const [savedTick, setSavedTick] = useState(0);
+  const [mockFollowTick, setMockFollowTick] = useState(0);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const startY = useRef(0);
 
   const DAY_LABELS: [string, string][] = [
     ["mon", t("app.storefront.monday")],
@@ -51,15 +142,49 @@ export function StorefrontScreen({ slug }: { slug: string }) {
   });
 
   const follows = useQuery({
-    queryKey: ["followed-ids", profile?.id],
+    queryKey: ["followed-ids", profile?.id ?? "guest"],
+    queryFn: () => fetchMyFollowedBusinessIds(profile?.id ?? "guest"),
+  });
+
+  const myShops = useQuery({
+    queryKey: ["my-business-ids", profile?.id],
     enabled: Boolean(profile?.id),
-    queryFn: () => fetchMyFollowedBusinessIds(profile!.id),
+    queryFn: () => fetchMyBusinessIds(profile!.id),
   });
 
   const business = query.data?.business;
   const products = query.data?.products ?? [];
   const videos = query.data?.videos ?? [];
-  const following = Boolean(business && follows.data?.has(business.id));
+  const ownSlug = primaryBusiness.data?.business?.public_slug;
+  const viewingOwnShop = Boolean(profile && ownSlug && ownSlug === slug);
+  const isOwner = Boolean(
+    viewingOwnShop ||
+      (profile &&
+        business &&
+        (primaryBusiness.data?.business?.id === business.id || myShops.data?.includes(business.id))),
+  );
+  const mockShop = Boolean(business && isMockFeedId(business.id));
+  const following = Boolean(business && (follows.data?.has(business.id) || isFollowingShop(profile?.id ?? "guest", business.id)));
+  const shopSaved = business ? readIdList(SAVED_SHOPS_KEY).includes(business.id) : false;
+  void savedTick;
+  void mockFollowTick;
+
+  const collections = useMemo(() => {
+    const map = new Map<string, PublicProduct[]>();
+    for (const p of products) {
+      const key = p.attributes?.collection?.trim() || p.category_name?.trim() || "Catalogue";
+      const list = map.get(key) ?? [];
+      list.push(p);
+      map.set(key, list);
+    }
+    return [...map.entries()];
+  }, [products]);
+
+  const featured = products.slice(0, 8);
+  const followerCount = mockShop ? 1200 + (following ? 1 : 0) : following ? 1 : 0;
+  const productCount = mockShop ? 320 : products.length;
+  const rating = mockShop ? 4.9 : null;
+  const reviewCount = mockShop ? 128 : 0;
 
   async function onEnquiry(e: React.FormEvent) {
     e.preventDefault();
@@ -84,30 +209,28 @@ export function StorefrontScreen({ slug }: { slug: string }) {
     }
   }
 
-  async function onShare() {
-    const url = window.location.href;
-    try {
-      if (navigator.share) await navigator.share({ title: business?.business_name ?? t("app.storefront.defaultShopName"), url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast.success(t("app.storefront.linkCopied"));
-      }
-    } catch {
-      /* user cancelled share */
-    }
-  }
-
   async function onFollow() {
-    if (!session || !profile || !business) {
-      void navigate({ to: "/login" });
+    if (!business) return;
+    const r = await toggleFollowBusiness(profile?.id ?? "guest", business.id, profile?.full_name);
+    if (r.error) {
+      toast.error(r.error);
       return;
     }
-    const r = await toggleFollowBusiness(profile.id, business.id);
-    if (r.error) toast.error(r.error);
-    else {
-      toast.success(r.following ? "Following this shop" : "Unfollowed");
-      await queryClient.invalidateQueries({ queryKey: ["followed-ids"] });
-    }
+    setMockFollowTick((n) => n + 1);
+    toast.success(r.following ? "Following this shop" : "Unfollowed");
+    await queryClient.invalidateQueries({ queryKey: ["followed-ids"] });
+    await queryClient.invalidateQueries({ queryKey: ["followed-shops"] });
+    await queryClient.invalidateQueries({ queryKey: ["shop-followers"] });
+    await queryClient.invalidateQueries({ queryKey: ["video-follows"] });
+  }
+
+  function onSaveShop() {
+    if (!business) return;
+    const ids = readIdList(SAVED_SHOPS_KEY);
+    const next = ids.includes(business.id) ? ids.filter((id) => id !== business.id) : [...ids, business.id];
+    writeIdList(SAVED_SHOPS_KEY, next);
+    setSavedTick((n) => n + 1);
+    toast.success(next.includes(business.id) ? "Shop saved" : "Removed from saved");
   }
 
   async function onReport() {
@@ -122,20 +245,368 @@ export function StorefrontScreen({ slug }: { slug: string }) {
     else toast.success("Report sent to TIJAR. We do not show fake reviews.");
   }
 
-  if (query.isLoading) return <p className="mx-auto max-w-3xl px-4 py-10 text-muted-foreground">{t("app.storefront.loading")}</p>;
-
-  if (!business) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-        <h1 className="text-xl font-bold">{t("app.storefront.notFoundTitle")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{t("app.storefront.notFoundBody")}</p>
-        <Button asChild className="mt-5 rounded-xl">
-          <Link to="/discover">{t("app.storefront.browseShops")}</Link>
-        </Button>
-      </div>
-    );
+  async function refresh() {
+    await query.refetch();
+    await follows.refetch();
   }
 
+  function onTouchStart(e: React.TouchEvent) {
+    if (scrollerRef.current && scrollerRef.current.scrollTop <= 0) startY.current = e.touches[0]?.clientY ?? 0;
+    else startY.current = 0;
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    if (!startY.current || !scrollerRef.current || scrollerRef.current.scrollTop > 0) {
+      setPull(0);
+      return;
+    }
+    const dy = (e.touches[0]?.clientY ?? 0) - startY.current;
+    setPull(Math.max(0, Math.min(72, dy * 0.45)));
+  }
+
+  function onTouchEnd() {
+    if (pull > 48) void refresh();
+    setPull(0);
+    startY.current = 0;
+  }
+
+  const loading = query.isLoading && !query.data;
+
+  return (
+    <MarketplaceShell hideTopBar variant="feed">
+      <div
+        ref={scrollerRef}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-white [-webkit-overflow-scrolling:touch]"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <header className="sticky top-0 z-20 bg-white/95 px-4 pb-1 pt-1 backdrop-blur-md">
+          <div className="relative flex items-center justify-center py-1">
+            <div className="flex flex-col items-center">
+              <Link to="/shop" className="block w-[7.25rem]" aria-label="TIJAR home">
+                <TijarLogo compact className="mx-auto" />
+              </Link>
+              <p className="mt-0.5 text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#1F7A4D]">
+                Business storefront
+              </p>
+            </div>
+            {isOwner ? (
+              <Link
+                to="/shop/create"
+                search={{ camera: true }}
+                className="absolute left-0 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-[#1F7A4D] text-white"
+                aria-label="Open camera to post"
+              >
+                <Camera className="size-5" />
+              </Link>
+            ) : null}
+            <Link
+              to="/shop/notifications"
+              className="absolute right-0 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-[#0B1F4D]"
+              aria-label="Notifications"
+            >
+              <Bell className="size-5" strokeWidth={1.8} />
+            </Link>
+          </div>
+        </header>
+
+        {pull > 8 || (query.isFetching && Boolean(query.data)) ? (
+          <p
+            className="py-1 text-center text-[11px] font-semibold text-[#1F7A4D]"
+            style={{ height: Math.max(pull, query.isFetching && query.data ? 28 : 0) }}
+          >
+            {query.isFetching && query.data ? "Refreshing…" : "Release to refresh"}
+          </p>
+        ) : null}
+
+        {loading ? (
+          <p className="px-4 py-16 text-center text-sm text-muted-foreground">{t("app.storefront.loading")}</p>
+        ) : !business && isOwner ? (
+          <div className="px-6 py-16 text-center">
+            <h1 className="text-xl font-bold text-[#0B1F4D]">Your shopfront</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Post a 5–30 second video tagged to a catalogue product. It goes live on For You with Buy Now.
+            </p>
+            <div className="mt-5 grid grid-cols-1 gap-2">
+              <Button className="min-h-11 rounded-xl bg-[#1F7A4D] font-extrabold text-white hover:bg-[#1F7A4D]/90" asChild>
+                <Link to="/shop/create">Create Post</Link>
+              </Button>
+              <Button variant="outline" className="min-h-11 rounded-xl font-extrabold" asChild>
+                <Link to="/shop/create" search={{ camera: true }}>
+                  Open Camera
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : !business ? (
+          <div className="px-6 py-16 text-center">
+            <h1 className="text-xl font-bold text-[#0B1F4D]">{t("app.storefront.notFoundTitle")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{t("app.storefront.notFoundBody")}</p>
+            <Button asChild className="mt-5 rounded-xl bg-[#0B1F4D]">
+              <Link to="/shop/discover">{t("app.storefront.browseShops")}</Link>
+            </Button>
+          </div>
+        ) : (
+          <>
+            <section className="px-4 pb-3 pt-3">
+              <div className="flex items-start gap-3">
+                {business.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={business.logo_url}
+                    alt=""
+                    className="size-[4.35rem] shrink-0 rounded-full border-[3px] border-[#1F7A4D] object-cover"
+                  />
+                ) : (
+                  <span className="flex size-[4.35rem] shrink-0 items-center justify-center rounded-full border-[3px] border-[#1F7A4D] bg-[#E8F5EE] text-xl font-extrabold text-[#0B1F4D]">
+                    {business.business_name.slice(0, 1)}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <h1 className="truncate text-[1.2rem] font-extrabold leading-tight text-[#0B1F4D]">{business.business_name}</h1>
+                    {business.is_verified ? <BadgeCheck className="size-[1.15rem] shrink-0 fill-[#1F7A4D] text-white" aria-label="Verified" /> : null}
+                  </div>
+                  <p className="mt-0.5 text-[13px] text-[#6B7280]">{business.category_name ?? t("app.storefront.defaultCategory")}</p>
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <p className="flex min-w-0 items-center gap-1 text-[12px] text-[#6B7280]">
+                      <MapPin className="size-3.5 shrink-0 text-[#1F7A4D]" />
+                      <span className="truncate">{business.public_location_label ?? business.location_text ?? "Lagos, Nigeria"}</span>
+                    </p>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {isOwner ? (
+                        <Link
+                          to="/shop/create"
+                          className="inline-flex h-8 min-w-[5.5rem] items-center justify-center rounded-full bg-[#1F7A4D] px-4 text-[13px] font-bold text-white"
+                        >
+                          Post
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void onFollow()}
+                          className={cn(
+                            "h-8 min-w-[5.5rem] rounded-full px-4 text-[13px] font-bold text-white transition-colors",
+                            following ? "bg-[#0B1F4D]" : "bg-[#1F7A4D]",
+                          )}
+                        >
+                          {following ? "Following" : "Follow"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={onSaveShop}
+                        className="flex size-8 items-center justify-center rounded-full border border-[#1F7A4D]/25 text-[#1F7A4D]"
+                        aria-label={shopSaved ? "Unsave shop" : "Save shop"}
+                      >
+                        <Heart className={cn("size-4", shopSaved && "fill-[#1F7A4D]")} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {isOwner ? (
+              <div className="grid grid-cols-2 gap-2 px-4 pb-3">
+                <Button className="min-h-11 rounded-xl bg-[#1F7A4D] font-extrabold text-white hover:bg-[#1F7A4D]/90" asChild>
+                  <Link to="/shop/create">
+                    <Plus className="size-4" />
+                    Create Post
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="min-h-11 rounded-xl border-[#1F7A4D] font-extrabold text-[#1F7A4D]"
+                  asChild
+                >
+                  <Link to="/shop/create" search={{ camera: true }}>
+                    <Camera className="size-4" />
+                    Open Camera
+                  </Link>
+                </Button>
+              </div>
+            ) : null}
+
+            <section className="grid grid-cols-3 border-y border-[#EEF1F5] py-3">
+              <div className="text-center">
+                <p className="text-[1.15rem] font-extrabold leading-none text-[#0B1F4D]">{compactCount(followerCount)}</p>
+                <p className="mt-1 text-[11px] text-[#9CA3AF]">Followers</p>
+              </div>
+              <div className="border-x border-[#EEF1F5] text-center">
+                <p className="text-[1.15rem] font-extrabold leading-none text-[#0B1F4D]">{productCount}</p>
+                <p className="mt-1 text-[11px] text-[#9CA3AF]">Products</p>
+              </div>
+              <div className="text-center">
+                <p className="flex items-center justify-center gap-1 text-[1.15rem] font-extrabold leading-none text-[#0B1F4D]">
+                  {rating != null ? rating.toFixed(1) : "—"}
+                  {rating != null ? <Star className="size-3.5 fill-[#E8B931] text-[#E8B931]" /> : null}
+                </p>
+                <p className="mt-1 text-[11px] text-[#9CA3AF]">{rating != null ? `Rating (${reviewCount})` : "Rating"}</p>
+              </div>
+            </section>
+
+            <div className="sticky top-[3.35rem] z-10 bg-white">
+              <nav className="grid grid-cols-3 px-2" aria-label="Storefront sections">
+                {(
+                  [
+                    ["featured", "Featured"],
+                    ["collections", "Collections"],
+                    ["about", "About"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setTab(id)}
+                    className={cn(
+                      "relative py-3 text-[14px] font-semibold transition-colors",
+                      tab === id ? "text-[#1F7A4D]" : "text-[#9CA3AF]",
+                    )}
+                  >
+                    {label}
+                    <span
+                      className={cn(
+                        "absolute inset-x-6 bottom-0 h-[2.5px] rounded-full bg-[#1F7A4D] transition-opacity duration-200",
+                        tab === id ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            <div className="min-h-[20rem] px-4 pb-8 pt-4">
+              <div key={tab} className="transition-opacity duration-200">
+                {tab === "featured" ? (
+                  <>
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="text-[1.05rem] font-extrabold text-[#0B1F4D]">Featured Products</h2>
+                      <button
+                        type="button"
+                        className="text-[13px] font-semibold text-[#1F7A4D]"
+                        onClick={() => setTab("collections")}
+                      >
+                        View all {"\u203A"}
+                      </button>
+                    </div>
+                    {featured.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted-foreground">{t("app.storefront.noProducts")}</p>
+                    ) : (
+                      <ul className="grid grid-cols-2 gap-3">
+                        {featured.map((p) => (
+                          <li key={p.id}>
+                            <StoreProductCard product={p} canPost={isOwner} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                ) : null}
+
+                {tab === "collections" ? (
+                  <>
+                    {collections.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted-foreground">No collections yet.</p>
+                    ) : (
+                      collections.map(([title, items]) => (
+                        <section key={title} className="mb-6">
+                          <h2 className="mb-3 text-[1.05rem] font-extrabold text-[#0B1F4D]">{title}</h2>
+                          <ul className="grid grid-cols-2 gap-3">
+                            {items.map((p) => (
+                              <li key={p.id}>
+                                <StoreProductCard product={p} canPost={isOwner} />
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      ))
+                    )}
+                    {videos.length > 0 ? (
+                      <section className="mt-2">
+                        <h2 className="mb-3 text-[1.05rem] font-extrabold text-[#0B1F4D]">From the shop</h2>
+                        <ul className="grid grid-cols-3 gap-2">
+                          {videos.slice(0, 6).map((v) => (
+                            <li key={v.id} className="overflow-hidden rounded-xl bg-muted">
+                              <Link to="/shop">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={v.cover_path ?? ""} alt="" className="aspect-[3/4] w-full object-cover" />
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ) : null}
+                  </>
+                ) : null}
+
+                {tab === "about" ? (
+                  <AboutPanel
+                    business={business}
+                    hours={DAY_LABELS.filter(([k]) => business.opening_hours?.[k])}
+                    voiceLang={voiceLang}
+                    name={name}
+                    phone={phone}
+                    message={message}
+                    sending={sending}
+                    reporting={reporting}
+                    setName={setName}
+                    setPhone={setPhone}
+                    setMessage={setMessage}
+                    onEnquiry={onEnquiry}
+                    onReport={() => void onReport()}
+                    onChat={() =>
+                      void startChat({
+                        businessId: business.id,
+                        businessName: business.business_name,
+                        logoUrl: business.logo_url,
+                        businessSlug: business.slug,
+                      })
+                    }
+                  />
+                ) : null}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </MarketplaceShell>
+  );
+}
+
+function AboutPanel({
+  business,
+  hours,
+  voiceLang,
+  name,
+  phone,
+  message,
+  sending,
+  reporting,
+  setName,
+  setPhone,
+  setMessage,
+  onEnquiry,
+  onReport,
+  onChat,
+}: {
+  business: NonNullable<Awaited<ReturnType<typeof fetchStorefront>>["business"]>;
+  hours: [string, string][];
+  voiceLang: string;
+  name: string;
+  phone: string;
+  message: string;
+  sending: boolean;
+  reporting: boolean;
+  setName: (v: string) => void;
+  setPhone: (v: string) => void;
+  setMessage: (v: string) => void;
+  onEnquiry: (e: React.FormEvent) => void;
+  onReport: () => void;
+  onChat: () => void;
+}) {
+  const { t } = useTranslation();
   const directions =
     business.latitude != null && business.longitude != null
       ? getMapsProvider().directionsUrl({
@@ -144,84 +615,44 @@ export function StorefrontScreen({ slug }: { slug: string }) {
           label: business.business_name,
         })
       : null;
-  const hours = DAY_LABELS.filter(([k]) => business.opening_hours?.[k]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-      {business.cover_image_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={business.cover_image_url} alt="" className="mb-4 h-40 w-full rounded-3xl object-cover" />
-      )}
-      <div className="flex items-start gap-4">
-        {business.logo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={business.logo_url} alt="" className="size-16 rounded-2xl object-cover" />
-        ) : (
-          <span className="flex size-16 items-center justify-center rounded-2xl bg-muted text-2xl font-extrabold">
-            {business.business_name.slice(0, 1)}
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold">{business.business_name}</h1>
-          <p className="text-sm text-muted-foreground">{business.category_name ?? t("app.storefront.defaultCategory")}</p>
-          <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="size-4" /> {business.public_location_label ?? business.location_text}
-          </p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => void onShare()}>
-            <Share2 className="mr-1 size-4" /> {t("app.storefront.share")}
-          </Button>
-          <Button type="button" size="sm" className="rounded-xl" onClick={() => void onFollow()}>
-            {following ? "Following" : "Follow"}
-          </Button>
-        </div>
-      </div>
-
-      <p id="verification" className="mt-3 flex gap-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-        <Info className="size-4 shrink-0" />
-        <span>{business.is_verified ? t("app.storefront.verifiedInfo") : t("app.storefront.unverifiedInfo")}</span>
-      </p>
-
-      {business.description && (
-        <div className="mt-4 space-y-2 text-sm">
-          <p className="leading-relaxed">{business.description}</p>
+    <div className="space-y-5">
+      {business.description ? (
+        <div className="space-y-2 text-sm leading-relaxed text-[#374151]">
+          <p>{business.description}</p>
           <TranslateText text={business.description} />
         </div>
-      )}
+      ) : null}
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        {business.public_phone && (
-          <Button asChild className="min-h-11 rounded-xl">
+      <div className="flex flex-wrap gap-2">
+        {business.public_phone ? (
+          <Button asChild className="min-h-11 rounded-xl bg-[#0B1F4D]">
             <a href={`tel:${business.public_phone}`}>
               <Phone className="mr-1.5 size-4" /> {t("app.storefront.call")}
             </a>
           </Button>
-        )}
-        {business.public_whatsapp && (
+        ) : null}
+        {business.public_whatsapp ? (
           <Button asChild variant="outline" className="min-h-11 rounded-xl">
             <a href={`https://wa.me/${business.public_whatsapp.replace(/[^0-9]/g, "")}`} target="_blank" rel="noreferrer">
               <MessageCircle className="mr-1.5 size-4" /> {t("app.storefront.whatsapp")}
             </a>
           </Button>
-        )}
-        {directions && (
+        ) : null}
+        {directions ? (
           <Button asChild variant="outline" className="min-h-11 rounded-xl">
             <a href={directions} target="_blank" rel="noreferrer">
               <Navigation className="mr-1.5 size-4" /> {t("app.storefront.directions")}
             </a>
           </Button>
-        )}
-        <Button type="button" variant="ghost" size="sm" className="rounded-xl" disabled={reporting} onClick={() => void onReport()}>
-          <Flag className="mr-1 size-4" /> Report
-        </Button>
+        ) : null}
       </div>
 
-      {hours.length > 0 && (
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 font-bold">
-            <Clock className="size-4" /> {t("app.storefront.openingHours")}{" "}
-            <span className="text-xs font-normal text-muted-foreground">{t("app.storefront.ownerProvided")}</span>
+      {hours.length > 0 ? (
+        <section>
+          <h2 className="flex items-center gap-2 font-bold text-[#0B1F4D]">
+            <Clock className="size-4" /> {t("app.storefront.openingHours")}
           </h2>
           <ul className="mt-2 divide-y divide-border rounded-2xl border border-border">
             {hours.map(([k, label]) => (
@@ -232,87 +663,17 @@ export function StorefrontScreen({ slug }: { slug: string }) {
             ))}
           </ul>
         </section>
-      )}
+      ) : null}
 
-      <section className="mt-8">
-        <h2 className="font-bold">{t("app.storefront.productsTitle")}</h2>
-        {products.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">{t("app.storefront.noProducts")}</p>
-        ) : (
-          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-            {products.map((p) => (
-              <li key={p.id} className="overflow-hidden rounded-2xl border border-border bg-card">
-                {p.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.image_url} alt="" loading="lazy" className="h-36 w-full object-cover" />
-                )}
-                <div className="p-3">
-                  <Link to="/shop/p/$productId" params={{ productId: p.id }} className="font-bold leading-tight hover:underline">
-                    {p.name}
-                  </Link>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {p.kind === "service" ? t("app.storefront.service") : t("app.storefront.product")}
-                  </p>
-                  {p.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{p.description}</p>}
-                  <TranslateText text={`${p.name}. ${p.description ?? ""}`.trim()} label={t("app.storefront.translateProduct")} />
-                  <p className="mt-2 flex items-center justify-between">
-                    <span className="font-extrabold">{p.sale_price != null ? formatNgn(p.sale_price) : t("app.storefront.priceOnRequest")}</span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${p.is_available ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary"}`}
-                    >
-                      {p.is_available ? t("app.storefront.available") : t("app.storefront.outOfStock")}
-                    </span>
-                  </p>
-                  {p.sale_price != null && p.is_available && (
-                    <Button
-                      type="button"
-                      className="mt-2 min-h-10 w-full rounded-xl"
-                      onClick={async () => {
-                        if (!session || !profile) {
-                          void navigate({ to: "/login" });
-                          return;
-                        }
-                        const r = await addToCart(profile.id, {
-                          businessId: p.business_id,
-                          productId: p.id,
-                          productName: p.name,
-                          unit: p.unit,
-                          unitPrice: Number(p.sale_price),
-                          imageUrl: p.image_url,
-                        });
-                        if (r.error) toast.error(r.error);
-                        else toast.success("Added to cart");
-                      }}
-                    >
-                      Add to cart
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {videos.length > 0 && (
-        <section className="mt-8">
-          <h2 className="font-bold">Shopping videos</h2>
-          <ul className="mt-3 grid grid-cols-3 gap-2">
-            {videos.map((v) => (
-              <li key={v.id} className="overflow-hidden rounded-xl bg-muted">
-                <Link to="/shop">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={resolveCoverSrc(v.cover_path) ?? resolveVideoSrc(v)} alt="" className="aspect-[9/16] w-full object-cover" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="mt-10 rounded-2xl border border-border bg-card p-4">
-        <h2 className="font-bold">{t("app.storefront.enquiryTitle")}</h2>
-        <form className="mt-3 space-y-2" onSubmit={(e) => void onEnquiry(e)}>
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="font-bold text-[#0B1F4D]">Message this shop</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Chat with the seller about products, prices, or pickup.</p>
+        <Button type="button" className="mt-3 min-h-11 w-full rounded-xl bg-[#0B1F4D] font-bold" onClick={onChat}>
+          <MessageCircle className="mr-2 size-4" />
+          Open chat
+        </Button>
+        <h2 className="mt-6 font-bold text-[#0B1F4D]">{t("app.storefront.enquiryTitle")}</h2>
+        <form className="mt-3 space-y-2" onSubmit={onEnquiry}>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("app.storefront.namePlaceholder")} className="min-h-11 rounded-xl" />
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("app.storefront.phonePlaceholder")} className="min-h-11 rounded-xl" />
           <textarea
@@ -322,11 +683,15 @@ export function StorefrontScreen({ slug }: { slug: string }) {
             className="min-h-24 w-full rounded-xl border px-3 py-2 text-sm"
           />
           <VoiceTranslate language={voiceLang} onUseTranscript={(text) => setMessage((cur) => (cur ? `${cur} ${text}` : text))} />
-          <Button type="submit" className="min-h-11 w-full rounded-xl" disabled={sending}>
+          <Button type="submit" className="min-h-11 w-full rounded-xl bg-[#1F7A4D]" disabled={sending}>
             {sending ? t("app.storefront.sending") : t("app.storefront.sendMessage")}
           </Button>
         </form>
       </section>
+
+      <Button type="button" variant="ghost" size="sm" className="rounded-xl text-muted-foreground" disabled={reporting} onClick={onReport}>
+        <Flag className="mr-1 size-4" /> Report
+      </Button>
     </div>
   );
 }

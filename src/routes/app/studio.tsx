@@ -27,6 +27,7 @@ function StudioInner() {
         <MarketingStudioScreen
           businessId={businessId}
           businessName={biz.data?.business?.business_name ?? "Your shop"}
+          profileId={profile?.id ?? ""}
         />
       )}
     </SellerPage>

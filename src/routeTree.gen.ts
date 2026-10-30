@@ -15,11 +15,13 @@ import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as BusinessVisibilityRouteImport } from './routes/business-visibility'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoverRouteImport } from './routes/discover'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TranslateRouteImport } from './routes/translate'
@@ -52,21 +54,31 @@ import { Route as AppSuppliersRouteImport } from './routes/app/suppliers'
 import { Route as AppTeamRouteImport } from './routes/app/team'
 import { Route as AppTransactionsRouteImport } from './routes/app/transactions'
 import { Route as AppVideosRouteImport } from './routes/app/videos'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as BSlugRouteImport } from './routes/b/$slug'
 import { Route as ShopIndexRouteImport } from './routes/shop/index'
 import { Route as ShopBrowseRouteImport } from './routes/shop/browse'
 import { Route as ShopBusinessApplyRouteImport } from './routes/shop/business-apply'
+import { Route as ShopBuyRouteImport } from './routes/shop/buy'
 import { Route as ShopCartRouteImport } from './routes/shop/cart'
 import { Route as ShopCheckoutRouteImport } from './routes/shop/checkout'
 import { Route as ShopCreateRouteImport } from './routes/shop/create'
 import { Route as ShopDiscoverRouteImport } from './routes/shop/discover'
+import { Route as ShopEditProfileRouteImport } from './routes/shop/edit-profile'
 import { Route as ShopEnquiriesRouteImport } from './routes/shop/enquiries'
 import { Route as ShopFavoritesRouteImport } from './routes/shop/favorites'
+import { Route as ShopFollowersRouteImport } from './routes/shop/followers'
 import { Route as ShopFollowsRouteImport } from './routes/shop/follows'
+import { Route as ShopHelpRouteImport } from './routes/shop/help'
 import { Route as ShopNearbyRouteImport } from './routes/shop/nearby'
 import { Route as ShopNotificationsRouteImport } from './routes/shop/notifications'
 import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
 import { Route as ShopProfileRouteImport } from './routes/shop/profile'
+import { Route as ShopSettingsRouteImport } from './routes/shop/settings'
+import { Route as ShopStudioRouteImport } from './routes/shop/studio'
+import { Route as ApiStudioFlyerRouteImport } from './routes/api.studio.flyer'
+import { Route as ApiStudioStatusRouteImport } from './routes/api.studio.status'
+import { Route as ApiStudioVideoRouteImport } from './routes/api.studio.video'
 import { Route as AppAdminIndexRouteImport } from './routes/app/admin/index'
 import { Route as AppAdminModerationRouteImport } from './routes/app/admin/moderation'
 import { Route as AppAdminTranslateRouteImport } from './routes/app/admin/translate'
@@ -86,8 +98,12 @@ import { Route as AppProductsScanShopRouteImport } from './routes/app/products/s
 import { Route as AppProfileEditRouteImport } from './routes/app/profile/edit'
 import { Route as AppProfileSettingsRouteImport } from './routes/app/profile/settings'
 import { Route as AppVideosNewRouteImport } from './routes/app/videos/new'
+import { Route as ShopEnquiriesIndexRouteImport } from './routes/shop/enquiries.index'
+import { Route as ShopEnquiriesConversationIdRouteImport } from './routes/shop/enquiries.$conversationId'
+import { Route as ShopOrdersIndexRouteImport } from './routes/shop/orders.index'
 import { Route as ShopOrdersOrderIdRouteImport } from './routes/shop/orders.$orderId'
 import { Route as ShopPProductIdRouteImport } from './routes/shop/p.$productId'
+import { Route as ApiStudioVideoRequestIdRouteImport } from './routes/api.studio.video.$requestId'
 import { Route as AppCustomersCreditNewRouteImport } from './routes/app/customers/credit/new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -120,6 +136,11 @@ const DiscoverRoute = DiscoverRouteImport.update({
   path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
   path: '/how-it-works',
@@ -143,6 +164,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -305,6 +331,11 @@ const AppVideosRoute = AppVideosRouteImport.update({
   path: '/videos',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BSlugRoute = BSlugRouteImport.update({
   id: '/b/$slug',
   path: '/b/$slug',
@@ -323,6 +354,11 @@ const ShopBrowseRoute = ShopBrowseRouteImport.update({
 const ShopBusinessApplyRoute = ShopBusinessApplyRouteImport.update({
   id: '/business-apply',
   path: '/business-apply',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopBuyRoute = ShopBuyRouteImport.update({
+  id: '/buy',
+  path: '/buy',
   getParentRoute: () => ShopRoute,
 } as any)
 const ShopCartRoute = ShopCartRouteImport.update({
@@ -345,6 +381,11 @@ const ShopDiscoverRoute = ShopDiscoverRouteImport.update({
   path: '/discover',
   getParentRoute: () => ShopRoute,
 } as any)
+const ShopEditProfileRoute = ShopEditProfileRouteImport.update({
+  id: '/edit-profile',
+  path: '/edit-profile',
+  getParentRoute: () => ShopRoute,
+} as any)
 const ShopEnquiriesRoute = ShopEnquiriesRouteImport.update({
   id: '/enquiries',
   path: '/enquiries',
@@ -355,9 +396,19 @@ const ShopFavoritesRoute = ShopFavoritesRouteImport.update({
   path: '/favorites',
   getParentRoute: () => ShopRoute,
 } as any)
+const ShopFollowersRoute = ShopFollowersRouteImport.update({
+  id: '/followers',
+  path: '/followers',
+  getParentRoute: () => ShopRoute,
+} as any)
 const ShopFollowsRoute = ShopFollowsRouteImport.update({
   id: '/follows',
   path: '/follows',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopHelpRoute = ShopHelpRouteImport.update({
+  id: '/help',
+  path: '/help',
   getParentRoute: () => ShopRoute,
 } as any)
 const ShopNearbyRoute = ShopNearbyRouteImport.update({
@@ -379,6 +430,31 @@ const ShopProfileRoute = ShopProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
   getParentRoute: () => ShopRoute,
+} as any)
+const ShopSettingsRoute = ShopSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ShopStudioRoute = ShopStudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => ShopRoute,
+} as any)
+const ApiStudioFlyerRoute = ApiStudioFlyerRouteImport.update({
+  id: '/api/studio/flyer',
+  path: '/api/studio/flyer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStudioStatusRoute = ApiStudioStatusRouteImport.update({
+  id: '/api/studio/status',
+  path: '/api/studio/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStudioVideoRoute = ApiStudioVideoRouteImport.update({
+  id: '/api/studio/video',
+  path: '/api/studio/video',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
   id: '/admin/',
@@ -475,6 +551,22 @@ const AppVideosNewRoute = AppVideosNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AppVideosRoute,
 } as any)
+const ShopEnquiriesIndexRoute = ShopEnquiriesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShopEnquiriesRoute,
+} as any)
+const ShopEnquiriesConversationIdRoute =
+  ShopEnquiriesConversationIdRouteImport.update({
+    id: '/$conversationId',
+    path: '/$conversationId',
+    getParentRoute: () => ShopEnquiriesRoute,
+  } as any)
+const ShopOrdersIndexRoute = ShopOrdersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShopOrdersRoute,
+} as any)
 const ShopOrdersOrderIdRoute = ShopOrdersOrderIdRouteImport.update({
   id: '/$orderId',
   path: '/$orderId',
@@ -484,6 +576,11 @@ const ShopPProductIdRoute = ShopPProductIdRouteImport.update({
   id: '/p/$productId',
   path: '/p/$productId',
   getParentRoute: () => ShopRoute,
+} as any)
+const ApiStudioVideoRequestIdRoute = ApiStudioVideoRequestIdRouteImport.update({
+  id: '/$requestId',
+  path: '/$requestId',
+  getParentRoute: () => ApiStudioVideoRoute,
 } as any)
 const AppCustomersCreditNewRoute = AppCustomersCreditNewRouteImport.update({
   id: '/credit/new',
@@ -498,11 +595,13 @@ export interface FileRoutesByFullPath {
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/discover': typeof DiscoverRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/shop': typeof ShopRouteWithChildren
   '/terms': typeof TermsRoute
   '/translate': typeof TranslateRoute
@@ -534,22 +633,32 @@ export interface FileRoutesByFullPath {
   '/app/team': typeof AppTeamRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/app/videos': typeof AppVideosRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/b/$slug': typeof BSlugRoute
   '/shop/browse': typeof ShopBrowseRoute
   '/shop/business-apply': typeof ShopBusinessApplyRoute
+  '/shop/buy': typeof ShopBuyRoute
   '/shop/cart': typeof ShopCartRoute
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/create': typeof ShopCreateRoute
   '/shop/discover': typeof ShopDiscoverRoute
-  '/shop/enquiries': typeof ShopEnquiriesRoute
+  '/shop/edit-profile': typeof ShopEditProfileRoute
+  '/shop/enquiries': typeof ShopEnquiriesRouteWithChildren
   '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/followers': typeof ShopFollowersRoute
   '/shop/follows': typeof ShopFollowsRoute
+  '/shop/help': typeof ShopHelpRoute
   '/shop/nearby': typeof ShopNearbyRoute
   '/shop/notifications': typeof ShopNotificationsRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
   '/shop/profile': typeof ShopProfileRoute
+  '/shop/settings': typeof ShopSettingsRoute
+  '/shop/studio': typeof ShopStudioRoute
   '/app/': typeof AppIndexRoute
   '/shop/': typeof ShopIndexRoute
+  '/api/studio/flyer': typeof ApiStudioFlyerRoute
+  '/api/studio/status': typeof ApiStudioStatusRoute
+  '/api/studio/video': typeof ApiStudioVideoRouteWithChildren
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
@@ -566,11 +675,15 @@ export interface FileRoutesByFullPath {
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
   '/app/videos/new': typeof AppVideosNewRoute
+  '/shop/enquiries/$conversationId': typeof ShopEnquiriesConversationIdRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
   '/shop/p/$productId': typeof ShopPProductIdRoute
   '/app/admin/': typeof AppAdminIndexRoute
   '/app/customers/': typeof AppCustomersIndexRoute
   '/app/learn/': typeof AppLearnIndexRoute
+  '/shop/enquiries/': typeof ShopEnquiriesIndexRoute
+  '/shop/orders/': typeof ShopOrdersIndexRoute
+  '/api/studio/video/$requestId': typeof ApiStudioVideoRequestIdRoute
   '/app/customers/credit/new': typeof AppCustomersCreditNewRoute
 }
 export interface FileRoutesByTo {
@@ -579,11 +692,13 @@ export interface FileRoutesByTo {
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/discover': typeof DiscoverRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/translate': typeof TranslateRoute
   '/api/public-config': typeof ApiPublicConfigRoute
@@ -612,22 +727,30 @@ export interface FileRoutesByTo {
   '/app/team': typeof AppTeamRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/app/videos': typeof AppVideosRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/b/$slug': typeof BSlugRoute
   '/shop/browse': typeof ShopBrowseRoute
   '/shop/business-apply': typeof ShopBusinessApplyRoute
+  '/shop/buy': typeof ShopBuyRoute
   '/shop/cart': typeof ShopCartRoute
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/create': typeof ShopCreateRoute
   '/shop/discover': typeof ShopDiscoverRoute
-  '/shop/enquiries': typeof ShopEnquiriesRoute
+  '/shop/edit-profile': typeof ShopEditProfileRoute
   '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/followers': typeof ShopFollowersRoute
   '/shop/follows': typeof ShopFollowsRoute
+  '/shop/help': typeof ShopHelpRoute
   '/shop/nearby': typeof ShopNearbyRoute
   '/shop/notifications': typeof ShopNotificationsRoute
-  '/shop/orders': typeof ShopOrdersRouteWithChildren
   '/shop/profile': typeof ShopProfileRoute
+  '/shop/settings': typeof ShopSettingsRoute
+  '/shop/studio': typeof ShopStudioRoute
   '/app': typeof AppIndexRoute
   '/shop': typeof ShopIndexRoute
+  '/api/studio/flyer': typeof ApiStudioFlyerRoute
+  '/api/studio/status': typeof ApiStudioStatusRoute
+  '/api/studio/video': typeof ApiStudioVideoRouteWithChildren
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
@@ -644,11 +767,15 @@ export interface FileRoutesByTo {
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
   '/app/videos/new': typeof AppVideosNewRoute
+  '/shop/enquiries/$conversationId': typeof ShopEnquiriesConversationIdRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
   '/shop/p/$productId': typeof ShopPProductIdRoute
   '/app/admin': typeof AppAdminIndexRoute
   '/app/customers': typeof AppCustomersIndexRoute
   '/app/learn': typeof AppLearnIndexRoute
+  '/shop/enquiries': typeof ShopEnquiriesIndexRoute
+  '/shop/orders': typeof ShopOrdersIndexRoute
+  '/api/studio/video/$requestId': typeof ApiStudioVideoRequestIdRoute
   '/app/customers/credit/new': typeof AppCustomersCreditNewRoute
 }
 export interface FileRoutesById {
@@ -659,11 +786,13 @@ export interface FileRoutesById {
   '/business-visibility': typeof BusinessVisibilityRoute
   '/contact': typeof ContactRoute
   '/discover': typeof DiscoverRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
   '/learn': typeof LearnRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/shop': typeof ShopRouteWithChildren
   '/terms': typeof TermsRoute
   '/translate': typeof TranslateRoute
@@ -695,22 +824,32 @@ export interface FileRoutesById {
   '/app/team': typeof AppTeamRoute
   '/app/transactions': typeof AppTransactionsRoute
   '/app/videos': typeof AppVideosRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/b/$slug': typeof BSlugRoute
   '/shop/browse': typeof ShopBrowseRoute
   '/shop/business-apply': typeof ShopBusinessApplyRoute
+  '/shop/buy': typeof ShopBuyRoute
   '/shop/cart': typeof ShopCartRoute
   '/shop/checkout': typeof ShopCheckoutRoute
   '/shop/create': typeof ShopCreateRoute
   '/shop/discover': typeof ShopDiscoverRoute
-  '/shop/enquiries': typeof ShopEnquiriesRoute
+  '/shop/edit-profile': typeof ShopEditProfileRoute
+  '/shop/enquiries': typeof ShopEnquiriesRouteWithChildren
   '/shop/favorites': typeof ShopFavoritesRoute
+  '/shop/followers': typeof ShopFollowersRoute
   '/shop/follows': typeof ShopFollowsRoute
+  '/shop/help': typeof ShopHelpRoute
   '/shop/nearby': typeof ShopNearbyRoute
   '/shop/notifications': typeof ShopNotificationsRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
   '/shop/profile': typeof ShopProfileRoute
+  '/shop/settings': typeof ShopSettingsRoute
+  '/shop/studio': typeof ShopStudioRoute
   '/app/': typeof AppIndexRoute
   '/shop/': typeof ShopIndexRoute
+  '/api/studio/flyer': typeof ApiStudioFlyerRoute
+  '/api/studio/status': typeof ApiStudioStatusRoute
+  '/api/studio/video': typeof ApiStudioVideoRouteWithChildren
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
@@ -727,11 +866,15 @@ export interface FileRoutesById {
   '/app/profile/edit': typeof AppProfileEditRoute
   '/app/profile/settings': typeof AppProfileSettingsRoute
   '/app/videos/new': typeof AppVideosNewRoute
+  '/shop/enquiries/$conversationId': typeof ShopEnquiriesConversationIdRoute
   '/shop/orders/$orderId': typeof ShopOrdersOrderIdRoute
   '/shop/p/$productId': typeof ShopPProductIdRoute
   '/app/admin/': typeof AppAdminIndexRoute
   '/app/customers/': typeof AppCustomersIndexRoute
   '/app/learn/': typeof AppLearnIndexRoute
+  '/shop/enquiries/': typeof ShopEnquiriesIndexRoute
+  '/shop/orders/': typeof ShopOrdersIndexRoute
+  '/api/studio/video/$requestId': typeof ApiStudioVideoRequestIdRoute
   '/app/customers/credit/new': typeof AppCustomersCreditNewRoute
 }
 export interface FileRouteTypes {
@@ -743,11 +886,13 @@ export interface FileRouteTypes {
     | '/business-visibility'
     | '/contact'
     | '/discover'
+    | '/forgot-password'
     | '/how-it-works'
     | '/learn'
     | '/login'
     | '/privacy'
     | '/register'
+    | '/reset-password'
     | '/shop'
     | '/terms'
     | '/translate'
@@ -779,22 +924,32 @@ export interface FileRouteTypes {
     | '/app/team'
     | '/app/transactions'
     | '/app/videos'
+    | '/auth/callback'
     | '/b/$slug'
     | '/shop/browse'
     | '/shop/business-apply'
+    | '/shop/buy'
     | '/shop/cart'
     | '/shop/checkout'
     | '/shop/create'
     | '/shop/discover'
+    | '/shop/edit-profile'
     | '/shop/enquiries'
     | '/shop/favorites'
+    | '/shop/followers'
     | '/shop/follows'
+    | '/shop/help'
     | '/shop/nearby'
     | '/shop/notifications'
     | '/shop/orders'
     | '/shop/profile'
+    | '/shop/settings'
+    | '/shop/studio'
     | '/app/'
     | '/shop/'
+    | '/api/studio/flyer'
+    | '/api/studio/status'
+    | '/api/studio/video'
     | '/app/admin/moderation'
     | '/app/admin/translate'
     | '/app/business/edit'
@@ -811,11 +966,15 @@ export interface FileRouteTypes {
     | '/app/profile/edit'
     | '/app/profile/settings'
     | '/app/videos/new'
+    | '/shop/enquiries/$conversationId'
     | '/shop/orders/$orderId'
     | '/shop/p/$productId'
     | '/app/admin/'
     | '/app/customers/'
     | '/app/learn/'
+    | '/shop/enquiries/'
+    | '/shop/orders/'
+    | '/api/studio/video/$requestId'
     | '/app/customers/credit/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -824,11 +983,13 @@ export interface FileRouteTypes {
     | '/business-visibility'
     | '/contact'
     | '/discover'
+    | '/forgot-password'
     | '/how-it-works'
     | '/learn'
     | '/login'
     | '/privacy'
     | '/register'
+    | '/reset-password'
     | '/terms'
     | '/translate'
     | '/api/public-config'
@@ -857,22 +1018,30 @@ export interface FileRouteTypes {
     | '/app/team'
     | '/app/transactions'
     | '/app/videos'
+    | '/auth/callback'
     | '/b/$slug'
     | '/shop/browse'
     | '/shop/business-apply'
+    | '/shop/buy'
     | '/shop/cart'
     | '/shop/checkout'
     | '/shop/create'
     | '/shop/discover'
-    | '/shop/enquiries'
+    | '/shop/edit-profile'
     | '/shop/favorites'
+    | '/shop/followers'
     | '/shop/follows'
+    | '/shop/help'
     | '/shop/nearby'
     | '/shop/notifications'
-    | '/shop/orders'
     | '/shop/profile'
+    | '/shop/settings'
+    | '/shop/studio'
     | '/app'
     | '/shop'
+    | '/api/studio/flyer'
+    | '/api/studio/status'
+    | '/api/studio/video'
     | '/app/admin/moderation'
     | '/app/admin/translate'
     | '/app/business/edit'
@@ -889,11 +1058,15 @@ export interface FileRouteTypes {
     | '/app/profile/edit'
     | '/app/profile/settings'
     | '/app/videos/new'
+    | '/shop/enquiries/$conversationId'
     | '/shop/orders/$orderId'
     | '/shop/p/$productId'
     | '/app/admin'
     | '/app/customers'
     | '/app/learn'
+    | '/shop/enquiries'
+    | '/shop/orders'
+    | '/api/studio/video/$requestId'
     | '/app/customers/credit/new'
   id:
     | '__root__'
@@ -903,11 +1076,13 @@ export interface FileRouteTypes {
     | '/business-visibility'
     | '/contact'
     | '/discover'
+    | '/forgot-password'
     | '/how-it-works'
     | '/learn'
     | '/login'
     | '/privacy'
     | '/register'
+    | '/reset-password'
     | '/shop'
     | '/terms'
     | '/translate'
@@ -939,22 +1114,32 @@ export interface FileRouteTypes {
     | '/app/team'
     | '/app/transactions'
     | '/app/videos'
+    | '/auth/callback'
     | '/b/$slug'
     | '/shop/browse'
     | '/shop/business-apply'
+    | '/shop/buy'
     | '/shop/cart'
     | '/shop/checkout'
     | '/shop/create'
     | '/shop/discover'
+    | '/shop/edit-profile'
     | '/shop/enquiries'
     | '/shop/favorites'
+    | '/shop/followers'
     | '/shop/follows'
+    | '/shop/help'
     | '/shop/nearby'
     | '/shop/notifications'
     | '/shop/orders'
     | '/shop/profile'
+    | '/shop/settings'
+    | '/shop/studio'
     | '/app/'
     | '/shop/'
+    | '/api/studio/flyer'
+    | '/api/studio/status'
+    | '/api/studio/video'
     | '/app/admin/moderation'
     | '/app/admin/translate'
     | '/app/business/edit'
@@ -971,11 +1156,15 @@ export interface FileRouteTypes {
     | '/app/profile/edit'
     | '/app/profile/settings'
     | '/app/videos/new'
+    | '/shop/enquiries/$conversationId'
     | '/shop/orders/$orderId'
     | '/shop/p/$productId'
     | '/app/admin/'
     | '/app/customers/'
     | '/app/learn/'
+    | '/shop/enquiries/'
+    | '/shop/orders/'
+    | '/api/studio/video/$requestId'
     | '/app/customers/credit/new'
   fileRoutesById: FileRoutesById
 }
@@ -986,11 +1175,13 @@ export interface RootRouteChildren {
   BusinessVisibilityRoute: typeof BusinessVisibilityRoute
   ContactRoute: typeof ContactRoute
   DiscoverRoute: typeof DiscoverRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   HowItWorksRoute: typeof HowItWorksRoute
   LearnRoute: typeof LearnRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ShopRoute: typeof ShopRouteWithChildren
   TermsRoute: typeof TermsRoute
   TranslateRoute: typeof TranslateRoute
@@ -1001,7 +1192,11 @@ export interface RootRouteChildren {
   ApiTranslateBatchRoute: typeof ApiTranslateBatchRoute
   ApiTranslateSpeechRoute: typeof ApiTranslateSpeechRoute
   ApiVoiceEnrollRoute: typeof ApiVoiceEnrollRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   BSlugRoute: typeof BSlugRoute
+  ApiStudioFlyerRoute: typeof ApiStudioFlyerRoute
+  ApiStudioStatusRoute: typeof ApiStudioStatusRoute
+  ApiStudioVideoRoute: typeof ApiStudioVideoRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -1048,6 +1243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/how-it-works': {
       id: '/how-it-works'
       path: '/how-it-works'
@@ -1081,6 +1283,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shop': {
@@ -1307,6 +1516,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVideosRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/b/$slug': {
       id: '/b/$slug'
       path: '/b/$slug'
@@ -1333,6 +1549,13 @@ declare module '@tanstack/react-router' {
       path: '/business-apply'
       fullPath: '/shop/business-apply'
       preLoaderRoute: typeof ShopBusinessApplyRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/buy': {
+      id: '/shop/buy'
+      path: '/buy'
+      fullPath: '/shop/buy'
+      preLoaderRoute: typeof ShopBuyRouteImport
       parentRoute: typeof ShopRoute
     }
     '/shop/cart': {
@@ -1363,6 +1586,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopDiscoverRouteImport
       parentRoute: typeof ShopRoute
     }
+    '/shop/edit-profile': {
+      id: '/shop/edit-profile'
+      path: '/edit-profile'
+      fullPath: '/shop/edit-profile'
+      preLoaderRoute: typeof ShopEditProfileRouteImport
+      parentRoute: typeof ShopRoute
+    }
     '/shop/enquiries': {
       id: '/shop/enquiries'
       path: '/enquiries'
@@ -1377,11 +1607,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopFavoritesRouteImport
       parentRoute: typeof ShopRoute
     }
+    '/shop/followers': {
+      id: '/shop/followers'
+      path: '/followers'
+      fullPath: '/shop/followers'
+      preLoaderRoute: typeof ShopFollowersRouteImport
+      parentRoute: typeof ShopRoute
+    }
     '/shop/follows': {
       id: '/shop/follows'
       path: '/follows'
       fullPath: '/shop/follows'
       preLoaderRoute: typeof ShopFollowsRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/help': {
+      id: '/shop/help'
+      path: '/help'
+      fullPath: '/shop/help'
+      preLoaderRoute: typeof ShopHelpRouteImport
       parentRoute: typeof ShopRoute
     }
     '/shop/nearby': {
@@ -1411,6 +1655,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/shop/profile'
       preLoaderRoute: typeof ShopProfileRouteImport
       parentRoute: typeof ShopRoute
+    }
+    '/shop/settings': {
+      id: '/shop/settings'
+      path: '/settings'
+      fullPath: '/shop/settings'
+      preLoaderRoute: typeof ShopSettingsRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/shop/studio': {
+      id: '/shop/studio'
+      path: '/studio'
+      fullPath: '/shop/studio'
+      preLoaderRoute: typeof ShopStudioRouteImport
+      parentRoute: typeof ShopRoute
+    }
+    '/api/studio/flyer': {
+      id: '/api/studio/flyer'
+      path: '/api/studio/flyer'
+      fullPath: '/api/studio/flyer'
+      preLoaderRoute: typeof ApiStudioFlyerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/studio/status': {
+      id: '/api/studio/status'
+      path: '/api/studio/status'
+      fullPath: '/api/studio/status'
+      preLoaderRoute: typeof ApiStudioStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/studio/video': {
+      id: '/api/studio/video'
+      path: '/api/studio/video'
+      fullPath: '/api/studio/video'
+      preLoaderRoute: typeof ApiStudioVideoRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/admin/': {
       id: '/app/admin/'
@@ -1545,6 +1824,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVideosNewRouteImport
       parentRoute: typeof AppVideosRoute
     }
+    '/shop/enquiries/': {
+      id: '/shop/enquiries/'
+      path: '/'
+      fullPath: '/shop/enquiries/'
+      preLoaderRoute: typeof ShopEnquiriesIndexRouteImport
+      parentRoute: typeof ShopEnquiriesRoute
+    }
+    '/shop/enquiries/$conversationId': {
+      id: '/shop/enquiries/$conversationId'
+      path: '/$conversationId'
+      fullPath: '/shop/enquiries/$conversationId'
+      preLoaderRoute: typeof ShopEnquiriesConversationIdRouteImport
+      parentRoute: typeof ShopEnquiriesRoute
+    }
+    '/shop/orders/': {
+      id: '/shop/orders/'
+      path: '/'
+      fullPath: '/shop/orders/'
+      preLoaderRoute: typeof ShopOrdersIndexRouteImport
+      parentRoute: typeof ShopOrdersRoute
+    }
     '/shop/orders/$orderId': {
       id: '/shop/orders/$orderId'
       path: '/$orderId'
@@ -1558,6 +1858,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/shop/p/$productId'
       preLoaderRoute: typeof ShopPProductIdRouteImport
       parentRoute: typeof ShopRoute
+    }
+    '/api/studio/video/$requestId': {
+      id: '/api/studio/video/$requestId'
+      path: '/$requestId'
+      fullPath: '/api/studio/video/$requestId'
+      preLoaderRoute: typeof ApiStudioVideoRequestIdRouteImport
+      parentRoute: typeof ApiStudioVideoRoute
     }
     '/app/customers/credit/new': {
       id: '/app/customers/credit/new'
@@ -1732,12 +2039,28 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
 
+interface ShopEnquiriesRouteChildren {
+  ShopEnquiriesConversationIdRoute: typeof ShopEnquiriesConversationIdRoute
+  ShopEnquiriesIndexRoute: typeof ShopEnquiriesIndexRoute
+}
+
+const ShopEnquiriesRouteChildren: ShopEnquiriesRouteChildren = {
+  ShopEnquiriesConversationIdRoute: ShopEnquiriesConversationIdRoute,
+  ShopEnquiriesIndexRoute: ShopEnquiriesIndexRoute,
+}
+
+const ShopEnquiriesRouteWithChildren = ShopEnquiriesRoute._addFileChildren(
+  ShopEnquiriesRouteChildren,
+)
+
 interface ShopOrdersRouteChildren {
   ShopOrdersOrderIdRoute: typeof ShopOrdersOrderIdRoute
+  ShopOrdersIndexRoute: typeof ShopOrdersIndexRoute
 }
 
 const ShopOrdersRouteChildren: ShopOrdersRouteChildren = {
   ShopOrdersOrderIdRoute: ShopOrdersOrderIdRoute,
+  ShopOrdersIndexRoute: ShopOrdersIndexRoute,
 }
 
 const ShopOrdersRouteWithChildren = ShopOrdersRoute._addFileChildren(
@@ -1747,17 +2070,23 @@ const ShopOrdersRouteWithChildren = ShopOrdersRoute._addFileChildren(
 interface ShopRouteChildren {
   ShopBrowseRoute: typeof ShopBrowseRoute
   ShopBusinessApplyRoute: typeof ShopBusinessApplyRoute
+  ShopBuyRoute: typeof ShopBuyRoute
   ShopCartRoute: typeof ShopCartRoute
   ShopCheckoutRoute: typeof ShopCheckoutRoute
   ShopCreateRoute: typeof ShopCreateRoute
   ShopDiscoverRoute: typeof ShopDiscoverRoute
-  ShopEnquiriesRoute: typeof ShopEnquiriesRoute
+  ShopEditProfileRoute: typeof ShopEditProfileRoute
+  ShopEnquiriesRoute: typeof ShopEnquiriesRouteWithChildren
   ShopFavoritesRoute: typeof ShopFavoritesRoute
+  ShopFollowersRoute: typeof ShopFollowersRoute
   ShopFollowsRoute: typeof ShopFollowsRoute
+  ShopHelpRoute: typeof ShopHelpRoute
   ShopNearbyRoute: typeof ShopNearbyRoute
   ShopNotificationsRoute: typeof ShopNotificationsRoute
   ShopOrdersRoute: typeof ShopOrdersRouteWithChildren
   ShopProfileRoute: typeof ShopProfileRoute
+  ShopSettingsRoute: typeof ShopSettingsRoute
+  ShopStudioRoute: typeof ShopStudioRoute
   ShopIndexRoute: typeof ShopIndexRoute
   ShopPProductIdRoute: typeof ShopPProductIdRoute
 }
@@ -1765,22 +2094,40 @@ interface ShopRouteChildren {
 const ShopRouteChildren: ShopRouteChildren = {
   ShopBrowseRoute: ShopBrowseRoute,
   ShopBusinessApplyRoute: ShopBusinessApplyRoute,
+  ShopBuyRoute: ShopBuyRoute,
   ShopCartRoute: ShopCartRoute,
   ShopCheckoutRoute: ShopCheckoutRoute,
   ShopCreateRoute: ShopCreateRoute,
   ShopDiscoverRoute: ShopDiscoverRoute,
-  ShopEnquiriesRoute: ShopEnquiriesRoute,
+  ShopEditProfileRoute: ShopEditProfileRoute,
+  ShopEnquiriesRoute: ShopEnquiriesRouteWithChildren,
   ShopFavoritesRoute: ShopFavoritesRoute,
+  ShopFollowersRoute: ShopFollowersRoute,
   ShopFollowsRoute: ShopFollowsRoute,
+  ShopHelpRoute: ShopHelpRoute,
   ShopNearbyRoute: ShopNearbyRoute,
   ShopNotificationsRoute: ShopNotificationsRoute,
   ShopOrdersRoute: ShopOrdersRouteWithChildren,
   ShopProfileRoute: ShopProfileRoute,
+  ShopSettingsRoute: ShopSettingsRoute,
+  ShopStudioRoute: ShopStudioRoute,
   ShopIndexRoute: ShopIndexRoute,
   ShopPProductIdRoute: ShopPProductIdRoute,
 }
 
 const ShopRouteWithChildren = ShopRoute._addFileChildren(ShopRouteChildren)
+
+interface ApiStudioVideoRouteChildren {
+  ApiStudioVideoRequestIdRoute: typeof ApiStudioVideoRequestIdRoute
+}
+
+const ApiStudioVideoRouteChildren: ApiStudioVideoRouteChildren = {
+  ApiStudioVideoRequestIdRoute: ApiStudioVideoRequestIdRoute,
+}
+
+const ApiStudioVideoRouteWithChildren = ApiStudioVideoRoute._addFileChildren(
+  ApiStudioVideoRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1789,11 +2136,13 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessVisibilityRoute: BusinessVisibilityRoute,
   ContactRoute: ContactRoute,
   DiscoverRoute: DiscoverRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   HowItWorksRoute: HowItWorksRoute,
   LearnRoute: LearnRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ShopRoute: ShopRouteWithChildren,
   TermsRoute: TermsRoute,
   TranslateRoute: TranslateRoute,
@@ -1804,7 +2153,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTranslateBatchRoute: ApiTranslateBatchRoute,
   ApiTranslateSpeechRoute: ApiTranslateSpeechRoute,
   ApiVoiceEnrollRoute: ApiVoiceEnrollRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   BSlugRoute: BSlugRoute,
+  ApiStudioFlyerRoute: ApiStudioFlyerRoute,
+  ApiStudioStatusRoute: ApiStudioStatusRoute,
+  ApiStudioVideoRoute: ApiStudioVideoRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

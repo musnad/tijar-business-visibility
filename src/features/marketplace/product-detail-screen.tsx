@@ -2,16 +2,22 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Heart, ShoppingCart, Store } from "lucide-react";
-import { useState } from "react";
+import { BadgeCheck, ChevronRight, Heart, ShoppingBag, Star, Store, Zap } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { TijarLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
+import { isMockFeedId } from "@/features/marketplace/feed-mock";
 import { useAuth } from "@/features/auth/auth-context";
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
 import { parseVariantList } from "@/lib/catalogue/variants";
+import { haptic } from "@/lib/haptics";
+import { cn } from "@/lib/utils";
+import { isProductLiked, likeProduct, isProductSaved, toggleSavedProduct } from "@/lib/shop-social";
+import { useDoubleTap } from "@/lib/use-double-tap";
 import {
   addToCart,
   fetchCart,
@@ -19,20 +25,41 @@ import {
   toggleFavoriteProduct,
 } from "@/services/marketplace-service";
 import { enrollInService } from "@/services/customer-service";
-import { formatNgn } from "@/utils/money";
+import { formatNgn, percentOff } from "@/utils/money";
+
+const COLOUR_HEX: Record<string, string> = {
+  navy: "#001B3A",
+  green: "#12805C",
+  black: "#111111",
+  white: "#F4F4F5",
+  red: "#B42318",
+  gold: "#C6A15B",
+  brown: "#6F4E37",
+};
+
+function colourHex(label: string): string {
+  const key = label.trim().toLowerCase();
+  return COLOUR_HEX[key] ?? "#D4D4D8";
+}
 
 export function ProductDetailScreen({ productId }: { productId: string }) {
   const { profile, session } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [qty, setQty] = useState(1);
-  const [variantId, setVariantId] = useState<string>("");
+  const scroller = useRef<HTMLDivElement>(null);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [saved, setSaved] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [heartBurst, setHeartBurst] = useState(false);
+  const [variantId, setVariantId] = useState("");
+  const [busy, setBusy] = useState<"cart" | "buy" | null>(null);
 
   const productQuery = useQuery({
     queryKey: ["marketplace-product", productId],
     queryFn: async () => {
       const res = await fetchMarketplaceProduct(productId);
       if (res.error) throw new Error(res.error);
+      if (!res.product) throw new Error("This product is not available.");
       return res.product;
     },
   });
@@ -45,181 +72,382 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
 
   const product = productQuery.data;
   const variants = parseVariantList(product?.variants);
+  const colours = useMemo(() => {
+    const fromVariants = variants.map((v) => v.colour ?? v.label).filter(Boolean);
+    const unique = [...new Set(fromVariants)];
+    return unique;
+  }, [variants]);
   const selectedVariant = variants.find((v) => v.id === variantId) ?? variants[0] ?? null;
+  const selectedColour = selectedVariant?.colour ?? selectedVariant?.label ?? colours[0] ?? "";
+
+  useEffect(() => {
+    if (!variantId && variants.length) {
+      const green = variants.find((v) => (v.colour ?? v.label).toLowerCase() === "green");
+      setVariantId((green ?? variants[0])!.id);
+    }
+  }, [variantId, variants]);
+
+  const gallery = useMemo(() => {
+    if (!product) return [];
+    const urls = [product.image_url, ...(product.extra_image_urls ?? [])].filter(Boolean) as string[];
+    return [...new Set(urls)];
+  }, [product]);
+
   const livePrice =
     product?.sale_price == null ? null : Number(product.sale_price) + (selectedVariant?.price_delta ?? 0);
+  const compareAt = product?.attributes?.compare_at ? Number(product.attributes.compare_at) : null;
+  const off = livePrice != null ? percentOff(livePrice, compareAt) : null;
+  const rating = product?.attributes?.rating ? Number(product.attributes.rating) : null;
+  const reviews = product?.attributes?.reviews ? Number(product.attributes.reviews) : null;
   const cartCount = cartQuery.data?.reduce((n, i) => n + Number(i.quantity), 0) ?? 0;
+  const inStock = product?.kind === "service" || product?.is_available !== false;
+  const mock = isMockFeedId(productId);
+  const actorId = profile?.id ?? "guest";
 
-  async function requireAuth() {
-    if (!session || !profile) {
-      toast.message("Sign in to continue.");
-      void navigate({ to: "/login" });
-      return false;
-    }
-    return true;
+  useEffect(() => {
+    setLiked(isProductLiked(actorId, productId));
+    setSaved(isProductSaved(actorId, productId));
+  }, [actorId, productId]);
+
+  function onGalleryScroll() {
+    const el = scroller.current;
+    if (!el || gallery.length === 0) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    setImageIndex(Math.min(gallery.length - 1, Math.max(0, i)));
   }
 
-  async function add(buyNow = false) {
-    if (!(await requireAuth()) || !product || !profile) return;
+  function goToImage(i: number) {
+    const el = scroller.current;
+    if (!el) return;
+    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+    setImageIndex(i);
+  }
+
+  function burstLike() {
+    haptic("success");
+    likeProduct(actorId, productId);
+    setLiked(true);
+    setHeartBurst(true);
+    window.setTimeout(() => setHeartBurst(false), 700);
+    toast.success("Liked");
+  }
+
+  const onImageTap = useDoubleTap(burstLike);
+
+  async function add(buyNow: boolean) {
+    haptic(buyNow ? "success" : "light");
+    if (!product) return;
     if (livePrice == null) {
-      toast.message("This product has no price yet. Send an enquiry from the storefront.");
+      toast.message("This product has no price yet. Message the shop instead.");
       return;
     }
-    const { error } = await addToCart(profile.id, {
+    if (buyNow) {
+      void navigate({ to: "/shop/buy", search: { productId: product.id } });
+      return;
+    }
+    setBusy("cart");
+    const { error } = await addToCart(actorId, {
       businessId: product.business_id,
       productId: product.id,
       productName: product.name,
       unit: product.unit,
       unitPrice: livePrice,
-      quantity: qty,
+      quantity: 1,
       imageUrl: product.image_url,
       variantId: selectedVariant?.id,
-      variantLabel: selectedVariant?.label,
+      variantLabel: selectedColour || selectedVariant?.label,
     });
+    setBusy(null);
     if (error) {
       toast.error(error);
       return;
     }
+    setSaved(true);
     await queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
-    if (buyNow) void navigate({ to: "/shop/checkout" });
-    else toast.success("Added to cart");
+    await queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
+    toast.success("Added to cart and Saved Products");
   }
 
   async function favorite() {
-    if (!(await requireAuth()) || !profile) return;
+    haptic();
+    if (!product) return;
+    if (mock || !session || !profile) {
+      const next = toggleSavedProduct(actorId, product);
+      setSaved(next);
+      toast.success(next ? "Saved to Saved Products" : "Removed from saved");
+      void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
+      return;
+    }
     const { favorited, error } = await toggleFavoriteProduct(profile.id, productId);
     if (error) toast.error(error);
-    else toast.success(favorited ? "Saved to favorites" : "Removed from favorites");
+    else {
+      setSaved(favorited);
+      toast.success(favorited ? "Saved to Saved Products" : "Removed from saved");
+    }
   }
 
   return (
-    <MarketplaceShell cartCount={cartCount}>
-      {productQuery.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-      {productQuery.isError && (
-        <p className="text-sm text-destructive">Could not load this product.</p>
-      )}
-      {product && (
-        <div className="space-y-4 pb-6">
-          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            <div className="aspect-[4/3] bg-muted">
-              {product.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.image_url} alt="" className="size-full object-cover" />
-              ) : (
-                <div className="flex size-full items-center justify-center text-sm text-muted-foreground">
-                  No photo
-                </div>
-              )}
+    <MarketplaceShell hideTopBar hideNav variant="feed">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+        <header className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center px-4 pb-1 pt-[max(0.5rem,env(safe-area-inset-top))]">
+          <Link to="/shop" className="justify-self-start" aria-label="TIJAR home">
+            <TijarLogo variant="mark" className="h-8 w-auto" />
+          </Link>
+          <div className="text-center">
+            <h1 className="text-[15px] font-extrabold text-[color:var(--brand-navy,#001B3A)]">Product Details</h1>
+            <span className="mx-auto mt-1 block h-0.5 w-16 rounded-full bg-[color:var(--brand-navy,#001B3A)]" />
+          </div>
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              className="flex size-11 items-center justify-center rounded-full"
+              aria-label={saved ? "Remove from saved" : "Save product"}
+              aria-pressed={saved}
+              onClick={() => void favorite()}
+            >
+              <Heart className={cn("size-6", saved ? "fill-red-500 text-red-500" : "text-[color:var(--brand-navy,#001B3A)]")} />
+            </button>
+            <Link
+              to="/shop/cart"
+              className="relative flex size-11 items-center justify-center rounded-full"
+              aria-label={`Cart, ${cartCount} items`}
+            >
+              <ShoppingBag className="size-6 text-[color:var(--brand-navy,#001B3A)]" />
+              {cartCount > 0 ? (
+                <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-extrabold text-white">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              ) : mock ? (
+                <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-extrabold text-white">
+                  2
+                </span>
+              ) : null}
+            </Link>
+          </div>
+        </header>
+
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {productQuery.isLoading && (
+            <div className="px-4 pt-2" aria-busy="true" aria-live="polite">
+              <div className="aspect-[4/3] animate-pulse rounded-2xl bg-muted" />
+              <p className="mt-4 text-sm text-muted-foreground">Loading product…</p>
             </div>
-            <div className="p-4">
-              <h1 className="text-xl font-extrabold leading-tight">{product.name}</h1>
+          )}
+          {productQuery.isError && (
+            <p className="px-4 pt-6 text-sm text-destructive" role="alert">
+              {productQuery.error instanceof Error ? productQuery.error.message : "Could not load this product."}
+            </p>
+          )}
+
+          {product && (
+            <div className="px-4 pb-4">
+              <div className="relative overflow-hidden rounded-2xl border border-border bg-white">
+                <div
+                  ref={scroller}
+                  className="flex snap-x snap-mandatory overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  onScroll={onGalleryScroll}
+                  onClick={onImageTap}
+                  aria-label={`${product.name} photos. Double tap to like.`}
+                >
+                  {(gallery.length ? gallery : [null]).map((src, i) => (
+                    <div key={src ?? "empty"} className="h-[min(38vh,16.5rem)] w-full shrink-0 snap-center bg-muted">
+                      {src ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={src}
+                          alt={`${product.name}, photo ${i + 1} of ${gallery.length}`}
+                          className="size-full object-contain p-2"
+                        />
+                      ) : (
+                        <div className="flex size-full items-center justify-center text-sm text-muted-foreground">No photo</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {heartBurst || liked ? (
+                  <Heart
+                    className={cn(
+                      "pointer-events-none absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 text-red-500 transition-all",
+                      heartBurst ? "scale-110 fill-red-500 opacity-100" : "scale-75 fill-red-500/0 opacity-0",
+                    )}
+                    aria-hidden
+                  />
+                ) : null}
+                {gallery.length > 1 && (
+                  <div className="flex justify-center gap-1 pb-2">
+                    {gallery.map((src, i) => (
+                      <button
+                        key={src}
+                        type="button"
+                        aria-label={`Show photo ${i + 1}`}
+                        aria-current={i === imageIndex}
+                        className={cn("size-2 rounded-full", i === imageIndex ? "bg-primary" : "bg-muted-foreground/30")}
+                        onClick={() => goToImage(i)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+              {gallery.length > 1 && (
+                <ul className="mt-2 flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {gallery.map((src, i) => (
+                    <li key={src}>
+                      <button
+                        type="button"
+                        onClick={() => goToImage(i)}
+                        className={cn(
+                          "size-14 overflow-hidden rounded-xl border-2",
+                          i === imageIndex ? "border-primary" : "border-transparent",
+                        )}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" className="size-full object-cover" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <p className="mt-4 text-[13px] font-bold text-muted-foreground">{product.name}</p>
               {serviceLabel(product) && (
                 <p className="mt-1 text-xs font-bold uppercase tracking-wide text-primary">
                   {serviceLabel(product)}
                   {formatServiceDates(product) ? ` · ${formatServiceDates(product)}` : ""}
                 </p>
               )}
-              <p className="mt-1 text-2xl font-extrabold text-primary">
-                {livePrice != null ? formatNgn(livePrice) : "Ask seller"}
+
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-[28px] font-black tabular-nums leading-none text-[color:var(--brand-navy,#001B3A)]">
+                  {livePrice != null ? formatNgn(livePrice) : "Ask seller"}
+                </p>
+                {off != null ? (
+                  <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-extrabold text-white">
+                    {off}% OFF
+                  </span>
+                ) : null}
+                {rating != null && Number.isFinite(rating) ? (
+                  <p className="ml-auto flex items-center gap-1 text-[13px] font-semibold text-[color:var(--brand-navy,#001B3A)]">
+                    <Stars value={rating} />
+                    <span>
+                      {rating.toFixed(1)}
+                      {reviews ? ` (${reviews})` : ""}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="ml-auto text-[12px] font-medium text-muted-foreground">No reviews yet</p>
+                )}
+              </div>
+              <p className="mt-2 flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+                <span className={cn("size-2 rounded-full", inStock ? "bg-primary" : "bg-destructive")} />
+                {product.kind === "service" ? "Open for enrolment" : inStock ? "In Stock" : "Out of stock"}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {product.kind === "service"
-                  ? "Open for enrolment"
-                  : product.is_available
-                    ? "In stock"
-                    : "Unavailable"}{" "}
-                · {product.unit}
-                {product.category_name ? ` · ${product.category_name}` : ""}
-                {product.currency ? ` · ${product.currency}` : ""}
-              </p>
-              {product.description && (
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{product.description}</p>
-              )}
-              {variants.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {variants.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      className={`rounded-full px-3 py-1 text-xs font-bold ${
-                        (selectedVariant?.id ?? "") === v.id ? "bg-primary text-primary-foreground" : "bg-muted"
-                      }`}
-                      onClick={() => setVariantId(v.id)}
-                    >
-                      {v.label}
-                    </button>
-                  ))}
+
+              <div className="mt-4 flex items-center gap-3 border-y border-border py-3">
+                <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Store className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-medium text-muted-foreground">Seller</p>
+                  <p className="flex items-center gap-1 font-extrabold text-[color:var(--brand-navy,#001B3A)]">
+                    <span className="truncate">{product.business_name ?? "TIJAR shop"}</span>
+                    <BadgeCheck className="size-4 shrink-0 fill-primary text-white" aria-label="Verified seller" />
+                  </p>
+                </div>
+                {product.business_slug ? (
+                  <Link
+                    to="/b/$slug"
+                    params={{ slug: product.business_slug }}
+                    className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full border border-border px-3 text-[12px] font-bold text-[color:var(--brand-navy,#001B3A)]"
+                  >
+                    View Store
+                    <ChevronRight className="size-4" />
+                  </Link>
+                ) : null}
+              </div>
+
+              {colours.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-[13px] font-semibold text-muted-foreground">Color</p>
+                  <div className="mt-2 flex gap-4" role="radiogroup" aria-label="Color">
+                    {colours.map((colour) => {
+                      const match = variants.find((v) => (v.colour ?? v.label) === colour);
+                      const active = selectedColour === colour;
+                      return (
+                        <button
+                          key={colour}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          onClick={() => {
+                            haptic();
+                            if (match) setVariantId(match.id);
+                          }}
+                          className="flex flex-col items-center gap-1"
+                        >
+                          <span
+                            className={cn(
+                              "size-10 rounded-full border-2",
+                              active ? "border-[color:var(--brand-navy,#001B3A)] ring-2 ring-offset-2 ring-[color:var(--brand-navy,#001B3A)]" : "border-transparent",
+                            )}
+                            style={{ backgroundColor: colourHex(colour) }}
+                          />
+                          <span className="text-[12px] font-medium text-muted-foreground">{colour}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
+
+              {product.description && (
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{product.description}</p>
+              )}
+
+              {product.kind === "service" && <div className="mt-4"><ServiceEnrollForm productId={product.id} /></div>}
             </div>
-          </div>
+          )}
+        </div>
 
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <p className="flex items-center gap-2 text-sm font-bold">
-              <Store className="size-4 text-primary" /> {product.business_name ?? "Seller"}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">Informal TIJAR business</p>
-            {product.business_slug && (
-              <Link
-                to="/b/$slug"
-                params={{ slug: product.business_slug }}
-                className="mt-2 inline-block text-sm font-semibold text-primary underline-offset-2 hover:underline"
-              >
-                View business profile
-              </Link>
-            )}
-          </div>
-
-          {product.kind === "service" && <ServiceEnrollForm productId={product.id} />}
-
-          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-            <span className="text-sm font-semibold">Qty</span>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-9 rounded-xl"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-              >
-                −
-              </Button>
-              <span className="w-8 text-center font-bold">{qty}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-9 rounded-xl"
-                onClick={() => setQty((q) => q + 1)}
-              >
-                +
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
+        {product && (
+          <div className="grid shrink-0 grid-cols-2 gap-2 px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <Button
               type="button"
-              variant="outline"
-              className="min-h-12 rounded-xl font-bold"
-              onClick={() => void favorite()}
+              className="min-h-12 rounded-2xl bg-[color:var(--brand-navy,#001B3A)] font-extrabold text-white hover:bg-[color:var(--brand-navy,#001B3A)]/90"
+              disabled={!inStock || livePrice == null || busy !== null}
+              onClick={() => void add(false)}
             >
-              <Heart className="mr-1.5 size-4" /> Save
+              <ShoppingBag className="mr-1.5 size-4" />
+              {busy === "cart" ? "Adding…" : "Add to Cart"}
             </Button>
-            <Button type="button" className="min-h-12 rounded-xl font-bold" onClick={() => void add(false)}>
-              <ShoppingCart className="mr-1.5 size-4" /> Add to cart
+            <Button
+              type="button"
+              className="min-h-12 rounded-2xl bg-primary font-extrabold text-white"
+              disabled={!inStock || livePrice == null || busy !== null}
+              onClick={() => void add(true)}
+            >
+              <Zap className="mr-1.5 size-4 fill-current" />
+              {busy === "buy" ? "…" : "Buy Now"}
             </Button>
           </div>
-          <Button
-            type="button"
-            className="min-h-12 w-full rounded-xl font-bold"
-            onClick={() => void add(true)}
-          >
-            Buy now
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
     </MarketplaceShell>
+  );
+}
+
+function Stars({ value }: { value: number }) {
+  return (
+    <span className="inline-flex" aria-hidden>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          className={cn("size-3.5", n <= Math.floor(value) ? "fill-primary text-primary" : "text-muted-foreground/40")}
+        />
+      ))}
+    </span>
   );
 }
 

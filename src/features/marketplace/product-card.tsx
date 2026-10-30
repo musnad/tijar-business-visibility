@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth/auth-context";
+import { isMockFeedId } from "@/features/marketplace/feed-mock";
+import { ensureSavedProduct } from "@/lib/shop-social";
 import { addToCart } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import type { PublicProduct } from "@/types/database";
@@ -33,6 +35,12 @@ export function ProductCard({
       toast.message("This product has no price yet.");
       return;
     }
+    ensureSavedProduct(profile.id, product);
+    if (isMockFeedId(product.id)) {
+      toast.success("Saved to Saved Products");
+      void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
+      return;
+    }
     const { error } = await addToCart(profile.id, {
       businessId: product.business_id,
       productId: product.id,
@@ -43,8 +51,9 @@ export function ProductCard({
     });
     if (error) toast.error(error);
     else {
-      toast.success("Added to cart");
+      toast.success("Added to cart and Saved Products");
       void queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
+      void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
     }
   }
 

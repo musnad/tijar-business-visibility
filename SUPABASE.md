@@ -47,8 +47,13 @@ Open [http://localhost:3000/api/supabase-health](http://localhost:3000/api/supab
 
 Dashboard → **Authentication → URL configuration**:
 
-- **Site URL:** your live origin (same as `VITE_PUBLIC_APP_URL`)
-- **Redirect URLs:** `https://tijar-two.vercel.app/**` and `http://localhost:3000/**`
+- **Site URL:** `https://www.tijar.ng`
+- **Redirect URLs:**
+  - `https://www.tijar.ng/auth/callback`
+  - `https://www.tijar.ng/reset-password`
+  - `https://www.tijar.ng/**`
+  - `https://tijar.ng/**`
+  - `http://localhost:3000/**`
 
 See [DEPLOY.md](./DEPLOY.md) for build-time env vars.
 

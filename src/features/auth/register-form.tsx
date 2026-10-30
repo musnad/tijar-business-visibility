@@ -17,7 +17,7 @@ import {
   RegisterWaveFooter,
   authIcons,
 } from "@/features/auth/auth-ui";
-import { signUpWithEmail } from "@/features/auth/auth-service";
+import { signInWithGoogle, signUpWithEmail } from "@/features/auth/auth-service";
 import { registerSchema } from "@/features/onboarding/schemas";
 import { useTranslation } from "@/lib/i18n/context";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,6 +43,7 @@ export function RegisterForm() {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,8 +89,17 @@ export function RegisterForm() {
     void navigate({ to: "/app/login" });
   }
 
-  function onGoogle() {
-    toast.message(t("auth.googleSoon"));
+  async function onGoogle() {
+    if (!agreeTerms) {
+      toast.error("You must agree to the terms");
+      return;
+    }
+    setGoogleLoading(true);
+    const { error } = await signInWithGoogle({ accountMode: "business", next: "/app/onboarding" });
+    if (error) {
+      setGoogleLoading(false);
+      toast.error(error.message || t("auth.googleFailed"));
+    }
   }
 
   return (
@@ -97,6 +107,8 @@ export function RegisterForm() {
       <RegisterTopHeader />
       <form onSubmit={onSubmit}>
         <AuthCard className="space-y-4">
+          <GoogleAuthButton loading={googleLoading} onClick={() => void onGoogle()} />
+          <AuthOrDivider />
           <AuthField
             id="reg-name"
             label={t("app.register.fullName")}
@@ -166,8 +178,6 @@ export function RegisterForm() {
             </span>
           </label>
           <GradientRegisterButton loading={loading}>{t("auth.createAccount")}</GradientRegisterButton>
-          <AuthOrDivider />
-          <GoogleAuthButton onClick={onGoogle} />
         </AuthCard>
       </form>
       <p className="relative z-10 mt-8 pb-8 text-center text-sm text-[#5a6578]">

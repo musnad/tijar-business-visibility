@@ -4,6 +4,7 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/auth-context";
+import { isPasswordRecovery } from "@/lib/auth-recovery";
 import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
 import { resolveAppEntry } from "@/features/auth/route-guards";
 import { canUseBusinessMode, isCustomerOnly } from "@/lib/account-mode";
@@ -98,6 +99,10 @@ export function RedirectIfAuthed({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (loading || !session) return;
+    if (isPasswordRecovery()) {
+      void navigate({ to: "/reset-password" });
+      return;
+    }
     const target = resolveAppEntry(profile, true);
     if (target !== "/app/login") {
       void navigate({ to: target });

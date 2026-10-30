@@ -15,7 +15,13 @@ import { uploadProfileAvatar } from "@/services/profile-avatar-service";
 import { updateProfile } from "@/services/profile-service";
 import type { Profile } from "@/types/database";
 
-export function EditProfileForm({ profile }: { profile: Profile }) {
+export function EditProfileForm({
+  profile,
+  afterSave = "/app/profile",
+}: {
+  profile: Profile;
+  afterSave?: "/app/profile" | "/shop/profile";
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { refreshProfile } = useAuth();
@@ -65,7 +71,7 @@ export function EditProfileForm({ profile }: { profile: Profile }) {
 
     toast.success(t("app.profile.saved"));
     await refreshProfile();
-    void navigate({ to: "/app/profile" });
+    void navigate({ to: afterSave });
   }
 
   return (

@@ -1,375 +1,255 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
+  BadgeCheck,
+  Bell,
+  Building2,
   ChevronRight,
-  Clock3,
+  CircleHelp,
   Heart,
-  LogOut,
   MapPin,
   Package,
-  Store,
-  ShoppingCart,
+  Settings,
+  Sparkles,
+  UserRound,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
+import { TijarLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
-import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
-import { OrderTrackTimeline } from "@/features/marketplace/order-track-timeline";
 import { useAuth } from "@/features/auth/auth-context";
-import { signOut } from "@/features/auth/auth-service";
-import { canUseBusinessMode, isCustomerOnly, profileAccountMode } from "@/lib/account-mode";
-import { isTijarSuperAdminEmail } from "@/lib/admin";
+import { canUseBusinessMode } from "@/lib/account-mode";
+import { haptic } from "@/lib/haptics";
+import { cn } from "@/lib/utils";
+import { listFollowedPeople, listPeopleFollowers, listShopFollowers } from "@/lib/shop-social";
+import { MOCK_BUSINESS_ID } from "@/features/marketplace/feed-mock";
 import {
   countFavoriteProducts,
-  fetchCart,
-  fetchMyBusinessUpgradeRequest,
-  fetchMyOrders,
+  fetchFollowedBusinesses,
+  listAddresses,
 } from "@/services/marketplace-service";
-import { formatNgn } from "@/utils/money";
-import {
-  formatOrderWhen,
-  isActiveOrder,
-  orderStatusLabel,
-  orderStatusTone,
-} from "@/utils/order-tracking";
-import { cn } from "@/lib/utils";
+import { countUnreadShopChats, fetchMyBusinessIds } from "@/services/shop-chat-service";
 
-function statusBadgeClass(status: string): string {
-  const tone = orderStatusTone(status);
-  if (tone === "active") return "bg-primary/15 text-primary";
-  if (tone === "done") return "bg-primary/15 text-primary";
-  if (tone === "warn") return "bg-destructive/10 text-destructive";
-  return "bg-muted text-muted-foreground";
+function handleFromName(name: string, email: string | null): string {
+  const fromEmail = email?.split("@")[0]?.replace(/[^a-zA-Z0-9]/g, "") ?? "";
+  if (fromEmail) return fromEmail.toLowerCase();
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "tijar";
+}
+
+function Frame({ children }: { children: ReactNode }) {
+  return (
+    <MarketplaceShell hideTopBar variant="feed">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">{children}</div>
+    </MarketplaceShell>
+  );
 }
 
 export function ShopProfileScreen() {
-  const { profile, session, refreshProfile } = useAuth();
-  const navigate = useNavigate();
+  const { profile, session, loading } = useAuth();
 
-  const ordersQuery = useQuery({
-    queryKey: ["marketplace-orders"],
-    enabled: Boolean(session),
-    queryFn: async () => {
-      const res = await fetchMyOrders();
-      if (res.error) throw new Error(res.error);
-      return res.orders;
-    },
-  });
-
-  const cartQuery = useQuery({
-    queryKey: ["marketplace-cart", profile?.id],
-    enabled: Boolean(profile?.id),
-    queryFn: async () => (await fetchCart(profile!.id)).items,
-  });
-
-  const favCountQuery = useQuery({
+  const favQuery = useQuery({
     queryKey: ["marketplace-fav-count", profile?.id],
     enabled: Boolean(profile?.id),
     queryFn: async () => countFavoriteProducts(profile!.id),
   });
-
-  const upgradeQuery = useQuery({
-    queryKey: ["business-upgrade-request", profile?.id],
-    enabled: Boolean(profile?.id) && !canUseBusinessMode(profile),
+  const followsQuery = useQuery({
+    queryKey: ["followed-shops", profile?.id ?? "guest"],
     queryFn: async () => {
-      const res = await fetchMyBusinessUpgradeRequest(profile!.id);
-      if (res.error) throw new Error(res.error);
-      return res.request;
+      const r = await fetchFollowedBusinesses(profile?.id ?? "guest");
+      if (r.error) throw new Error(r.error);
+      return r.shops;
+    },
+  });
+  const addressQuery = useQuery({
+    queryKey: ["customer-addresses", profile?.id],
+    enabled: Boolean(profile?.id),
+    queryFn: async () => (await listAddresses(profile!.id)).data,
+  });
+  const unreadQuery = useQuery({
+    queryKey: ["shop-inbox-unread", profile?.id],
+    enabled: Boolean(profile?.id),
+    queryFn: async () => {
+      const ids = await fetchMyBusinessIds(profile!.id);
+      return countUnreadShopChats(profile!.id, ids);
     },
   });
 
-  if (!session || !profile) {
+  if (loading) {
     return (
-      <MarketplaceShell>
-        <div className="rounded-2xl border border-border bg-card p-6 text-center">
-          <p className="font-bold">Sign in to manage your profile</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Track orders, saved items, and your cart in one place.
-          </p>
-          <Button className="mt-4 rounded-xl font-bold" asChild>
-            <Link to="/login">Sign in</Link>
-          </Button>
-        </div>
-      </MarketplaceShell>
+      <Frame>
+        <ProfileChrome />
+        <p className="px-4 pt-8 text-center text-sm text-muted-foreground">Loading profile…</p>
+      </Frame>
     );
   }
 
-  const mode = profileAccountMode(profile);
-  const orders = ordersQuery.data ?? [];
-  const activeOrders = orders.filter((o) => isActiveOrder(o.status));
-  const recent = (activeOrders.length > 0 ? activeOrders : orders).slice(0, 3);
-  const cartCount = cartQuery.data?.reduce((n, i) => n + Number(i.quantity), 0) ?? 0;
-  const favCount = favCountQuery.data ?? 0;
-  const firstName = profile.full_name?.trim().split(/\s+/)[0] || "there";
-  const upgrade = upgradeQuery.data;
-  const showBusinessApply =
-    (isCustomerOnly(profile) || mode === "customer") && !canUseBusinessMode(profile);
+  const demo = !session || !profile;
+  const name = demo ? "Ada Johnson" : profile.full_name?.trim() || "TIJAR member";
+  const username = demo ? "adajohnson" : handleFromName(name, profile.email);
+  const verified = demo || canUseBusinessMode(profile);
+  const followers =
+    listPeopleFollowers(profile?.id).length + listShopFollowers(MOCK_BUSINESS_ID).length;
+  const following = (followsQuery.data?.length ?? 0) + listFollowedPeople(profile?.id ?? "guest").length;
+  const saved = demo ? Math.max(23, favQuery.data ?? 0) : (favQuery.data ?? 0);
+  const bio = demo
+    ? "Entrepreneur | Sourcing & Supply Specialist | Connecting great products with global opportunities."
+    : profile.bio?.trim() || "Tell shops who you are. Your bio is only shown on your profile.";
+  const address = addressQuery.data?.find((a) => a.is_default) ?? addressQuery.data?.[0];
+  const location = demo
+    ? "Lagos, Nigeria"
+    : [address?.city, address?.state].filter(Boolean).join(", ") || "Location private";
+  const photo = demo ? null : profile.avatar_url;
+  const notifBadge = demo ? 3 : unreadQuery.data ?? 0;
+
+  const menu: { to: string; label: string; icon: LucideIcon; badge?: number }[] = [
+    ...(canUseBusinessMode(profile)
+      ? [{ to: "/shop/studio", label: "AI Marketing Studio", icon: Sparkles }]
+      : []),
+    { to: "/shop/orders", label: "My Orders", icon: Package },
+    { to: "/shop/favorites", label: "Saved Products", icon: Heart },
+    { to: "/shop/follows", label: "Following", icon: Building2 },
+    { to: "/shop/followers", label: "Followers", icon: UserRound },
+    { to: "/shop/notifications", label: "Notifications", icon: Bell, badge: notifBadge },
+    { to: "/shop/settings", label: "Settings", icon: Settings },
+    { to: "/shop/help", label: "Help", icon: CircleHelp },
+  ];
 
   return (
-    <MarketplaceShell cartCount={cartCount}>
-      <section className="dashboard-summary-card rounded-2xl p-5 text-primary-foreground shadow-lg">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-white/70">My account</p>
-        <h1 className="mt-1 text-xl font-extrabold">Hi {firstName}</h1>
-        <p className="mt-1 truncate text-sm text-white/80">{profile.email}</p>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <Link
-            to="/shop/orders"
-            className="rounded-xl bg-white/15 px-2 py-2.5 text-center backdrop-blur-sm"
-          >
-            <p className="text-lg font-extrabold tabular-nums">{activeOrders.length}</p>
-            <p className="text-[10px] font-semibold text-white/80">Active</p>
-          </Link>
-          <Link
-            to="/shop/orders"
-            className="rounded-xl bg-white/15 px-2 py-2.5 text-center backdrop-blur-sm"
-          >
-            <p className="text-lg font-extrabold tabular-nums">{orders.length}</p>
-            <p className="text-[10px] font-semibold text-white/80">Orders</p>
-          </Link>
-          <Link
-            to="/shop/favorites"
-            className="rounded-xl bg-white/15 px-2 py-2.5 text-center backdrop-blur-sm"
-          >
-            <p className="text-lg font-extrabold tabular-nums">{favCount}</p>
-            <p className="text-[10px] font-semibold text-white/80">Saved</p>
-          </Link>
-        </div>
-      </section>
-
-      <section className="mt-5">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-extrabold">Track your orders</h2>
-          <Link to="/shop/orders" className="text-xs font-bold text-primary">
-            See all
-          </Link>
-        </div>
-
-        {ordersQuery.isLoading && (
-          <p className="mt-3 text-sm text-muted-foreground">Loading orders…</p>
-        )}
-
-        {!ordersQuery.isLoading && recent.length === 0 && (
-          <div className="mt-3 rounded-2xl border border-dashed border-border bg-card p-5 text-center">
-            <Package className="mx-auto size-8 text-muted-foreground" />
-            <p className="mt-2 font-semibold">No orders yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              When you buy something, you can track it here.
-            </p>
-            <Button className="mt-4 rounded-xl font-bold" asChild>
-              <Link to="/shop">Start shopping</Link>
-            </Button>
-          </div>
-        )}
-
-        <ul className="mt-3 space-y-3">
-          {recent.map((o) => (
-            <li key={o.id}>
-              <Link
-                to="/shop/orders/$orderId"
-                params={{ orderId: o.id }}
-                className="block rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-bold">{o.order_number}</p>
-                    <p className="text-xs text-muted-foreground">{formatOrderWhen(o.created_at)}</p>
-                  </div>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
-                      statusBadgeClass(o.status),
-                    )}
-                  >
-                    {orderStatusLabel(o.status)}
-                  </span>
-                </div>
-                <OrderTrackTimeline status={o.status} fulfilment={o.fulfilment} compact />
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="text-sm font-extrabold text-primary">
-                    {formatNgn(Number(o.total))}
-                  </p>
-                  <span className="inline-flex items-center gap-0.5 text-xs font-bold text-primary">
-                    Track <ChevronRight className="size-3.5" />
-                  </span>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="mt-5 grid grid-cols-2 gap-2">
-        <Link
-          to="/shop/orders"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
-        >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Package className="size-5" />
-          </span>
-          <span>
-            <p className="text-sm font-bold">Orders</p>
-            <p className="text-[11px] text-muted-foreground">History & status</p>
-          </span>
-        </Link>
-        <Link
-          to="/shop/cart"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
-        >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <ShoppingCart className="size-5" />
-          </span>
-          <span>
-            <p className="text-sm font-bold">Cart</p>
-            <p className="text-[11px] text-muted-foreground">
-              {cartCount > 0 ? `${cartCount} items` : "Empty"}
-            </p>
-          </span>
-        </Link>
-        <Link
-          to="/shop/favorites"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
-        >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Heart className="size-5" />
-          </span>
-          <span>
-            <p className="text-sm font-bold">Saved</p>
-            <p className="text-[11px] text-muted-foreground">
-              {favCount > 0 ? `${favCount} items` : "Favorites"}
-            </p>
-          </span>
-        </Link>
-        <Link
-          to="/shop/follows"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
-        >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Store className="size-5" />
-          </span>
-          <span>
-            <p className="text-sm font-bold">Following</p>
-            <p className="text-[11px] text-muted-foreground">Shops you follow</p>
-          </span>
-        </Link>
-        <Link
-          to="/shop/enquiries"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
-        >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Package className="size-5" />
-          </span>
-          <span>
-            <p className="text-sm font-bold">Enquiries</p>
-            <p className="text-[11px] text-muted-foreground">Messages sent</p>
-          </span>
-        </Link>
-        <Link
-          to="/shop/notifications"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
-        >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Clock3 className="size-5" />
-          </span>
-          <span>
-            <p className="text-sm font-bold">Alerts</p>
-            <p className="text-[11px] text-muted-foreground">Preferences</p>
-          </span>
-        </Link>
-        <Link
-          to="/shop/nearby"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
-        >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <MapPin className="size-5" />
-          </span>
-          <span>
-            <p className="text-sm font-bold">Near me</p>
-            <p className="text-[11px] text-muted-foreground">Map & buy</p>
-          </span>
-        </Link>
-      </section>
-
-      <section className="mt-5 rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="text-sm font-bold">Account mode</p>
-            <p className="text-xs capitalize text-muted-foreground">
-              {mode === "both" ? "Shop + Business" : mode}
-            </p>
-          </div>
-          <AccountModeSwitch />
-        </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-          {canUseBusinessMode(profile)
-            ? "Verified businesses can switch to Shop or Business anytime."
-            : "Customers request a business account first. Admin approval unlocks the dashboard."}
-        </p>
-        {canUseBusinessMode(profile) && (
-          <Button variant="outline" className="mt-3 w-full justify-start rounded-xl" asChild>
-            <Link to="/app">
-              <Store className="mr-2 size-4" /> Open business dashboard
-            </Link>
-          </Button>
-        )}
-        {isTijarSuperAdminEmail(profile.email) && (
-          <Button variant="outline" className="mt-2 w-full justify-start rounded-xl" asChild>
-            <Link to="/app/admin">
-              <Store className="mr-2 size-4" /> Admin console
-            </Link>
-          </Button>
-        )}
-      </section>
-
-      {showBusinessApply && (
-        <section className="mt-4">
-          {upgrade?.status === "pending" ? (
-            <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
-              <p className="flex items-center gap-2 text-sm font-extrabold text-primary">
-                <Clock3 className="size-4" /> Business account pending
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Your application for <strong>{upgrade.business_name}</strong> is with admin for
-                approval. You stay on the shopping app until then.
-              </p>
-              <Button variant="outline" className="mt-3 w-full rounded-xl font-bold" asChild>
-                <Link to="/shop/business-apply">View application</Link>
-              </Button>
-            </div>
-          ) : (
-            <Link
-              to="/shop/business-apply"
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-primary/30"
-            >
-              <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Store className="size-6" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <p className="font-extrabold">Business account</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Add shop details, location & photo — then request admin approval. Not a dashboard
-                  yet.
-                </p>
-              </span>
-              <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
-            </Link>
-          )}
-        </section>
-      )}
-
-      <Button
-        type="button"
-        variant="outline"
-        className="mt-6 w-full rounded-xl"
-        onClick={async () => {
-          await signOut();
-          await refreshProfile();
-          void navigate({ to: "/shop" });
-        }}
+    <Frame>
+      <ProfileChrome />
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ WebkitOverflowScrolling: "touch" }}
       >
-        <LogOut className="mr-2 size-4" /> Log out
-      </Button>
-    </MarketplaceShell>
+        <section className="flex items-start gap-3 px-4 pt-2" aria-label="Profile">
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo}
+              alt=""
+              className="size-[4.75rem] shrink-0 rounded-full object-cover ring-2 ring-border"
+            />
+          ) : (
+            <span
+              className="flex size-[4.75rem] shrink-0 items-center justify-center rounded-full bg-muted text-xl font-extrabold text-[color:var(--brand-navy,#001B3A)]"
+              aria-hidden
+            >
+              {name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((p) => p[0])
+                .join("")
+                .toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h1 className="flex items-center gap-1.5 text-[22px] font-extrabold leading-tight tracking-tight text-[color:var(--brand-navy,#001B3A)]">
+              <span className="truncate">{name}</span>
+              {verified ? (
+                <BadgeCheck className="size-5 shrink-0 fill-primary text-white" aria-label="Verified profile" />
+              ) : null}
+            </h1>
+            <p className="text-[13px] font-medium text-muted-foreground">@{username}</p>
+            <div className="mt-2.5 grid grid-cols-3 divide-x divide-border" role="group" aria-label="Profile stats">
+              <Stat value={followers} label="Followers" to="/shop/followers" />
+              <Stat value={following} label="Following" to="/shop/follows" />
+              <Stat value={saved} label="Saved" to="/shop/favorites" />
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-4 mt-4 rounded-2xl border border-border bg-white p-3.5 shadow-[0_1px_2px_rgba(15,40,50,0.04)]">
+          <p className="flex items-start gap-2 text-[13px] leading-snug text-foreground">
+            <UserRound className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+            <span>{bio}</span>
+          </p>
+          <p className="mt-2.5 flex items-center gap-2 text-[13px] font-medium text-muted-foreground">
+            <MapPin className="size-4 shrink-0 text-primary" aria-hidden />
+            {location}
+          </p>
+        </section>
+
+        {demo ? (
+          <Button className="mx-4 mt-4 min-h-12 w-[calc(100%-2rem)] rounded-full border-2 border-[color:var(--brand-navy,#001B3A)] bg-white font-extrabold text-[color:var(--brand-navy,#001B3A)] hover:bg-muted" asChild>
+            <Link to="/login">Sign in</Link>
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            className="mx-4 mt-4 min-h-12 w-[calc(100%-2rem)] rounded-full border-2 border-[color:var(--brand-navy,#001B3A)] font-extrabold text-[color:var(--brand-navy,#001B3A)]"
+            asChild
+          >
+            <Link to="/shop/edit-profile">Edit Profile</Link>
+          </Button>
+        )}
+
+        <nav className="mt-4" aria-label="Account">
+          <ul>
+            {menu.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <li
+                  key={item.to}
+                  style={{ animation: `tijar-row-in 0.35s ease ${index * 45}ms both` }}
+                >
+                  <Link
+                    to={item.to as "/shop/orders"}
+                    onClick={() => haptic()}
+                    className="flex min-h-[3.25rem] items-center gap-3 px-4 text-[15px] font-semibold text-[color:var(--brand-navy,#001B3A)] transition active:bg-muted/70"
+                  >
+                    <Icon className="size-5 shrink-0 text-[color:var(--brand-navy,#001B3A)]" strokeWidth={1.75} />
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge && item.badge > 0 ? (
+                      <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-extrabold text-white">
+                        {item.badge > 9 ? "9+" : item.badge}
+                      </span>
+                    ) : null}
+                    <ChevronRight className="size-5 text-muted-foreground/70" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </div>
+    </Frame>
+  );
+}
+
+function ProfileChrome() {
+  return (
+    <header className="shrink-0 px-6 pb-2 pt-[max(0.65rem,env(safe-area-inset-top))] text-center">
+      <Link to="/shop" className="inline-block max-w-[160px]" aria-label="TIJAR home">
+        <TijarLogo compact className="mx-auto max-w-[160px]" />
+      </Link>
+      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+        Global · Trusted · Trade
+      </p>
+    </header>
+  );
+}
+
+function Stat({ value, label, to }: { value: number; label: string; to?: string }) {
+  const inner = (
+    <>
+      <p className="text-[17px] font-extrabold tabular-nums leading-none text-[color:var(--brand-navy,#001B3A)]">{value}</p>
+      <p className="mt-1 text-[11px] font-medium text-muted-foreground">{label}</p>
+    </>
+  );
+  if (to) {
+    return (
+      <Link to={to} className="px-1 text-center" aria-label={`${value} ${label}`}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <div className="px-1 text-center" aria-label={`${value} ${label}`}>
+      {inner}
+    </div>
   );
 }

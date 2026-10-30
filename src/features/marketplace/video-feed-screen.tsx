@@ -54,9 +54,12 @@ import {
   type PublicFeedVideo,
 } from "@/services/video-feed-service";
 import type { PublicProduct } from "@/types/database";
+import { ensureSavedProduct, likeVideoLocal, listFollowedShopIds, loadUserSocial } from "@/lib/shop-social";
+import { useDoubleTap } from "@/lib/use-double-tap";
 import { haptic } from "@/lib/haptics";
 import { formatNgn } from "@/utils/money";
 import { isMockFeedId, MOCK_POSTS, MOCK_PRODUCTS } from "@/features/marketplace/feed-mock";
+import { useStartShopChat } from "@/features/marketplace/use-start-shop-chat";
 
 type FeedTab = "foryou" | "following" | "nearby";
 
@@ -132,9 +135,15 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [feedTab, setFeedTab] = useState<FeedTab>("foryou");
-  const [mockLiked, setMockLiked] = useState(() => new Set<string>());
-  const [mockFollowing, setMockFollowing] = useState(() => new Set<string>());
+  const [mockLiked, setMockLiked] = useState(() => new Set(loadUserSocial("guest").likedVideos));
+  const [mockFollowing, setMockFollowing] = useState(() => new Set(listFollowedShopIds("guest")));
   const [mockCartExtra, setMockCartExtra] = useState(0);
+
+  useEffect(() => {
+    const id = profile?.id ?? "guest";
+    setMockFollowing(new Set(listFollowedShopIds(id)));
+    setMockLiked(new Set(loadUserSocial(id).likedVideos));
+  }, [profile?.id]);
   const reducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -192,9 +201,8 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
     queryFn: async () => fetchMySavedVideoIds(profile!.id),
   });
   const followQuery = useQuery({
-    queryKey: ["video-follows", profile?.id],
-    enabled: Boolean(profile?.id),
-    queryFn: async () => fetchMyFollowedBusinessIds(profile!.id),
+    queryKey: ["video-follows", profile?.id ?? "guest"],
+    queryFn: async () => fetchMyFollowedBusinessIds(profile?.id ?? "guest"),
   });
   const cartQuery = useQuery({
     queryKey: ["marketplace-cart", profile?.id],
@@ -326,13 +334,13 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                   }
                   return liveListings.filter((p) => p.business_id === video.business_id);
                 })()}
-                liked={isMockFeedId(video.id) ? mockLiked.has(video.id) : (likedQuery.data?.has(video.id) ?? false)}
-                saved={savedQuery.data?.has(video.id) ?? false}
-                following={
-                  isMockFeedId(video.business_id)
-                    ? mockFollowing.has(video.business_id)
-                    : (followQuery.data?.has(video.business_id) ?? false)
+                liked={
+                  isMockFeedId(video.id)
+                    ? mockLiked.has(video.id)
+                    : (likedQuery.data?.has(video.id) ?? mockLiked.has(video.id))
                 }
+                saved={savedQuery.data?.has(video.id) ?? false}
+                following={followQuery.data?.has(video.business_id) || mockFollowing.has(video.business_id)}
                 onToggleMute={() => {
                   setMuted((m) => {
                     const next = !m;
@@ -343,17 +351,14 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                 onTogglePause={() => setPaused((p) => !p)}
                 onLike={async () => {
                   haptic();
+                  const actor = profile?.id ?? "guest";
                   if (isMockFeedId(video.id)) {
-                    setMockLiked((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(video.id)) next.delete(video.id);
-                      else next.add(video.id);
-                      return next;
-                    });
+                    const liked = likeVideoLocal(actor, video.id);
+                    setMockLiked((prev) => new Set(prev).add(video.id));
+                    toast.success(liked ? "Liked" : "Liked");
                     return;
                   }
-                  if (!requireUser() || !profile) return;
-                  const { liked, error } = await toggleVideoLike(profile.id, video.id);
+                  const { liked, error } = await toggleVideoLike(actor, video.id);
                   if (error) toast.error(error);
                   else {
                     void recordFeedSignal(video.id, "like");
@@ -373,23 +378,23 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                 }}
                 onFollow={async () => {
                   haptic("success");
-                  if (isMockFeedId(video.business_id)) {
-                    const next = !mockFollowing.has(video.business_id);
+                  const { following, error } = await toggleFollowBusiness(
+                    profile?.id ?? "guest",
+                    video.business_id,
+                    profile?.full_name,
+                  );
+                  if (error) toast.error(error);
+                  else {
                     setMockFollowing((prev) => {
                       const copy = new Set(prev);
-                      if (next) copy.add(video.business_id);
+                      if (following) copy.add(video.business_id);
                       else copy.delete(video.business_id);
                       return copy;
                     });
-                    toast.success(next ? `Following ${video.business_name}` : "Unfollowed");
-                    return;
-                  }
-                  if (!requireUser() || !profile) return;
-                  const { following, error } = await toggleFollowBusiness(profile.id, video.business_id);
-                  if (error) toast.error(error);
-                  else {
-                    toast.success(following ? "Following" : "Unfollowed");
+                    toast.success(following ? `Following ${video.business_name}` : "Unfollowed");
                     void queryClient.invalidateQueries({ queryKey: ["video-follows"] });
+                    void queryClient.invalidateQueries({ queryKey: ["followed-shops"] });
+                    void queryClient.invalidateQueries({ queryKey: ["shop-followers"] });
                     void queryClient.invalidateQueries({ queryKey: ["video-feed"] });
                   }
                 }}
@@ -426,12 +431,13 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                 }}
                 onAddToCart={async (product) => {
                   haptic("success");
-                  if (isMockFeedId(product.id)) {
+                  ensureSavedProduct(profile?.id ?? "guest", product);
+                  if (isMockFeedId(product.id) || !profile) {
                     setMockCartExtra((n) => n + 1);
-                    toast.success(`Added ${product.name} to cart`);
+                    toast.success("Saved to Saved Products");
+                    void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
                     return;
                   }
-                  if (!requireUser() || !profile) return;
                   if (product.sale_price == null) {
                     toast.message("This listing has no price yet.");
                     return;
@@ -446,8 +452,9 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                   });
                   if (error) toast.error(error);
                   else {
-                    toast.success("Added to cart");
+                    toast.success("Added to cart and Saved Products");
                     void queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
+                    void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
                     if (!isMockFeedId(video.id)) void recordFeedSignal(video.id, "add_to_cart");
                   }
                 }}
@@ -458,37 +465,35 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
             <ListingSlide
               key={product.id}
               product={product}
-              following={
-                isMockFeedId(product.business_id)
-                  ? mockFollowing.has(product.business_id)
-                  : (followQuery.data?.has(product.business_id) ?? false)
-              }
+              following={followQuery.data?.has(product.business_id) || mockFollowing.has(product.business_id)}
               onFollow={async () => {
                 haptic("success");
-                if (isMockFeedId(product.business_id)) {
-                  const next = !mockFollowing.has(product.business_id);
+                const { following, error } = await toggleFollowBusiness(
+                  profile?.id ?? "guest",
+                  product.business_id,
+                  profile?.full_name,
+                );
+                if (error) toast.error(error);
+                else {
                   setMockFollowing((prev) => {
                     const copy = new Set(prev);
-                    if (next) copy.add(product.business_id);
+                    if (following) copy.add(product.business_id);
                     else copy.delete(product.business_id);
                     return copy;
                   });
-                  toast.success(next ? `Following ${product.business_name}` : "Unfollowed");
-                  return;
+                  toast.success(following ? `Following ${product.business_name}` : "Unfollowed");
+                  void queryClient.invalidateQueries({ queryKey: ["video-follows"] });
                 }
-                if (!requireUser() || !profile) return;
-                const { following, error } = await toggleFollowBusiness(profile.id, product.business_id);
-                if (error) toast.error(error);
-                else void queryClient.invalidateQueries({ queryKey: ["video-follows"] });
               }}
               onAdd={async () => {
                 haptic("success");
-                if (isMockFeedId(product.id)) {
+                ensureSavedProduct(profile?.id ?? "guest", product);
+                if (isMockFeedId(product.id) || !profile) {
                   setMockCartExtra((n) => n + 1);
-                  toast.success(`Added ${product.name} to cart`);
+                  toast.success("Saved to Saved Products");
+                  void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
                   return;
                 }
-                if (!requireUser() || !profile) return;
                 if (product.sale_price == null) return;
                 const { error } = await addToCart(profile.id, {
                   businessId: product.business_id,
@@ -500,8 +505,9 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                 });
                 if (error) toast.error(error);
                 else {
-                  toast.success("Added to cart");
+                  toast.success("Added to cart and Saved Products");
                   void queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
+                  void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
                 }
               }}
             />
@@ -768,6 +774,15 @@ function VideoSlide({
   const featured = products[0] ?? null;
   const when = timeAgo(video.published_at ?? video.created_at);
   const place = video.category_name;
+  const [burst, setBurst] = useState(false);
+  const onMediaTap = useDoubleTap(
+    () => {
+      setBurst(true);
+      window.setTimeout(() => setBurst(false), 650);
+      onLike();
+    },
+    image ? undefined : onTogglePause,
+  );
 
   const likes = video.like_count + (liked && isMockFeedId(video.id) ? 1 : 0);
 
@@ -840,13 +855,14 @@ function VideoSlide({
             style={poster ? { backgroundImage: `url(${poster})` } : undefined}
           />
         )}
-        {!image ? (
-          <button
-            type="button"
-            className="absolute inset-0"
-            aria-label={paused || !active ? "Play video" : "Pause video"}
-            onClick={onTogglePause}
-          />
+        <button
+          type="button"
+          className="absolute inset-0"
+          aria-label="Double tap to like"
+          onClick={onMediaTap}
+        />
+        {burst ? (
+          <Heart className="pointer-events-none absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 fill-red-500 text-red-500" />
         ) : null}
       </div>
 
@@ -938,6 +954,7 @@ function SellerMeta({
 
 function FeedProductCard({ product, onAdd }: { product: PublicProduct; onAdd: () => void }) {
   const navigate = useNavigate();
+  const startChat = useStartShopChat();
   const summary = variantSummary(product);
   const inStock = product.is_available !== false;
   const mock = isMockFeedId(product.id);
@@ -1005,6 +1022,22 @@ function FeedProductCard({ product, onAdd }: { product: PublicProduct; onAdd: ()
           Add to cart
         </button>
       </div>
+      <button
+        type="button"
+        className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-full bg-muted text-xs font-extrabold text-foreground"
+        onClick={() =>
+          void startChat({
+            businessId: product.business_id,
+            businessName: product.business_name,
+            logoUrl: product.business_logo_url,
+            businessSlug: product.business_slug,
+            productId: mock ? null : product.id,
+          })
+        }
+      >
+        <MessageCircle className="size-3.5" />
+        Message shop
+      </button>
     </div>
   );
 }
@@ -1157,7 +1190,7 @@ function ProductList({
                     );
                     return;
                   }
-                  void navigate({ to: "/shop/p/$productId", params: { productId: product.id } });
+                  void navigate({ to: "/shop/buy", search: { productId: product.id } });
                 }}
               >
                 Buy now
@@ -1168,14 +1201,11 @@ function ProductList({
                 className="rounded-lg"
                 disabled={product.sale_price == null || product.is_available === false}
                 onClick={async () => {
-                  if (isMockFeedId(product.id)) {
-                    haptic("success");
-                    toast.success(`Added ${product.name} to cart`);
+                  haptic("success");
+                  ensureSavedProduct(profile?.id ?? "guest", product);
+                  if (isMockFeedId(product.id) || !session || !profile) {
+                    toast.success("Saved to Saved Products");
                     onAdded();
-                    return;
-                  }
-                  if (!session || !profile) {
-                    void navigate({ to: "/login" });
                     return;
                   }
                   const { error } = await addToCart(profile.id, {
@@ -1188,7 +1218,7 @@ function ProductList({
                   });
                   if (error) toast.error(error);
                   else {
-                    toast.success("Added to cart");
+                    toast.success("Added to cart and Saved Products");
                     onAdded();
                   }
                 }}
