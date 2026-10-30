@@ -1069,13 +1069,33 @@
   transform: scale(0.96);
 }
 
-/* TIJAR Android WebView — extra inset for system nav / notch */
+/* TIJAR Android app — phone chrome, designed marketplace/dashboard (not the marketing site) */
+html.tijar-android-webview,
+html.tijar-android-webview body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  background: #ffffff;
+}
+
 html.tijar-android-webview body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 html.tijar-android-webview .app-bottom-nav {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+html.tijar-android-webview .lg\:max-w-6xl,
+html.tijar-android-webview .xl\:max-w-7xl,
+html.tijar-android-webview .sm\:max-w-6xl {
+  max-width: 32rem !important;
+}
+
+html.tijar-android-webview header[data-site-header],
+html.tijar-android-webview footer[data-site-footer] {
+  display: none !important;
 }
 
 /* Leaflet map — mobile touch + avoid iOS text zoom conflicts */

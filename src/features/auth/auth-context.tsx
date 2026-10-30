@@ -76,20 +76,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     const supabase = getSupabaseBrowserClient();
+    const failSafe = window.setTimeout(() => setLoading(false), 4000);
 
-    void supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+      })
+      .catch(() => {
+        setSession(null);
+      })
+      .finally(() => {
+        window.clearTimeout(failSafe);
+        setLoading(false);
+      });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === "PASSWORD_RECOVERY") markPasswordRecovery();
-      setSession(nextSession);
+      setSession((prev) => {
+        if (prev?.access_token === nextSession?.access_token && prev?.user.id === nextSession?.user.id) {
+          return prev;
+        }
+        return nextSession;
+      });
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      window.clearTimeout(failSafe);
+      subscription.unsubscribe();
+    };
   }, [configLoading, configured]);
 
   useEffect(() => {

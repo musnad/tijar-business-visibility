@@ -1,11 +1,12 @@
 "use client";
 
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { AuthOrDivider, GoogleAuthButton, PasswordToggle, authIcons } from "@/features/auth/auth-ui";
-import { signInWithGoogle, signUpWithEmail } from "@/features/auth/auth-service";
+import { signInWithEmail, signInWithGoogle, signUpWithEmail } from "@/features/auth/auth-service";
+import { enterAppAfterAuth } from "@/features/auth/route-guards";
 import { WebAuthLayout } from "@/features/auth/web-auth-layout";
 import { WebAuthField, WebAuthSelect, WebPrimaryButton } from "@/features/auth/web-auth-fields";
 import { registerSchema } from "@/features/onboarding/schemas";
@@ -27,7 +28,6 @@ const LOCATION_OPTIONS = [
 export function WebRegisterForm() {
   const { t } = useTranslation();
   const { configured, configLoading } = useAuth();
-  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -62,8 +62,8 @@ export function WebRegisterForm() {
       location: parsed.data.location,
       accountMode,
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast.error(error.message);
       return;
     }
@@ -76,12 +76,22 @@ export function WebRegisterForm() {
         }),
       );
     }
-    if (data.session) {
-      void navigate({ to: accountMode === "customer" ? "/shop" : "/app/onboarding" });
+    let session = data.session;
+    if (!session) {
+      const signedIn = await signInWithEmail(parsed.data.email, parsed.data.password);
+      if (signedIn.error || !signedIn.data.session) {
+        setLoading(false);
+        toast.message(signedIn.error?.message ?? t("app.register.checkEmail"));
+        return;
+      }
+      session = signedIn.data.session;
+    }
+    if (!session) {
+      setLoading(false);
+      toast.error("Could not open your account. Try signing in.");
       return;
     }
-    toast.message(t("app.register.checkEmail"));
-    void navigate({ to: "/login" });
+    await enterAppAfterAuth({ prefer: accountMode === "customer" ? "shop" : "onboarding" });
   }
 
   async function onGoogle() {

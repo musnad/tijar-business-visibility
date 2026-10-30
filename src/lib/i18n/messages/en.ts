@@ -3,16 +3,16 @@ import { learnAppMessages } from "./learn-en";
 export const enMessages = {
   meta: {
     siteName: "TIJAR",
-    tagline: "Making Every Business Visible",
-    defaultDescription: "Making every business visible.",
+    tagline: "Watch shops. Follow. Buy now.",
+    defaultDescription: "TIJAR is the social marketplace for Nigerian shops — watch, follow, and buy now.",
     author: "TIJAR",
     home: {
-      title: "TIJAR — For informal businesses that need to be seen",
+      title: "TIJAR — Watch shops. Follow. Buy now.",
       description:
-        "TIJAR is only for informal businesses: market traders, food sellers, tailors, mechanics, and small shops. Record today's money, catch the debts, and let the next customer find you.",
-      ogTitle: "TIJAR — For informal businesses",
+        "TIJAR is the social marketplace for Nigerian shops. Watch For You, tap Buy now, transfer to the shop or pay with Flutterwave.",
+      ogTitle: "TIJAR — Social marketplace for shops",
       ogDescription:
-        "You already sell every day. TIJAR shows whether you made money, who still owes you, and how new customers can find you.",
+        "Watch stalls and shops, follow the ones you love, and buy now — transfer or Flutterwave.",
     },
     about: {
       title: "About TIJAR — Making Every Business Visible",
@@ -66,8 +66,10 @@ export const enMessages = {
 
   nav: {
     skipToContent: "Skip to content",
-    shop: "Shop",
-    discover: "Discover",
+    shop: "For You",
+    discover: "Explore",
+    sell: "Sell",
+    openForYou: "Open For You",
     translator: "Translator",
     howItWorks: "How It Works",
     learn: "Learn",
@@ -94,8 +96,8 @@ export const enMessages = {
     privacy: "Privacy",
     terms: "Terms",
     copyright: "© 2026 TIJAR. All rights reserved.",
-    tagline: "For informal businesses that need to be seen.",
-    learnRunGrow: "Learn. Run. Grow.",
+    tagline: "Watch shops. Follow. Buy now.",
+    learnRunGrow: "Watch. Buy. Sell.",
     socialChannels: "Social channels",
     instagramComingSoon: "Instagram, coming soon",
     linkedinComingSoon: "LinkedIn, coming soon",
@@ -142,14 +144,14 @@ export const enMessages = {
     getItOnGooglePlay: "Get it on",
     storeComingSoon: "TIJAR on the App Store and Google Play — coming soon",
     mobileApp: "Download TIJAR",
-    recordLearnGrow: "Record, learn, verify and grow in the mobile app.",
-    signupInApp: "Sign up in the app and write today's sales before you close.",
+    recordLearnGrow: "Watch shops, tap Buy now, and sell with videos in the app.",
+    signupInApp: "Open For You on your phone — same marketplace as the web.",
     ios: "iPhone",
     android: "Android",
     livePreview: "Live preview",
-    heroTitle: "The notebook in your head, on your phone.",
+    heroTitle: "The marketplace, on your phone.",
     heroCopy:
-      "Sales, expenses, and the names of people who still owe you. Built for a market day, not an office.",
+      "For You videos, Buy now, transfer to the shop or Flutterwave. Built for stalls and neighbourhood shops.",
     storeLinksNote: "Store links will go live at launch.",
     finalWorking: "You already do the hard part.",
     finalTitle: "Put the business on your phone before another day disappears.",
@@ -164,16 +166,29 @@ export const enMessages = {
   },
 
   home: {
-    heroTitle: "You worked today. You still do not know if you made money.",
+    heroTitle: "Watch shops. Follow. Buy now.",
     heroDesc:
-      "TIJAR is only for informal businesses — market traders, food sellers, tailors, mechanics, and small shops. Write the sale before you forget it, see who still owes you, and let the next customer find you.",
+      "TIJAR is the social marketplace for stalls, kitchens, tailors, and neighbourhood shops. Scroll For You like you already scroll videos — then tap Buy now.",
+    openForYou: "Open For You",
+    startSelling: "Start selling",
+    heroHint: "Transfer to the shop, or pay online with Flutterwave.",
+    buyNow: "Buy now",
     seeHowItWorks: "See how it works",
     appFeatures: "App features",
     getTheApp: "Get the app",
     seeTheNeed: "See what you are losing",
+    shoppers: {
+      title: "You came to buy",
+      copy: "Open For You, follow shops you trust, and tap Buy now. Pay into the seller’s bank or with Flutterwave.",
+    },
+    sellers: {
+      title: "You came to sell",
+      copy: "Post a photo or video, tag the product, and take orders. Add your account so buyers can transfer — or collect Flutterwave payouts anytime.",
+      payHint: "Bank transfer or Flutterwave wallet.",
+    },
     audience: {
-      eyebrow: "Only informal businesses",
-      title: "If you sell with your own hands, this was built for you.",
+      eyebrow: "Social marketplace",
+      title: "If you sell with your own hands, people should find you here.",
       copy: "TIJAR is not for every company. It is for the person who opens a stall, a table, or a small shop, takes the cash, and goes home still unsure of the profit.",
       forLabel: "This is for you",
       notLabel: "This is not for you",
@@ -248,22 +263,22 @@ export const enMessages = {
       tagline: "Informal does not mean invisible.",
     },
     howItWorks: {
-      eyebrow: "Start today",
-      title: "Three steps. Then you can see the money.",
+      eyebrow: "How it works",
+      title: "Same as the app: watch, buy, sell.",
       level1: {
         label: "Step 1",
-        title: "Name the business",
-        copy: "Download the app. Say what you sell and where you work.",
+        title: "Watch For You",
+        copy: "Shops post photos and videos. Follow the stall you already buy from.",
       },
       level2: {
         label: "Step 2",
-        title: "Write the day",
-        copy: "Log the sale, the expense, and the debt before you forget them.",
+        title: "Tap Buy now",
+        copy: "Open the buy page. Transfer to the shop’s bank, or pay online with Flutterwave.",
       },
       level3: {
         label: "Step 3",
-        title: "Let people find you",
-        copy: "Verify, then share a profile a new customer can trust.",
+        title: "Sell with a video",
+        copy: "Tag your product, add your account, and request a payout whenever you want.",
       },
     },
     businesses: {
@@ -273,7 +288,7 @@ export const enMessages = {
     languages: {
       eyebrow: "In your language",
       title: "In the language you already sell in.",
-      copy: "Records and lessons in English, Hausa, Arabic, Yoruba, Igbo, and Kiswahili. No office English required.",
+      copy: "The marketplace speaks the language you already sell in.",
       english: "English",
       hausa: "Hausa",
       arabic: "Arabic",
@@ -283,7 +298,9 @@ export const enMessages = {
       morePlanned: "More African languages are planned.",
     },
     scenes: {
-      label: "Informal businesses in Nigeria",
+      label: "Shops on TIJAR",
+      eyebrow: "On the feed",
+      title: "Real stalls. Real Buy now.",
       market: "Market stall",
       marketAlt: "A trader arranging peppers, tomatoes, and onions at a Nigerian market stall",
       tailor: "Tailor",

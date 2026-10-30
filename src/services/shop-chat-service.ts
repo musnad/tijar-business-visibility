@@ -26,37 +26,8 @@ export type ShopInboxRow = {
   unread: boolean;
 };
 
-type MockStore = {
-  threads: Array<
-    ShopInboxRow & {
-      messages: ShopChatMessage[];
-    }
-  >;
-};
-
-const MOCK_KEY = "tijar-shop-chat-v1";
-
 function missingTable(message: string): boolean {
   return /does not exist|schema cache|shop_conversations|shop_messages/i.test(message);
-}
-
-function loadMock(): MockStore {
-  try {
-    const raw = localStorage.getItem(MOCK_KEY);
-    if (!raw) return { threads: [] };
-    const parsed = JSON.parse(raw) as MockStore;
-    return { threads: parsed.threads ?? [] };
-  } catch {
-    return { threads: [] };
-  }
-}
-
-function saveMock(store: MockStore) {
-  localStorage.setItem(MOCK_KEY, JSON.stringify(store));
-}
-
-function mockThreadId(businessId: string, customerId: string): string {
-  return `mock-chat-${businessId}-${customerId}`;
 }
 
 export async function openShopConversation(input: {
@@ -68,27 +39,7 @@ export async function openShopConversation(input: {
   productId?: string | null;
 }): Promise<{ id: string | null; error: string | null }> {
   if (isMockFeedId(input.businessId)) {
-    const store = loadMock();
-    const id = mockThreadId(input.businessId, input.customerId);
-    const existing = store.threads.find((t) => t.id === id);
-    if (!existing) {
-      store.threads.unshift({
-        id,
-        business_id: input.businessId,
-        customer_id: input.customerId,
-        last_preview: "Say hello to this shop",
-        last_message_at: new Date().toISOString(),
-        business_name: input.businessName ?? "Shop",
-        logo_url: input.logoUrl ?? null,
-        business_slug: input.businessSlug ?? null,
-        customer_name: "You",
-        as_seller: false,
-        unread: false,
-        messages: [],
-      });
-      saveMock(store);
-    }
-    return { id, error: null };
+    return { id: null, error: "This shop is not available." };
   }
 
   const supabase = getSupabaseBrowserClient();
@@ -112,14 +63,6 @@ export async function fetchShopInbox(
   profileId: string,
   myBusinessIds: string[],
 ): Promise<{ rows: ShopInboxRow[]; error: string | null }> {
-  const mockRows = loadMock()
-    .threads.filter((t) => t.customer_id === profileId || myBusinessIds.includes(t.business_id))
-    .map((t) => ({
-      ...t,
-      as_seller: myBusinessIds.includes(t.business_id),
-      unread: t.unread,
-    }));
-
   const supabase = getSupabaseBrowserClient();
   const { data: asCustomer, error: cErr } = await supabase
     .from("shop_conversations")
@@ -131,9 +74,9 @@ export async function fetchShopInbox(
     .limit(80);
 
   if (cErr && missingTable(cErr.message)) {
-    return { rows: mockRows, error: null };
+    return { rows: [], error: "Chat is not set up yet. Apply migration 000026 in Supabase." };
   }
-  if (cErr) return { rows: mockRows, error: cErr.message };
+  if (cErr) return { rows: [], error: cErr.message };
 
   let asSeller: typeof asCustomer = [];
   if (myBusinessIds.length > 0) {
@@ -176,7 +119,7 @@ export async function fetchShopInbox(
   }
 
   live.sort((a, b) => +new Date(b.last_message_at) - +new Date(a.last_message_at));
-  return { rows: [...mockRows, ...live], error: null };
+  return { rows: live, error: null };
 }
 
 export async function countUnreadShopChats(profileId: string, myBusinessIds: string[]): Promise<number> {
@@ -189,8 +132,7 @@ export async function fetchShopMessages(
   customerId: string,
 ): Promise<{ messages: ShopChatMessage[]; inbox: ShopInboxRow | null; error: string | null }> {
   if (isMockFeedId(conversationId) || conversationId.startsWith("mock-chat-")) {
-    const thread = loadMock().threads.find((t) => t.id === conversationId) ?? null;
-    return { messages: thread?.messages ?? [], inbox: thread ?? null, error: thread ? null : "Chat not found." };
+    return { messages: [], inbox: null, error: "This chat is not available." };
   }
 
   const supabase = getSupabaseBrowserClient();
@@ -259,44 +201,7 @@ export async function sendShopMessage(input: {
   if (body.length > 2000) return { error: "Message is too long." };
 
   if (isMockFeedId(input.conversationId) || input.conversationId.startsWith("mock-chat-")) {
-    const store = loadMock();
-    const thread = store.threads.find((t) => t.id === input.conversationId);
-    if (!thread) return { error: "Chat not found." };
-    const now = new Date().toISOString();
-    thread.messages.push({
-      id: `mock-msg-${Date.now()}`,
-      conversation_id: thread.id,
-      sender_id: input.senderId,
-      body,
-      created_at: now,
-      role: input.asSeller ? "business" : "customer",
-    });
-    thread.last_preview = body.slice(0, 140);
-    thread.last_message_at = now;
-    thread.unread = Boolean(input.asSeller);
-    if (!input.asSeller) {
-      window.setTimeout(() => {
-        const later = loadMock();
-        const t = later.threads.find((row) => row.id === input.conversationId);
-        if (!t) return;
-        const replyAt = new Date().toISOString();
-        t.messages.push({
-          id: `mock-msg-${Date.now()}-r`,
-          conversation_id: t.id,
-          sender_id: t.business_id,
-          body: `Thanks for messaging ${t.business_name}. We will reply here on TIJAR.`,
-          created_at: replyAt,
-          role: "business",
-        });
-        t.last_preview = `Thanks for messaging ${t.business_name}.`;
-        t.last_message_at = replyAt;
-        t.unread = true;
-        saveMock(later);
-        window.dispatchEvent(new Event("tijar-shop-chat"));
-      }, 700);
-    }
-    saveMock(store);
-    return { error: null };
+    return { error: "This chat is not available." };
   }
 
   const supabase = getSupabaseBrowserClient();

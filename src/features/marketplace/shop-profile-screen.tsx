@@ -5,10 +5,13 @@ import { Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
   Bell,
+  BookOpen,
   Building2,
   ChevronRight,
   CircleHelp,
   Heart,
+  Languages,
+  LayoutDashboard,
   MapPin,
   Package,
   Settings,
@@ -25,8 +28,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { canUseBusinessMode } from "@/lib/account-mode";
 import { haptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
-import { listFollowedPeople, listPeopleFollowers, listShopFollowers } from "@/lib/shop-social";
-import { MOCK_BUSINESS_ID } from "@/features/marketplace/feed-mock";
+import { listFollowedPeople, listPeopleFollowers } from "@/lib/shop-social";
 import {
   countFavoriteProducts,
   fetchFollowedBusinesses,
@@ -88,27 +90,31 @@ export function ShopProfileScreen() {
   }
 
   const demo = !session || !profile;
-  const name = demo ? "Ada Johnson" : profile.full_name?.trim() || "TIJAR member";
-  const username = demo ? "adajohnson" : handleFromName(name, profile.email);
-  const verified = demo || canUseBusinessMode(profile);
-  const followers =
-    listPeopleFollowers(profile?.id).length + listShopFollowers(MOCK_BUSINESS_ID).length;
+  const name = demo ? "TIJAR member" : profile.full_name?.trim() || "TIJAR member";
+  const username = demo ? "guest" : handleFromName(name, profile.email);
+  const verified = !demo && canUseBusinessMode(profile);
+  const followers = listPeopleFollowers(profile?.id).length;
   const following = (followsQuery.data?.length ?? 0) + listFollowedPeople(profile?.id ?? "guest").length;
-  const saved = demo ? Math.max(23, favQuery.data ?? 0) : (favQuery.data ?? 0);
+  const saved = favQuery.data ?? 0;
   const bio = demo
-    ? "Entrepreneur | Sourcing & Supply Specialist | Connecting great products with global opportunities."
+    ? "Sign in to save shops, orders, and your profile."
     : profile.bio?.trim() || "Tell shops who you are. Your bio is only shown on your profile.";
   const address = addressQuery.data?.find((a) => a.is_default) ?? addressQuery.data?.[0];
   const location = demo
-    ? "Lagos, Nigeria"
+    ? ""
     : [address?.city, address?.state].filter(Boolean).join(", ") || "Location private";
   const photo = demo ? null : profile.avatar_url;
-  const notifBadge = demo ? 3 : unreadQuery.data ?? 0;
+  const notifBadge = unreadQuery.data ?? 0;
 
   const menu: { to: string; label: string; icon: LucideIcon; badge?: number }[] = [
     ...(canUseBusinessMode(profile)
-      ? [{ to: "/shop/studio", label: "AI Marketing Studio", icon: Sparkles }]
+      ? [
+          { to: "/app", label: "Business dashboard", icon: LayoutDashboard },
+          { to: "/shop/studio", label: "AI Marketing Studio", icon: Sparkles },
+        ]
       : []),
+    { to: "/app/learn", label: "Learn", icon: BookOpen },
+    { to: "/translate", label: "Translate", icon: Languages },
     { to: "/shop/orders", label: "My Orders", icon: Package },
     { to: "/shop/favorites", label: "Saved Products", icon: Heart },
     { to: "/shop/follows", label: "Following", icon: Building2 },

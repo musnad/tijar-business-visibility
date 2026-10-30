@@ -236,8 +236,30 @@ export function AssistantScreen() {
 
     const hint = await englishHintForBooks(trimmed);
     const cmd = parseVoiceCommandWithHint(trimmed, hint);
-    setDraft(cmd);
-    sayBooks(summarizeDraft(cmd, summaryStrings()));
+    if (cmd.intent !== "unknown") {
+      setDraft(cmd);
+      sayBooks(summarizeDraft(cmd, summaryStrings()));
+      return;
+    }
+    setDraft(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/assistant/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: trimmed,
+          language: speakLang,
+          shop: business?.business_name ?? "",
+        }),
+      });
+      const json = (await res.json()) as { reply?: string; error?: string };
+      sayBooks(json.reply?.trim() || json.error || t("app.assistant.summaryUnknown"));
+    } catch {
+      sayBooks(t("app.assistant.summaryUnknown"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onBooksMic() {

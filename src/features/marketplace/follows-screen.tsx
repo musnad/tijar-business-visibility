@@ -7,10 +7,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
-import { MOCK_BUSINESS_ID } from "@/features/marketplace/feed-mock";
 import { useAuth } from "@/features/auth/auth-context";
 import {
-  MOCK_PEOPLE,
   listFollowedPeople,
   listPeopleFollowers,
   toggleFollowPersonLocal,
@@ -38,7 +36,7 @@ export function FollowsScreen() {
 
   const people = listFollowedPeople(profile?.id ?? "guest");
   void peopleTick;
-  const suggested = MOCK_PEOPLE.filter((p) => p.id !== profile?.id && !people.some((x) => x.id === p.id));
+  const suggested: SocialPerson[] = [];
 
   return (
     <MarketplaceShell>
@@ -139,9 +137,10 @@ export function FollowersScreen() {
     enabled: Boolean(profile?.id),
     queryFn: () => fetchMyBusinessIds(profile!.id),
   });
-  const shopId = bizQuery.data?.[0] ?? MOCK_BUSINESS_ID;
+  const shopId = bizQuery.data?.[0] ?? "";
   const shopFollowers = useQuery({
     queryKey: ["shop-followers", shopId],
+    enabled: Boolean(shopId),
     queryFn: async () => {
       const r = await fetchShopFollowers(shopId);
       if (r.error) throw new Error(r.error);

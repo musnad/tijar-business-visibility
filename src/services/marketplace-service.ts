@@ -1,4 +1,4 @@
-import { isMockFeedId, MOCK_PRODUCTS } from "@/features/marketplace/feed-mock";
+import { isMockFeedId } from "@/features/marketplace/feed-mock";
 import {
   addLocalCartItem,
   isLocalCartId,
@@ -13,7 +13,6 @@ import {
   listLocalOrders,
   listSavedProducts,
   listShopFollowers,
-  toggleSavedProduct,
 } from "@/lib/shop-social";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { CheckoutQuote } from "@/lib/checkout/quote";
@@ -219,8 +218,9 @@ export async function fetchMarketplaceProduct(productId: string): Promise<{
   product: PublicProduct | null;
   error: string | null;
 }> {
-  const mock = MOCK_PRODUCTS.find((p) => p.id === productId);
-  if (isMockFeedId(productId) && mock) return { product: mock, error: null };
+  if (isMockFeedId(productId)) {
+    return { product: null, error: "This listing is not available." };
+  }
 
   const supabase = getSupabaseBrowserClient();
   let { data, error } = await supabase
@@ -240,8 +240,8 @@ export async function fetchMarketplaceProduct(productId: string): Promise<{
     error = null;
   }
 
-  if (error) return { product: mock ?? null, error: mock ? null : error.message };
-  if (!data) return { product: mock ?? null, error: mock ? null : "This product is not available." };
+  if (error) return { product: null, error: error.message };
+  if (!data) return { product: null, error: "This product is not available." };
 
   const product = data as PublicProduct;
   if (product.is_informal === false) {
@@ -332,11 +332,14 @@ export async function addToCart(
     variantLabel?: string | null;
   },
 ): Promise<{ error: string | null }> {
+  if (isMockFeedId(input.productId)) {
+    return { error: "This listing is not available." };
+  }
+  if (!profileId || profileId === "guest") {
+    return { error: "Sign in to add items to your cart." };
+  }
   addLocalCartItem(profileId, input);
   rememberSavedFromCart(profileId, input);
-  if (isMockFeedId(input.productId) || !profileId || profileId === "guest") {
-    return { error: null };
-  }
   const supabase = getSupabaseBrowserClient();
   const qty = input.quantity ?? 1;
   const rpc = await supabase.rpc("add_marketplace_cart_item", {
@@ -399,10 +402,9 @@ function rememberSavedFromCart(
     imageUrl?: string | null;
   },
 ) {
-  const catalog = MOCK_PRODUCTS.find((p) => p.id === input.productId);
   ensureSavedProduct(
     profileId,
-    catalog ?? {
+    {
       id: input.productId,
       business_id: input.businessId,
       name: input.productName,
@@ -464,6 +466,8 @@ export async function placeOrders(input: {
   buyerNote?: string;
   buyerPhone?: string;
   idempotencyKey: string;
+  paymentMethod?: string | null;
+  paymentDestination?: string | null;
 }): Promise<{ orders: MarketplaceOrder[]; error: string | null }> {
   const supabase = getSupabaseBrowserClient();
   const payload = {
@@ -485,7 +489,22 @@ export async function placeOrders(input: {
     error = legacy.error;
   }
   if (error) return { orders: [], error: error.message };
-  return { orders: (data ?? []) as MarketplaceOrder[], error: null };
+  const orders = (data ?? []) as MarketplaceOrder[];
+  if (input.paymentMethod && orders.length > 0) {
+    const supabasePay = getSupabaseBrowserClient();
+    await Promise.all(
+      orders.map((order) =>
+        supabasePay
+          .from("orders")
+          .update({
+            payment_method: input.paymentMethod,
+            payment_destination: input.paymentDestination ?? null,
+          })
+          .eq("id", order.id),
+      ),
+    );
+  }
+  return { orders, error: null };
 }
 
 export async function transitionOrder(
@@ -587,9 +606,8 @@ export async function toggleFavoriteProduct(
   profileId: string,
   productId: string,
 ): Promise<{ favorited: boolean; error: string | null }> {
-  const catalog = MOCK_PRODUCTS.find((p) => p.id === productId);
-  if (isMockFeedId(productId) && catalog) {
-    return { favorited: toggleSavedProduct(profileId, catalog), error: null };
+  if (isMockFeedId(productId)) {
+    return { favorited: false, error: "This listing is not available." };
   }
   const supabase = getSupabaseBrowserClient();
   const { data: existing } = await supabase
@@ -830,7 +848,7 @@ export async function fetchShopFollowers(
   businessId: string,
 ): Promise<{ people: ReturnType<typeof listShopFollowers>; error: string | null }> {
   const local = listShopFollowers(businessId);
-  if (isMockFeedId(businessId)) return { people: local, error: null };
+  if (isMockFeedId(businessId)) return { people: [], error: null };
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("business_follows")
@@ -883,4 +901,123 @@ export async function saveNotificationPreferences(
     updated_at: new Date().toISOString(),
   });
   return { error: error?.message ?? null };
+}
+
+export async function fetchBusinessPayoutAccount(businessId: string): Promise<{
+  account: import("@/types/database").BusinessPayoutAccount | null;
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("public_business_payout_accounts")
+    .select("*")
+    .eq("business_id", businessId)
+    .maybeSingle();
+  if (!error) {
+    return { account: (data as import("@/types/database").BusinessPayoutAccount | null) ?? null, error: null };
+  }
+  const fallback = await supabase
+    .from("businesses")
+    .select("id, business_name, payout_account_name, payout_account_number, payout_bank_name, payout_bank_code")
+    .eq("id", businessId)
+    .maybeSingle();
+  if (fallback.error || !fallback.data?.payout_account_number) {
+    return { account: null, error: error.message };
+  }
+  const row = fallback.data;
+  return {
+    account: {
+      business_id: row.id as string,
+      business_name: row.business_name as string,
+      payout_account_name: (row.payout_account_name as string | null) ?? null,
+      payout_account_number: (row.payout_account_number as string | null) ?? null,
+      payout_bank_name: (row.payout_bank_name as string | null) ?? null,
+      payout_bank_code: (row.payout_bank_code as string | null) ?? null,
+    },
+    error: null,
+  };
+}
+
+export async function saveBusinessPayoutAccount(
+  businessId: string,
+  input: {
+    payout_account_name: string;
+    payout_account_number: string;
+    payout_bank_name: string;
+    payout_bank_code: string;
+  },
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase
+    .from("businesses")
+    .update({
+      payout_account_name: input.payout_account_name.trim(),
+      payout_account_number: input.payout_account_number.replace(/\s+/g, ""),
+      payout_bank_name: input.payout_bank_name.trim(),
+      payout_bank_code: input.payout_bank_code.trim(),
+    })
+    .eq("id", businessId);
+  return { error: error?.message ?? null };
+}
+
+export async function fetchSellerWallet(businessId: string): Promise<{
+  wallet: import("@/types/database").SellerWallet;
+  requests: import("@/types/database").PayoutRequest[];
+  error: string | null;
+}> {
+  const empty = { business_id: businessId, available_ngn: 0, pending_ngn: 0 };
+  const supabase = getSupabaseBrowserClient();
+  const walletRes = await supabase.from("seller_wallets").select("*").eq("business_id", businessId).maybeSingle();
+  const reqRes = await supabase
+    .from("payout_requests")
+    .select("*")
+    .eq("business_id", businessId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  return {
+    wallet: (walletRes.data as import("@/types/database").SellerWallet | null) ?? empty,
+    requests: (reqRes.data ?? []) as import("@/types/database").PayoutRequest[],
+    error: walletRes.error?.message ?? reqRes.error?.message ?? null,
+  };
+}
+
+export async function startFlutterwavePay(orderId: string): Promise<{ link: string | null; error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return { link: null, error: "Sign in to pay online." };
+  const res = await fetch("/api/payments/flutterwave", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ orderId }),
+  });
+  const json = (await res.json()) as { link?: string; error?: string };
+  if (!res.ok) return { link: null, error: json.error ?? "Could not open Flutterwave." };
+  return { link: json.link ?? null, error: json.link ? null : "Could not open Flutterwave." };
+}
+
+export async function requestSellerPayout(
+  businessId: string,
+  amount: number,
+): Promise<{ error: string | null; message?: string }> {
+  const supabase = getSupabaseBrowserClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return { error: "Sign in first." };
+  const res = await fetch("/api/payments/payout", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ businessId, amount }),
+  });
+  const json = (await res.json()) as { error?: string; message?: string };
+  if (!res.ok) return { error: json.error ?? "Payout failed." };
+  return { error: null, message: json.message };
 }

@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { ProductCard } from "@/features/marketplace/product-card";
-import { MOCK_PRODUCTS, MOCK_SHOP_META } from "@/features/marketplace/feed-mock";
 import { useAuth } from "@/features/auth/auth-context";
 import { haptic } from "@/lib/haptics";
 import { AREA_PRESETS } from "@/lib/maps/provider";
@@ -46,40 +45,6 @@ const PRICE_CHIPS = [
   { id: "mid", label: "₦10k–₦30k", min: "10000", max: "30000" },
   { id: "premium", label: "₦30k+", min: "30000", max: "" },
 ] as const;
-
-function mockShopsFromProducts(products: PublicProduct[]): MarketplaceShop[] {
-  const map = new Map<string, MarketplaceShop>();
-  for (const product of products) {
-    const meta = MOCK_SHOP_META[product.business_id];
-    const existing = map.get(product.business_id);
-    if (!existing) {
-      map.set(product.business_id, {
-        id: product.business_id,
-        slug: product.business_slug ?? product.business_id,
-        business_name: product.business_name ?? "Shop",
-        description: product.description,
-        location_text: meta?.city ?? null,
-        public_location_label: meta?.city ?? null,
-        latitude: meta?.lat ?? null,
-        longitude: meta?.lng ?? null,
-        logo_url: product.business_logo_url ?? product.image_url,
-        category_id: null,
-        category_name: product.category_name ?? null,
-        public_phone: null,
-        public_whatsapp: null,
-        opening_hours: {},
-        is_verified: true,
-        verification_status: "verified",
-        product_count: 1,
-        product_names: [product.name],
-      });
-    } else {
-      existing.product_count += 1;
-      existing.product_names.push(product.name);
-    }
-  }
-  return [...map.values()];
-}
 
 export function ShopDiscoverScreen() {
   const { profile } = useAuth();
@@ -122,17 +87,8 @@ export function ShopDiscoverScreen() {
     queryFn: async () => (await fetchCart(profile!.id)).items,
   });
 
-  const products = useMemo(() => {
-    const live = productsQuery.data ?? [];
-    const ids = new Set(live.map((p) => p.id));
-    return [...MOCK_PRODUCTS.filter((p) => !ids.has(p.id)), ...live];
-  }, [productsQuery.data]);
-
-  const shops = useMemo(() => {
-    const live = shopsQuery.data ?? [];
-    const ids = new Set(live.map((s) => s.id));
-    return [...mockShopsFromProducts(MOCK_PRODUCTS).filter((s) => !ids.has(s.id)), ...live];
-  }, [shopsQuery.data]);
+  const products = productsQuery.data ?? [];
+  const shops = shopsQuery.data ?? [];
 
   const categoryNames = useMemo(() => {
     const fromProducts = products.map((p) => p.category_name).filter(Boolean) as string[];

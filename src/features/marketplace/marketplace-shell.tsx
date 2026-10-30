@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { AppLanguageButton } from "@/features/app-layout/app-language-button";
 import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
 import { useAuth } from "@/features/auth/auth-context";
+import { isTijarNativeApp } from "@/lib/tijar-native-app";
 import { cn } from "@/lib/utils";
 import { countUnreadShopChats, fetchMyBusinessIds } from "@/services/shop-chat-service";
 
@@ -76,6 +77,7 @@ export function MarketplaceShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { profile } = useAuth();
+  const nativeApp = isTijarNativeApp();
   const unreadQuery = useQuery({
     queryKey: ["shop-inbox-unread", profile?.id],
     enabled: Boolean(profile?.id),
@@ -113,7 +115,8 @@ export function MarketplaceShell({
           feed || hideNav
             ? "flex max-w-lg min-h-0 flex-col p-0"
             : cn(
-                "max-w-lg pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 lg:max-w-6xl xl:max-w-7xl",
+                "max-w-lg pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5",
+                !nativeApp && "lg:max-w-6xl xl:max-w-7xl",
                 mapLayout ? "px-2 pb-2" : "px-4 pb-4",
               ),
         )}

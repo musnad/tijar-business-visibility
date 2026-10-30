@@ -16,7 +16,7 @@ import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedu
 import { parseVariantList } from "@/lib/catalogue/variants";
 import { haptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
-import { isProductLiked, likeProduct, isProductSaved, toggleSavedProduct } from "@/lib/shop-social";
+import { isProductLiked, likeProduct, isProductSaved } from "@/lib/shop-social";
 import { useDoubleTap } from "@/lib/use-double-tap";
 import {
   addToCart,
@@ -145,8 +145,13 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
       void navigate({ to: "/shop/buy", search: { productId: product.id } });
       return;
     }
+    if (!session || !profile) {
+      toast.message("Sign in to add items to your cart.");
+      void navigate({ to: "/login" });
+      return;
+    }
     setBusy("cart");
-    const { error } = await addToCart(actorId, {
+    const { error } = await addToCart(profile.id, {
       businessId: product.business_id,
       productId: product.id,
       productName: product.name,
@@ -171,11 +176,13 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
   async function favorite() {
     haptic();
     if (!product) return;
-    if (mock || !session || !profile) {
-      const next = toggleSavedProduct(actorId, product);
-      setSaved(next);
-      toast.success(next ? "Saved to Saved Products" : "Removed from saved");
-      void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
+    if (mock) {
+      toast.error("This listing is not available.");
+      return;
+    }
+    if (!session || !profile) {
+      toast.message("Sign in to save products.");
+      void navigate({ to: "/login" });
       return;
     }
     const { favorited, error } = await toggleFavoriteProduct(profile.id, productId);

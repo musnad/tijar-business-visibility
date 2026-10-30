@@ -1,4 +1,3 @@
-import { getMockStorefront, MOCK_POSTS } from "@/features/marketplace/feed-mock";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { PublicFeedVideo } from "@/services/video-feed-service";
 import type { Business, BusinessEnquiry, PublicBusiness, PublicProduct } from "@/types/database";
@@ -58,16 +57,6 @@ export async function fetchStorefront(slug: string): Promise<{
   videos: PublicFeedVideo[];
   error: string | null;
 }> {
-  const mock = getMockStorefront(slug);
-  if (mock) {
-    return {
-      business: mock.business,
-      products: mock.products,
-      videos: MOCK_POSTS.filter((v) => v.business_id === mock.business.id),
-      error: null,
-    };
-  }
-
   const supabase = getSupabaseBrowserClient();
   let { data, error } = await supabase
     .from("public_business_listings")

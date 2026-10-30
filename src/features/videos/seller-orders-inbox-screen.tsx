@@ -37,7 +37,7 @@ export function SellerOrdersInboxScreen({ businessId }: { businessId: string }) 
     <>
       <AppPageHeader
         title="Marketplace orders"
-        subtitle="Requests and confirmed orders for this shop only. Paid is never set from this screen."
+        subtitle="Confirm bank transfers yourself. Flutterwave paid orders update from the webhook."
       />
       {query.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
       {(query.data?.length ?? 0) === 0 && !query.isLoading && (
@@ -62,6 +62,12 @@ export function SellerOrdersInboxScreen({ businessId }: { businessId: string }) 
                 </div>
                 <p className="font-extrabold text-primary">{formatNgn(Number(o.total))}</p>
               </div>
+              {o.buyer_note ? <p className="mt-2 text-xs text-muted-foreground">{o.buyer_note}</p> : null}
+              {o.payment_method ? (
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {o.payment_method === "transfer" ? "Direct transfer" : o.payment_method}
+                </p>
+              ) : null}
               {next && canSellerTransition(o.status, next) && (
                 <Button
                   size="sm"
@@ -69,7 +75,9 @@ export function SellerOrdersInboxScreen({ businessId }: { businessId: string }) 
                   disabled={move.isPending}
                   onClick={() => move.mutate({ id: o.id, status: next })}
                 >
-                  Mark {orderStatusLabel(next)}
+                  {o.status === "pending_payment"
+                    ? "I received the transfer"
+                    : `Mark ${orderStatusLabel(next)}`}
                 </Button>
               )}
             </li>

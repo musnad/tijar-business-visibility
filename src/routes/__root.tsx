@@ -4,19 +4,22 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useNavigate,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import { isTijarNativeApp } from "@/lib/tijar-native-app";
 
 import appCss from "../styles.css?url";
 import { SiteFooter, SiteHeader } from "../components/site-shell";
 import { AuthProvider, useAuth } from "@/features/auth/auth-context";
 import { SitePreferencesProvider, useTranslation } from "../lib/i18n/context";
 import { enMessages } from "../lib/i18n/messages/en";
+import { clearServiceWorkers } from "../lib/clear-service-workers";
 
 function NotFoundContent() {
   const { t } = useTranslation();
@@ -126,10 +129,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+const NATIVE_APP_BOOT = `if(/TijarApp\\//i.test(navigator.userAgent))document.documentElement.classList.add('tijar-android-webview');`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: NATIVE_APP_BOOT }} />
         <HeadContent />
       </head>
       <body>
@@ -146,10 +152,15 @@ function isAppChromePath(pathname: string): boolean {
     pathname.startsWith("/app") ||
     pathname.startsWith("/shop") ||
     pathname.startsWith("/b/") ||
+    pathname.startsWith("/learn") ||
+    pathname.startsWith("/translate") ||
+    pathname.startsWith("/discover") ||
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password" ||
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
     pathname.startsWith("/login/") ||
     pathname.startsWith("/register/") ||
     pathname.startsWith("/auth/")
@@ -158,7 +169,15 @@ function isAppChromePath(pathname: string): boolean {
 
 function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const nativeApp = isTijarNativeApp();
   const { session } = useAuth();
+
+  useEffect(() => {
+    if (!nativeApp) return;
+    if (isAppChromePath(pathname)) return;
+    void navigate({ to: "/shop" });
+  }, [nativeApp, pathname, navigate]);
 
   // Logged-in users on product surfaces only see app/shop UI — no marketing nav/footer.
   const isLoggedInProductSurface =
@@ -167,7 +186,7 @@ function RootLayout() {
       pathname.startsWith("/translate") ||
       pathname.startsWith("/b/"));
 
-  const showMarketingShell = !isAppChromePath(pathname) && !isLoggedInProductSurface;
+  const showMarketingShell = !nativeApp && !isAppChromePath(pathname) && !isLoggedInProductSurface;
 
   const shopFeed =
     pathname === "/shop" ||
@@ -206,6 +225,10 @@ function RootLayout() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    void clearServiceWorkers();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

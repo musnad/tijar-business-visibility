@@ -30,17 +30,14 @@ export function SiteHeader() {
     () =>
       [
         { labelKey: "nav.shop", to: "/shop" as const },
-        { labelKey: "nav.discover", to: "/discover" as const },
-        { labelKey: "nav.translator", to: "/translate" as const },
-        { labelKey: "nav.howItWorks", to: "/how-it-works" as const },
-        { labelKey: "nav.learn", to: "/learn" as const },
-        { labelKey: "nav.about", to: "/about" as const },
+        { labelKey: "nav.discover", to: "/shop/discover" as const },
+        { labelKey: "nav.sell", to: "/register" as const },
       ] as const,
     [],
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
+    <header data-site-header className="sticky top-0 z-50 border-b border-[#EEF1F5] bg-white/95 text-[#0B1F4D] backdrop-blur-sm">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-[60] focus:bg-background focus:p-3"
@@ -57,20 +54,18 @@ export function SiteHeader() {
             <Link
               key={link.to}
               to={link.to}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              activeProps={{ className: "text-foreground" }}
+              className="text-sm font-semibold text-[#6B7280] transition-colors hover:text-[#0B1F4D]"
+              activeProps={{ className: "text-[#0B1F4D]" }}
             >
               {t(link.labelKey)}
             </Link>
           ))}
           <SitePreferencesControls compact />
-          <Button variant="outline" asChild>
+          <Button variant="outline" asChild className="rounded-full border-[#0B1F4D] font-bold text-[#0B1F4D]">
             <Link to="/login">{t("nav.signIn")}</Link>
           </Button>
-          <Button asChild>
-            <Link to="/" hash="download-app">
-              {t("nav.downloadApp")}
-            </Link>
+          <Button asChild className="rounded-full bg-[#1F7A4D] font-extrabold">
+            <Link to="/shop">{t("nav.openForYou")}</Link>
           </Button>
         </nav>
         <Button
@@ -109,14 +104,14 @@ export function SiteHeader() {
             <div className="mt-4">
               <SitePreferencesControls stacked />
             </div>
-            <Button variant="outline" asChild size="lg" className="mt-4">
+            <Button variant="outline" asChild size="lg" className="mt-4 rounded-full">
               <Link to="/login" onClick={() => setOpen(false)}>
                 {t("nav.signIn")}
               </Link>
             </Button>
-            <Button asChild size="lg" className="mt-2">
-              <Link to="/" hash="download-app" onClick={() => setOpen(false)}>
-                {t("nav.downloadApp")}
+            <Button asChild size="lg" className="mt-2 rounded-full bg-[#1F7A4D] font-extrabold">
+              <Link to="/shop" onClick={() => setOpen(false)}>
+                {t("nav.openForYou")}
               </Link>
             </Button>
           </div>
@@ -130,15 +125,16 @@ export function SiteFooter() {
   const { t } = useTranslation();
 
   const productLinks = [
+    { labelKey: "nav.shop", to: "/shop" as const },
+    { labelKey: "nav.discover", to: "/shop/discover" as const },
+    { labelKey: "nav.sell", to: "/register" as const },
     { labelKey: "nav.howItWorks", to: "/how-it-works" as const },
-    { labelKey: "nav.learn", to: "/learn" as const },
-    { labelKey: "nav.businessVisibility", to: "/business-visibility" as const },
     { labelKey: "nav.about", to: "/about" as const },
     { labelKey: "nav.contact", to: "/contact" as const },
   ] as const;
 
   return (
-    <footer className="border-t border-border bg-background text-foreground">
+    <footer data-site-footer className="border-t border-border bg-background text-foreground">
       <div className="mx-auto max-w-6xl px-5 py-14 lg:px-6">
         <div className="grid gap-12 md:grid-cols-[1.5fr_1fr_1fr]">
           <div>

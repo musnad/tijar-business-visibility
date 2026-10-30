@@ -247,6 +247,43 @@ export async function openaiTranslate(
   return out.replace(/^["']|["']$/g, "").trim();
 }
 
+export async function openaiChat(
+  input: { system: string; user: string },
+  config: OpenAiClientConfig = {},
+): Promise<string> {
+  const resolved = resolveConfig(config);
+  const res = await fetchWithTimeout(
+    resolved.fetchImpl,
+    `${resolved.baseUrl}/chat/completions`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resolved.apiKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "User-Agent": USER_AGENT,
+      },
+      body: JSON.stringify({
+        model: resolved.chatModel,
+        temperature: 0.4,
+        max_tokens: 500,
+        messages: [
+          { role: "system", content: input.system },
+          { role: "user", content: input.user.slice(0, 4000) },
+        ],
+      }),
+    },
+    resolved.timeoutMs,
+  );
+  if (!res.ok) {
+    throw mapHttpError(res.status, "Assistant failed. Please try again.");
+  }
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const out = data.choices?.[0]?.message?.content?.trim();
+  if (!out) throw new OpenAiError("PROVIDER_ERROR", "Empty reply from OpenAI.", 502);
+  return out;
+}
+
 export type OpenAiSttResult = { text: string };
 
 /** Transcribe speech with Whisper. */

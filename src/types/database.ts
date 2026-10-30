@@ -68,6 +68,8 @@ export type MarketplaceOrder = {
   buyer_phone: string | null;
   buyer_note: string | null;
   is_order_request?: boolean;
+  payment_method?: string | null;
+  payment_destination?: string | null;
   created_at: string;
 };
 
@@ -120,7 +122,36 @@ export type Business = {
   published_at: string | null;
   /** Informal micro-traders / artisans — Marketplace lists these only. */
   is_informal?: boolean;
+  payout_account_name?: string | null;
+  payout_account_number?: string | null;
+  payout_bank_name?: string | null;
+  payout_bank_code?: string | null;
   created_at?: string;
+};
+
+export type BusinessPayoutAccount = {
+  business_id: string;
+  business_name: string;
+  payout_account_name: string | null;
+  payout_account_number: string | null;
+  payout_bank_name: string | null;
+  payout_bank_code: string | null;
+};
+
+export type SellerWallet = {
+  business_id: string;
+  available_ngn: number;
+  pending_ngn: number;
+};
+
+export type PayoutRequest = {
+  id: string;
+  business_id: string;
+  amount_ngn: number;
+  status: string;
+  provider_reference: string | null;
+  note: string | null;
+  created_at: string;
 };
 
 /** Row of the public_business_listings view — public fields only. */

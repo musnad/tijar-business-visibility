@@ -12,7 +12,6 @@ import { TijarLogo } from "@/components/brand-logo";
 import { useAuth } from "@/features/auth/auth-context";
 import { usePrimaryBusiness } from "@/hooks/use-primary-business";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
-import { isMockFeedId } from "@/features/marketplace/feed-mock";
 import { TranslateText } from "@/features/translate/translate-text";
 import { VoiceTranslate } from "@/features/translate/voice-translate";
 import { useTranslation } from "@/lib/i18n/context";
@@ -163,7 +162,6 @@ export function StorefrontScreen({ slug }: { slug: string }) {
         business &&
         (primaryBusiness.data?.business?.id === business.id || myShops.data?.includes(business.id))),
   );
-  const mockShop = Boolean(business && isMockFeedId(business.id));
   const following = Boolean(business && (follows.data?.has(business.id) || isFollowingShop(profile?.id ?? "guest", business.id)));
   const shopSaved = business ? readIdList(SAVED_SHOPS_KEY).includes(business.id) : false;
   void savedTick;
@@ -181,10 +179,10 @@ export function StorefrontScreen({ slug }: { slug: string }) {
   }, [products]);
 
   const featured = products.slice(0, 8);
-  const followerCount = mockShop ? 1200 + (following ? 1 : 0) : following ? 1 : 0;
-  const productCount = mockShop ? 320 : products.length;
-  const rating = mockShop ? 4.9 : null;
-  const reviewCount = mockShop ? 128 : 0;
+  const followerCount = following ? 1 : 0;
+  const productCount = products.length;
+  const rating = null;
+  const reviewCount = 0;
 
   async function onEnquiry(e: React.FormEvent) {
     e.preventDefault();

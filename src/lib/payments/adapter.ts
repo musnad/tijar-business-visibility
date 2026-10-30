@@ -29,17 +29,17 @@ function serverSecret(name: string): string | undefined {
 export function getPaymentAdapterStatus(): PaymentAdapterStatus {
   const paystackSecret = serverSecret("PAYSTACK_SECRET_KEY");
   const flutterSecret = serverSecret("FLUTTERWAVE_SECRET_KEY");
-  if (paystackSecret) {
+  if (flutterSecret) {
     return {
-      provider: "paystack",
+      provider: "flutterwave",
       ready: true,
       checkoutMode: "live",
       missing: [],
     };
   }
-  if (flutterSecret) {
+  if (paystackSecret) {
     return {
-      provider: "flutterwave",
+      provider: "paystack",
       ready: true,
       checkoutMode: "live",
       missing: [],
@@ -50,8 +50,8 @@ export function getPaymentAdapterStatus(): PaymentAdapterStatus {
     ready: false,
     checkoutMode: "order_request",
     missing: [
-      "PAYSTACK_SECRET_KEY (and PAYSTACK_PUBLIC_KEY) or FLUTTERWAVE_SECRET_KEY",
-      "Webhook URL that confirms payments.success before setting orders.status = paid",
+      "FLUTTERWAVE_SECRET_KEY (or PAYSTACK_SECRET_KEY)",
+      "Webhook https://www.tijar.ng/api/payments/webhook",
     ],
   };
 }

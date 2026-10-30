@@ -1,11 +1,15 @@
 import type { Locale, MessageTree } from "../types";
 
-import arJson from "./ar.json";
-import ffJson from "./ff.json";
-import haJson from "./ha.json";
-import igJson from "./ig.json";
-import swJson from "./sw.json";
-import yoJson from "./yo.json";
+import arRaw from "./ar.json?raw";
+import ffRaw from "./ff.json?raw";
+import haRaw from "./ha.json?raw";
+import igRaw from "./ig.json?raw";
+import swRaw from "./sw.json?raw";
+import yoRaw from "./yo.json?raw";
+
+function parseFlat(raw: string): Record<string, string> {
+  return JSON.parse(raw) as Record<string, string>;
+}
 
 /**
  * Full-coverage translations, stored flat ("app.sales.title": "...") so
@@ -14,12 +18,12 @@ import yoJson from "./yo.json";
  * translate the whole app, not only selected screens.
  */
 const FLAT_BY_LOCALE: Partial<Record<Locale, Record<string, string>>> = {
-  ha: haJson as Record<string, string>,
-  ar: arJson as Record<string, string>,
-  yo: yoJson as Record<string, string>,
-  ig: igJson as Record<string, string>,
-  sw: swJson as Record<string, string>,
-  ff: ffJson as Record<string, string>,
+  ha: parseFlat(haRaw),
+  ar: parseFlat(arRaw),
+  yo: parseFlat(yoRaw),
+  ig: parseFlat(igRaw),
+  sw: parseFlat(swRaw),
+  ff: parseFlat(ffRaw),
 };
 
 function flatToTree(flat: Record<string, string>): MessageTree {

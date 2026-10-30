@@ -8,7 +8,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
-import { MOCK_PRODUCTS } from "@/features/marketplace/feed-mock";
 import { useAuth } from "@/features/auth/auth-context";
 import { useStartShopChat } from "@/features/marketplace/use-start-shop-chat";
 import { haptic } from "@/lib/haptics";
@@ -32,20 +31,7 @@ function MessagesFrame({ children }: { children: ReactNode }) {
 export function EnquiriesScreen() {
   const { profile, session, loading } = useAuth();
   const startChat = useStartShopChat();
-  const shops = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; logo: string | null; slug: string | null }>();
-    for (const p of MOCK_PRODUCTS) {
-      if (!map.has(p.business_id)) {
-        map.set(p.business_id, {
-          id: p.business_id,
-          name: p.business_name ?? "Shop",
-          logo: p.business_logo_url ?? p.image_url,
-          slug: p.business_slug ?? null,
-        });
-      }
-    }
-    return [...map.values()];
-  }, []);
+  const shops = useMemo(() => [] as { id: string; name: string; logo: string | null; slug: string | null }[], []);
 
   const inboxQuery = useQuery({
     queryKey: ["shop-inbox", profile?.id],

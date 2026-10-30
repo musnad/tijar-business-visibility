@@ -19,9 +19,8 @@ import {
 } from "@/features/auth/auth-ui";
 import { signInWithEmail, signInWithGoogle } from "@/features/auth/auth-service";
 import { loginSchema } from "@/features/onboarding/schemas";
-import { resolveAppEntry } from "@/features/auth/route-guards";
+import { enterAppAfterAuth } from "@/features/auth/route-guards";
 import { useTranslation } from "@/lib/i18n/context";
-import { fetchCurrentProfile } from "@/services/profile-service";
 
 export function LoginForm() {
   const { t } = useTranslation();
@@ -46,17 +45,16 @@ export function LoginForm() {
       return;
     }
     setLoading(true);
-    const { error } = await signInWithEmail(parsed.data.email, parsed.data.password);
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
+    const { data, error } = await signInWithEmail(parsed.data.email, parsed.data.password);
+    if (error || !data.session) {
+      setLoading(false);
+      toast.error(error?.message ?? "Sign-in did not complete. Try again.");
       return;
     }
     if (rememberMe && typeof window !== "undefined") {
       window.localStorage.setItem("tijar-remember-login", "1");
     }
-    const { profile } = await fetchCurrentProfile();
-    void navigate({ to: resolveAppEntry(profile, true) });
+    await enterAppAfterAuth();
   }
 
   async function onGoogle() {

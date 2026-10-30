@@ -5,7 +5,6 @@ import {
   listFollowedShopIds,
   loadUserSocial,
   toggleFollowShopLocal,
-  toggleVideoLikeLocal,
 } from "@/lib/shop-social";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { submitStudioVideo } from "@/services/video-studio-service";
@@ -305,7 +304,7 @@ export async function fetchMyFollowedBusinessIds(profileId: string): Promise<Set
 
 export async function toggleVideoLike(profileId: string, videoId: string): Promise<{ liked: boolean; error: string | null }> {
   if (isMockFeedId(videoId)) {
-    return { liked: toggleVideoLikeLocal(profileId, videoId), error: null };
+    return { liked: false, error: "This post is not available." };
   }
   const supabase = getSupabaseBrowserClient();
   const { data: existing } = await supabase
@@ -345,7 +344,7 @@ export async function toggleFollowBusiness(
   actorName?: string | null,
 ): Promise<{ following: boolean; error: string | null }> {
   if (isMockFeedId(businessId)) {
-    return { following: toggleFollowShopLocal(profileId, businessId, { name: actorName }), error: null };
+    return { following: false, error: "This shop is not available." };
   }
   const supabase = getSupabaseBrowserClient();
   const { data: existing } = await supabase

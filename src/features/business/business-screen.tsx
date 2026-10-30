@@ -8,6 +8,7 @@ import { AppPageHeader } from "@/features/app-layout/app-page-header";
 import { MiniStatCard } from "@/features/app-layout/mini-stat-card";
 import { StatusBadge } from "@/features/app-layout/status-badge";
 import { BusinessQuickActions } from "@/features/business/business-quick-actions";
+import { KycSubmitCard } from "@/features/business/kyc-submit-card";
 import { translateDnaList, translateDnaSlug } from "@/features/business/translate-dna-label";
 import { useTranslation } from "@/lib/i18n/context";
 import type { Business, BusinessDna } from "@/types/database";
@@ -141,6 +142,19 @@ export function BusinessScreen({
           </div>
 
           <BusinessQuickActions />
+          <Link
+            to="/app/business/payouts"
+            className="mt-3 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4"
+          >
+            <Wallet className="size-6 shrink-0 text-primary" />
+            <span>
+              <span className="block font-bold">Bank account & payouts</span>
+              <span className="block text-sm text-muted-foreground">
+                Buyers can transfer to your account, or pay on Flutterwave. Request a payout anytime.
+              </span>
+            </span>
+          </Link>
+          <KycSubmitCard business={business} />
 
           <Link
             to="/app/business/publish"

@@ -1,4 +1,3 @@
-import { MOCK_TESSY_BUSINESS } from "@/features/marketplace/feed-mock";
 import type { CartItem, MarketplaceOrder, MarketplaceOrderItem, PublicBusiness, PublicProduct } from "@/types/database";
 
 export type SocialPerson = {
@@ -9,12 +8,7 @@ export type SocialPerson = {
   kind: "person" | "shop";
 };
 
-export const MOCK_PEOPLE: SocialPerson[] = [
-  { id: "mock-person-ada", name: "Ada Johnson", handle: "adajohnson", kind: "person" },
-  { id: "mock-person-kemi", name: "Kemi Ade", handle: "kemiade", kind: "person" },
-  { id: "mock-person-ibrahim", name: "Ibrahim Musa", handle: "ibrahimm", kind: "person" },
-  { id: "mock-person-chioma", name: "Chioma Okeke", handle: "chiomao", kind: "person" },
-];
+export const MOCK_PEOPLE: SocialPerson[] = [];
 
 const USER_PREFIX = "tijar-social-user-";
 const SHOP_FOLLOWERS_KEY = "tijar-social-shop-followers";
@@ -187,15 +181,8 @@ export function listFollowedShopIds(profileId: string | null | undefined): strin
   return loadUserSocial(profileId).followedShops;
 }
 
-const TESSY_SEED: FollowerRow[] = MOCK_PEOPLE.slice(0, 3);
-
 export function listShopFollowers(businessId: string): FollowerRow[] {
-  const extra = shopFollowersMap()[businessId] ?? [];
-  if (businessId === MOCK_TESSY_BUSINESS.id) {
-    const ids = new Set(extra.map((p) => p.id));
-    return [...extra, ...TESSY_SEED.filter((p) => !ids.has(p.id))];
-  }
-  return extra;
+  return shopFollowersMap()[businessId] ?? [];
 }
 
 export function isFollowingPerson(profileId: string | null | undefined, personId: string): boolean {
@@ -223,29 +210,29 @@ export function toggleFollowPersonLocal(
 
 export function listFollowedPeople(profileId: string | null | undefined): SocialPerson[] {
   const ids = loadUserSocial(profileId).followedPeople;
-  return ids.map((id) => MOCK_PEOPLE.find((p) => p.id === id) ?? { id, name: "Member", handle: "member", kind: "person" as const });
+  return ids
+    .filter((id) => !id.startsWith("mock-"))
+    .map((id) => ({ id, name: "Member", handle: "member", kind: "person" as const }));
 }
 
 export function listPeopleFollowers(profileId: string | null | undefined): FollowerRow[] {
-  if (!profileId) return MOCK_PEOPLE.slice(0, 2);
-  const extra = peopleFollowersMap()[profileId] ?? [];
-  return extra;
+  if (!profileId) return [];
+  return peopleFollowersMap()[profileId] ?? [];
 }
 
-export function listFollowedShopsAsBusinesses(profileId: string | null | undefined): PublicBusiness[] {
-  return listFollowedShopIds(profileId)
-    .map((id) => (id === MOCK_TESSY_BUSINESS.id || id === MOCK_TESSY_BUSINESS.slug ? MOCK_TESSY_BUSINESS : null))
-    .filter((s): s is PublicBusiness => Boolean(s));
+export function listFollowedShopsAsBusinesses(_profileId: string | null | undefined): PublicBusiness[] {
+  return [];
 }
 
 export function listLocalOrders(profileId: string | null | undefined): MarketplaceOrder[] {
-  return loadUserSocial(profileId).orders;
+  return loadUserSocial(profileId).orders.filter((o) => !o.id.startsWith("mock-"));
 }
 
 export function getLocalOrder(
   profileId: string | null | undefined,
   orderId: string,
 ): { order: MarketplaceOrder; items: MarketplaceOrderItem[] } | null {
+  if (orderId.startsWith("mock-")) return null;
   const user = loadUserSocial(profileId);
   const order = user.orders.find((o) => o.id === orderId);
   if (order) return { order, items: user.orderItems[orderId] ?? [] };

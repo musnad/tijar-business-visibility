@@ -6,7 +6,7 @@ import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/auth-context";
 import { isPasswordRecovery } from "@/lib/auth-recovery";
 import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
-import { resolveAppEntry } from "@/features/auth/route-guards";
+import { hardRedirect, resolveAppEntry } from "@/features/auth/route-guards";
 import { canUseBusinessMode, isCustomerOnly } from "@/lib/account-mode";
 import { isTijarSuperAdminEmail } from "@/lib/admin";
 
@@ -95,22 +95,31 @@ export function RequireAuth({
 
 export function RedirectIfAuthed({ children }: { children: ReactNode }) {
   const { loading, session, profile } = useAuth();
-  const navigate = useNavigate();
+  const userId = session?.user.id;
 
   useEffect(() => {
-    if (loading || !session) return;
+    if (loading || !userId) return;
     if (isPasswordRecovery()) {
-      void navigate({ to: "/reset-password" });
+      hardRedirect("/reset-password");
       return;
     }
-    const target = resolveAppEntry(profile, true);
-    if (target !== "/app/login") {
-      void navigate({ to: target });
+    if (profile) {
+      hardRedirect(resolveAppEntry(profile, true));
+      return;
     }
-  }, [loading, session, profile, navigate]);
+    const timer = window.setTimeout(() => {
+      hardRedirect("/shop");
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [loading, userId, profile]);
 
-  if (loading) return null;
-  if (session) return null;
+  if (loading || session) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center px-4 text-center text-sm text-muted-foreground">
+        Opening TIJAR…
+      </div>
+    );
+  }
 
   return children;
 }

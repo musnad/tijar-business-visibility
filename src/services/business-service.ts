@@ -285,6 +285,28 @@ export async function fetchBusinessMembers(businessId: string): Promise<{
   };
 }
 
+export async function submitKycForReview(
+  businessId: string,
+  input: { legalName: string; idType: string; idNumber: string; notes?: string },
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const summary = [
+    `Legal name: ${input.legalName.trim()}`,
+    `ID: ${input.idType.trim()} ${input.idNumber.trim()}`,
+    input.notes?.trim() ? `Notes: ${input.notes.trim()}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const { error } = await supabase
+    .from("businesses")
+    .update({
+      verification_status: "submitted",
+      moderation_notes: summary.slice(0, 2000),
+    })
+    .eq("id", businessId);
+  return { error: error?.message ?? null };
+}
+
 export async function inviteBusinessStaff(
   businessId: string,
   email: string,

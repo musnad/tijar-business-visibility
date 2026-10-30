@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { AppFab, AppLinkFab } from "@/features/app-layout/app-fab";
 import { AppTopBar } from "@/features/app-layout/app-top-bar";
 import { useTranslation } from "@/lib/i18n/context";
+import { isTijarNativeApp } from "@/lib/tijar-native-app";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -41,12 +42,14 @@ export function AppShell({
 }) {
   const { t } = useTranslation();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const nativeApp = isTijarNativeApp();
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <main
         className={cn(
-          "mx-auto w-full max-w-lg flex-1 px-4 pt-3 sm:px-5 lg:max-w-6xl xl:max-w-7xl",
+          "mx-auto w-full max-w-lg flex-1 px-4 pt-3 sm:px-5",
+          !nativeApp && "lg:max-w-6xl xl:max-w-7xl",
           fab ? "pb-28" : "pb-4",
         )}
       >
@@ -72,7 +75,7 @@ export function AppShell({
       )}
 
       <nav className="app-bottom-nav sticky bottom-0 border-t border-border bg-background/95 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-sm">
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0 px-2 lg:max-w-6xl xl:max-w-7xl">
+        <div className={cn("mx-auto grid max-w-lg grid-cols-5 gap-0 px-2", !nativeApp && "lg:max-w-6xl xl:max-w-7xl")}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isNavActive(pathname, item);

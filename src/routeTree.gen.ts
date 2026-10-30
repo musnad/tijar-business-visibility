@@ -76,6 +76,11 @@ import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
 import { Route as ShopProfileRouteImport } from './routes/shop/profile'
 import { Route as ShopSettingsRouteImport } from './routes/shop/settings'
 import { Route as ShopStudioRouteImport } from './routes/shop/studio'
+import { Route as ApiAssistantChatRouteImport } from './routes/api.assistant.chat'
+import { Route as ApiPaymentsFlutterwaveRouteImport } from './routes/api.payments.flutterwave'
+import { Route as ApiPaymentsPayoutRouteImport } from './routes/api.payments.payout'
+import { Route as ApiPaymentsStatusRouteImport } from './routes/api.payments.status'
+import { Route as ApiPaymentsWebhookRouteImport } from './routes/api.payments.webhook'
 import { Route as ApiStudioFlyerRouteImport } from './routes/api.studio.flyer'
 import { Route as ApiStudioStatusRouteImport } from './routes/api.studio.status'
 import { Route as ApiStudioVideoRouteImport } from './routes/api.studio.video'
@@ -83,6 +88,7 @@ import { Route as AppAdminIndexRouteImport } from './routes/app/admin/index'
 import { Route as AppAdminModerationRouteImport } from './routes/app/admin/moderation'
 import { Route as AppAdminTranslateRouteImport } from './routes/app/admin/translate'
 import { Route as AppBusinessEditRouteImport } from './routes/app/business/edit'
+import { Route as AppBusinessPayoutsRouteImport } from './routes/app/business/payouts'
 import { Route as AppBusinessPublishRouteImport } from './routes/app/business/publish'
 import { Route as AppCustomersIndexRouteImport } from './routes/app/customers/index'
 import { Route as AppCustomersEnrollmentsRouteImport } from './routes/app/customers/enrollments'
@@ -441,6 +447,31 @@ const ShopStudioRoute = ShopStudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => ShopRoute,
 } as any)
+const ApiAssistantChatRoute = ApiAssistantChatRouteImport.update({
+  id: '/api/assistant/chat',
+  path: '/api/assistant/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPaymentsFlutterwaveRoute = ApiPaymentsFlutterwaveRouteImport.update({
+  id: '/api/payments/flutterwave',
+  path: '/api/payments/flutterwave',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPaymentsPayoutRoute = ApiPaymentsPayoutRouteImport.update({
+  id: '/api/payments/payout',
+  path: '/api/payments/payout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPaymentsStatusRoute = ApiPaymentsStatusRouteImport.update({
+  id: '/api/payments/status',
+  path: '/api/payments/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPaymentsWebhookRoute = ApiPaymentsWebhookRouteImport.update({
+  id: '/api/payments/webhook',
+  path: '/api/payments/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStudioFlyerRoute = ApiStudioFlyerRouteImport.update({
   id: '/api/studio/flyer',
   path: '/api/studio/flyer',
@@ -474,6 +505,11 @@ const AppAdminTranslateRoute = AppAdminTranslateRouteImport.update({
 const AppBusinessEditRoute = AppBusinessEditRouteImport.update({
   id: '/edit',
   path: '/edit',
+  getParentRoute: () => AppBusinessRoute,
+} as any)
+const AppBusinessPayoutsRoute = AppBusinessPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
   getParentRoute: () => AppBusinessRoute,
 } as any)
 const AppBusinessPublishRoute = AppBusinessPublishRouteImport.update({
@@ -656,12 +692,18 @@ export interface FileRoutesByFullPath {
   '/shop/studio': typeof ShopStudioRoute
   '/app/': typeof AppIndexRoute
   '/shop/': typeof ShopIndexRoute
+  '/api/assistant/chat': typeof ApiAssistantChatRoute
+  '/api/payments/flutterwave': typeof ApiPaymentsFlutterwaveRoute
+  '/api/payments/payout': typeof ApiPaymentsPayoutRoute
+  '/api/payments/status': typeof ApiPaymentsStatusRoute
+  '/api/payments/webhook': typeof ApiPaymentsWebhookRoute
   '/api/studio/flyer': typeof ApiStudioFlyerRoute
   '/api/studio/status': typeof ApiStudioStatusRoute
   '/api/studio/video': typeof ApiStudioVideoRouteWithChildren
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
+  '/app/business/payouts': typeof AppBusinessPayoutsRoute
   '/app/business/publish': typeof AppBusinessPublishRoute
   '/app/customers/enrollments': typeof AppCustomersEnrollmentsRoute
   '/app/customers/import': typeof AppCustomersImportRoute
@@ -748,12 +790,18 @@ export interface FileRoutesByTo {
   '/shop/studio': typeof ShopStudioRoute
   '/app': typeof AppIndexRoute
   '/shop': typeof ShopIndexRoute
+  '/api/assistant/chat': typeof ApiAssistantChatRoute
+  '/api/payments/flutterwave': typeof ApiPaymentsFlutterwaveRoute
+  '/api/payments/payout': typeof ApiPaymentsPayoutRoute
+  '/api/payments/status': typeof ApiPaymentsStatusRoute
+  '/api/payments/webhook': typeof ApiPaymentsWebhookRoute
   '/api/studio/flyer': typeof ApiStudioFlyerRoute
   '/api/studio/status': typeof ApiStudioStatusRoute
   '/api/studio/video': typeof ApiStudioVideoRouteWithChildren
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
+  '/app/business/payouts': typeof AppBusinessPayoutsRoute
   '/app/business/publish': typeof AppBusinessPublishRoute
   '/app/customers/enrollments': typeof AppCustomersEnrollmentsRoute
   '/app/customers/import': typeof AppCustomersImportRoute
@@ -847,12 +895,18 @@ export interface FileRoutesById {
   '/shop/studio': typeof ShopStudioRoute
   '/app/': typeof AppIndexRoute
   '/shop/': typeof ShopIndexRoute
+  '/api/assistant/chat': typeof ApiAssistantChatRoute
+  '/api/payments/flutterwave': typeof ApiPaymentsFlutterwaveRoute
+  '/api/payments/payout': typeof ApiPaymentsPayoutRoute
+  '/api/payments/status': typeof ApiPaymentsStatusRoute
+  '/api/payments/webhook': typeof ApiPaymentsWebhookRoute
   '/api/studio/flyer': typeof ApiStudioFlyerRoute
   '/api/studio/status': typeof ApiStudioStatusRoute
   '/api/studio/video': typeof ApiStudioVideoRouteWithChildren
   '/app/admin/moderation': typeof AppAdminModerationRoute
   '/app/admin/translate': typeof AppAdminTranslateRoute
   '/app/business/edit': typeof AppBusinessEditRoute
+  '/app/business/payouts': typeof AppBusinessPayoutsRoute
   '/app/business/publish': typeof AppBusinessPublishRoute
   '/app/customers/enrollments': typeof AppCustomersEnrollmentsRoute
   '/app/customers/import': typeof AppCustomersImportRoute
@@ -947,12 +1001,18 @@ export interface FileRouteTypes {
     | '/shop/studio'
     | '/app/'
     | '/shop/'
+    | '/api/assistant/chat'
+    | '/api/payments/flutterwave'
+    | '/api/payments/payout'
+    | '/api/payments/status'
+    | '/api/payments/webhook'
     | '/api/studio/flyer'
     | '/api/studio/status'
     | '/api/studio/video'
     | '/app/admin/moderation'
     | '/app/admin/translate'
     | '/app/business/edit'
+    | '/app/business/payouts'
     | '/app/business/publish'
     | '/app/customers/enrollments'
     | '/app/customers/import'
@@ -1039,12 +1099,18 @@ export interface FileRouteTypes {
     | '/shop/studio'
     | '/app'
     | '/shop'
+    | '/api/assistant/chat'
+    | '/api/payments/flutterwave'
+    | '/api/payments/payout'
+    | '/api/payments/status'
+    | '/api/payments/webhook'
     | '/api/studio/flyer'
     | '/api/studio/status'
     | '/api/studio/video'
     | '/app/admin/moderation'
     | '/app/admin/translate'
     | '/app/business/edit'
+    | '/app/business/payouts'
     | '/app/business/publish'
     | '/app/customers/enrollments'
     | '/app/customers/import'
@@ -1137,12 +1203,18 @@ export interface FileRouteTypes {
     | '/shop/studio'
     | '/app/'
     | '/shop/'
+    | '/api/assistant/chat'
+    | '/api/payments/flutterwave'
+    | '/api/payments/payout'
+    | '/api/payments/status'
+    | '/api/payments/webhook'
     | '/api/studio/flyer'
     | '/api/studio/status'
     | '/api/studio/video'
     | '/app/admin/moderation'
     | '/app/admin/translate'
     | '/app/business/edit'
+    | '/app/business/payouts'
     | '/app/business/publish'
     | '/app/customers/enrollments'
     | '/app/customers/import'
@@ -1194,6 +1266,11 @@ export interface RootRouteChildren {
   ApiVoiceEnrollRoute: typeof ApiVoiceEnrollRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   BSlugRoute: typeof BSlugRoute
+  ApiAssistantChatRoute: typeof ApiAssistantChatRoute
+  ApiPaymentsFlutterwaveRoute: typeof ApiPaymentsFlutterwaveRoute
+  ApiPaymentsPayoutRoute: typeof ApiPaymentsPayoutRoute
+  ApiPaymentsStatusRoute: typeof ApiPaymentsStatusRoute
+  ApiPaymentsWebhookRoute: typeof ApiPaymentsWebhookRoute
   ApiStudioFlyerRoute: typeof ApiStudioFlyerRoute
   ApiStudioStatusRoute: typeof ApiStudioStatusRoute
   ApiStudioVideoRoute: typeof ApiStudioVideoRouteWithChildren
@@ -1670,6 +1747,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopStudioRouteImport
       parentRoute: typeof ShopRoute
     }
+    '/api/assistant/chat': {
+      id: '/api/assistant/chat'
+      path: '/api/assistant/chat'
+      fullPath: '/api/assistant/chat'
+      preLoaderRoute: typeof ApiAssistantChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/payments/flutterwave': {
+      id: '/api/payments/flutterwave'
+      path: '/api/payments/flutterwave'
+      fullPath: '/api/payments/flutterwave'
+      preLoaderRoute: typeof ApiPaymentsFlutterwaveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/payments/payout': {
+      id: '/api/payments/payout'
+      path: '/api/payments/payout'
+      fullPath: '/api/payments/payout'
+      preLoaderRoute: typeof ApiPaymentsPayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/payments/status': {
+      id: '/api/payments/status'
+      path: '/api/payments/status'
+      fullPath: '/api/payments/status'
+      preLoaderRoute: typeof ApiPaymentsStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/payments/webhook': {
+      id: '/api/payments/webhook'
+      path: '/api/payments/webhook'
+      fullPath: '/api/payments/webhook'
+      preLoaderRoute: typeof ApiPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/studio/flyer': {
       id: '/api/studio/flyer'
       path: '/api/studio/flyer'
@@ -1717,6 +1829,13 @@ declare module '@tanstack/react-router' {
       path: '/edit'
       fullPath: '/app/business/edit'
       preLoaderRoute: typeof AppBusinessEditRouteImport
+      parentRoute: typeof AppBusinessRoute
+    }
+    '/app/business/payouts': {
+      id: '/app/business/payouts'
+      path: '/payouts'
+      fullPath: '/app/business/payouts'
+      preLoaderRoute: typeof AppBusinessPayoutsRouteImport
       parentRoute: typeof AppBusinessRoute
     }
     '/app/business/publish': {
@@ -1911,11 +2030,13 @@ const AppLearnRouteRouteWithChildren = AppLearnRouteRoute._addFileChildren(
 
 interface AppBusinessRouteChildren {
   AppBusinessEditRoute: typeof AppBusinessEditRoute
+  AppBusinessPayoutsRoute: typeof AppBusinessPayoutsRoute
   AppBusinessPublishRoute: typeof AppBusinessPublishRoute
 }
 
 const AppBusinessRouteChildren: AppBusinessRouteChildren = {
   AppBusinessEditRoute: AppBusinessEditRoute,
+  AppBusinessPayoutsRoute: AppBusinessPayoutsRoute,
   AppBusinessPublishRoute: AppBusinessPublishRoute,
 }
 
@@ -2155,6 +2276,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiVoiceEnrollRoute: ApiVoiceEnrollRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   BSlugRoute: BSlugRoute,
+  ApiAssistantChatRoute: ApiAssistantChatRoute,
+  ApiPaymentsFlutterwaveRoute: ApiPaymentsFlutterwaveRoute,
+  ApiPaymentsPayoutRoute: ApiPaymentsPayoutRoute,
+  ApiPaymentsStatusRoute: ApiPaymentsStatusRoute,
+  ApiPaymentsWebhookRoute: ApiPaymentsWebhookRoute,
   ApiStudioFlyerRoute: ApiStudioFlyerRoute,
   ApiStudioStatusRoute: ApiStudioStatusRoute,
   ApiStudioVideoRoute: ApiStudioVideoRouteWithChildren,

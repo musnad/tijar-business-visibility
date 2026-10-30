@@ -1,4 +1,3 @@
-import { MOCK_BUSINESS_ID } from "@/features/marketplace/feed-mock";
 import type { CartItem } from "@/types/database";
 
 const key = (profileId: string | null | undefined) => `tijar-local-cart-${profileId?.trim() || "guest"}`;
@@ -21,57 +20,8 @@ function write(profileId: string | null | undefined, items: CartItem[]) {
   localStorage.setItem(key(profileId), JSON.stringify(items));
 }
 
-export function demoCartItems(): CartItem[] {
-  return [
-    {
-      id: "local-cart-handbag",
-      cart_id: "local",
-      business_id: MOCK_BUSINESS_ID,
-      product_id: "mock-leather-handbag",
-      quantity: 1,
-      unit_price: 45_000,
-      product_name: "Leather Handbag",
-      unit: "piece",
-      image_url: "/tessy-leather-handbag.jpg",
-      variant_label: "Brown / Medium",
-    },
-    {
-      id: "local-cart-sneakers",
-      cart_id: "local",
-      business_id: MOCK_BUSINESS_ID,
-      product_id: "mock-street-sneakers",
-      quantity: 1,
-      unit_price: 28_500,
-      product_name: "White Sneakers",
-      unit: "pair",
-      image_url: "/mock-sneakers.jpg",
-      variant_label: "42 / White",
-    },
-    {
-      id: "local-cart-sunglasses",
-      cart_id: "local",
-      business_id: MOCK_BUSINESS_ID,
-      product_id: "mock-sunglasses",
-      quantity: 1,
-      unit_price: 17_000,
-      product_name: "Sunglasses",
-      unit: "pair",
-      image_url: "/mock-sunglasses.svg",
-      variant_label: "Black / Polarized",
-    },
-  ];
-}
-
 export function listLocalCart(profileId: string | null | undefined): CartItem[] {
-  const items = read(profileId);
-  if (typeof window === "undefined") return items;
-  if (!localStorage.getItem(seededKey(profileId))) {
-    const seed = items.length > 0 ? items : demoCartItems();
-    write(profileId, seed);
-    localStorage.setItem(seededKey(profileId), "1");
-    return seed;
-  }
-  return items;
+  return read(profileId).filter((item) => !item.product_id.startsWith("mock-") && !item.id.startsWith("local-cart-handbag"));
 }
 
 export function addLocalCartItem(

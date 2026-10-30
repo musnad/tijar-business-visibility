@@ -14,8 +14,11 @@ import {
   Trophy,
   Zap,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+
 import { cn } from "@/lib/utils";
-import { AppDownloadShowcase } from "@/components/app-download";
+import { AppDownloadButtons } from "@/components/app-download";
+import { HeroFeedPhone } from "@/components/hero-feed-phone";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -319,10 +322,30 @@ export function AchievementStrip() {
 }
 
 export function LandingDownloadCta() {
+  const { t } = useTranslation();
+
   return (
     <section id="download-app" className="scroll-mt-20 px-4 py-14 sm:px-5 sm:py-20">
-      <div className="mx-auto max-w-6xl overflow-hidden rounded-[1.75rem] bg-foreground px-5 py-10 text-background sm:px-10 sm:py-14 lg:px-12">
-        <AppDownloadShowcase theme="dark" />
+      <div className="mx-auto max-w-6xl overflow-hidden rounded-[1.75rem] bg-[#0B1F4D] px-5 py-10 text-white sm:px-10 sm:py-14 lg:px-12">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-[#8FCB9B]">
+              {t("download.mobileApp")}
+            </p>
+            <h2 className="mt-3 text-3xl font-extrabold sm:text-4xl">{t("download.heroTitle")}</h2>
+            <p className="mt-4 max-w-lg text-base leading-7 text-white/80">
+              {t("download.heroCopy")} {t("download.signupInApp")}
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild size="lg" className="rounded-full bg-[#1F7A4D] font-extrabold">
+                <Link to="/shop">{t("home.openForYou")}</Link>
+              </Button>
+              <AppDownloadButtons size="lg" theme="dark" />
+            </div>
+            <p className="mt-4 text-xs text-white/55">{t("download.storeLinksNote")}</p>
+          </div>
+          <HeroFeedPhone className="max-w-[240px] lg:justify-self-end" />
+        </div>
       </div>
     </section>
   );

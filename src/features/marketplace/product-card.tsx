@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Plus, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,6 +22,7 @@ export function ProductCard({
   compact?: boolean;
 }) {
   const { profile, session } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   async function quickAdd(e: React.MouseEvent) {
@@ -37,8 +38,7 @@ export function ProductCard({
     }
     ensureSavedProduct(profile.id, product);
     if (isMockFeedId(product.id)) {
-      toast.success("Saved to Saved Products");
-      void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
+      toast.error("This listing is not available.");
       return;
     }
     const { error } = await addToCart(profile.id, {
@@ -111,6 +111,23 @@ export function ProductCard({
         <p className="mt-1 truncate text-[11px] font-medium text-muted-foreground">
           {product.business_name ?? "TIJAR shop"}
         </p>
+        {product.sale_price != null ? (
+          <button
+            type="button"
+            className="mt-2 min-h-9 w-full rounded-full bg-primary text-[11px] font-extrabold text-white"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (isMockFeedId(product.id)) {
+                toast.error("This listing is not available.");
+                return;
+              }
+              void navigate({ to: "/shop/buy", search: { productId: product.id } });
+            }}
+          >
+            Buy now
+          </button>
+        ) : null}
       </div>
     </Link>
   );

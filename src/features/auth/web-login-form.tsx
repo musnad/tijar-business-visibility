@@ -1,6 +1,6 @@
 "use client";
 
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,9 +10,8 @@ import { signInWithEmail, signInWithGoogle } from "@/features/auth/auth-service"
 import { WebAuthLayout } from "@/features/auth/web-auth-layout";
 import { WebAuthField, WebPrimaryButton } from "@/features/auth/web-auth-fields";
 import { loginSchema } from "@/features/onboarding/schemas";
-import { resolveAppEntry } from "@/features/auth/route-guards";
+import { enterAppAfterAuth } from "@/features/auth/route-guards";
 import { useTranslation } from "@/lib/i18n/context";
-import { fetchCurrentProfile } from "@/services/profile-service";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/features/auth/auth-context";
 import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
@@ -20,7 +19,6 @@ import { SupabaseSetupNotice } from "@/features/auth/supabase-setup-notice";
 export function WebLoginForm() {
   const { t } = useTranslation();
   const { configured, configLoading } = useAuth();
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
@@ -41,17 +39,16 @@ export function WebLoginForm() {
       return;
     }
     setLoading(true);
-    const { error } = await signInWithEmail(parsed.data.email, parsed.data.password);
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
+    const { data, error } = await signInWithEmail(parsed.data.email, parsed.data.password);
+    if (error || !data.session) {
+      setLoading(false);
+      toast.error(error?.message ?? "Sign-in did not complete. Try again.");
       return;
     }
     if (rememberMe && typeof window !== "undefined") {
       window.localStorage.setItem("tijar-remember-login", "1");
     }
-    const { profile } = await fetchCurrentProfile();
-    void navigate({ to: resolveAppEntry(profile, true) });
+    await enterAppAfterAuth();
   }
 
   async function onGoogle() {

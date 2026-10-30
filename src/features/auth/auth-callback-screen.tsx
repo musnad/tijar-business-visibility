@@ -1,16 +1,14 @@
 "use client";
 
-import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { resolveAppEntry } from "@/features/auth/route-guards";
+import { hardRedirect, resolveAppEntry } from "@/features/auth/route-guards";
 import { WebAuthLayout } from "@/features/auth/web-auth-layout";
 import { isPasswordRecovery, readGoogleAccountMode, readOAuthNext } from "@/lib/auth-recovery";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { fetchCurrentProfile, updateProfile } from "@/services/profile-service";
 
 export function AuthCallbackScreen() {
-  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,7 +33,7 @@ export function AuthCallbackScreen() {
         return;
       }
       if (isPasswordRecovery()) {
-        void navigate({ to: "/reset-password" });
+        hardRedirect("/reset-password");
         return;
       }
       const mode = readGoogleAccountMode();
@@ -47,15 +45,15 @@ export function AuthCallbackScreen() {
       const { profile: fresh } = await fetchCurrentProfile();
       if (cancelled) return;
       if (next) {
-        window.location.replace(next);
+        hardRedirect(next);
         return;
       }
-      void navigate({ to: resolveAppEntry(fresh, true) });
+      hardRedirect(resolveAppEntry(fresh, true));
     })();
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, []);
 
   return (
     <WebAuthLayout mode="login" title="Signing you in" subtitle="Finishing Google…">

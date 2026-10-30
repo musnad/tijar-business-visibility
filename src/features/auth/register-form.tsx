@@ -1,6 +1,6 @@
 "use client";
 
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -17,7 +17,8 @@ import {
   RegisterWaveFooter,
   authIcons,
 } from "@/features/auth/auth-ui";
-import { signInWithGoogle, signUpWithEmail } from "@/features/auth/auth-service";
+import { signInWithEmail, signInWithGoogle, signUpWithEmail } from "@/features/auth/auth-service";
+import { enterAppAfterAuth } from "@/features/auth/route-guards";
 import { registerSchema } from "@/features/onboarding/schemas";
 import { useTranslation } from "@/lib/i18n/context";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,7 +35,6 @@ const LOCATION_OPTIONS = [
 
 export function RegisterForm() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -67,8 +67,8 @@ export function RegisterForm() {
       phone: parsed.data.phone,
       location: parsed.data.location,
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast.error(error.message);
       return;
     }
@@ -81,12 +81,22 @@ export function RegisterForm() {
         }),
       );
     }
-    if (data.session) {
-      void navigate({ to: "/app/onboarding" });
+    let session = data.session;
+    if (!session) {
+      const signedIn = await signInWithEmail(parsed.data.email, parsed.data.password);
+      if (signedIn.error || !signedIn.data.session) {
+        setLoading(false);
+        toast.message(signedIn.error?.message ?? t("app.register.checkEmail"));
+        return;
+      }
+      session = signedIn.data.session;
+    }
+    if (!session) {
+      setLoading(false);
+      toast.error("Could not open your account. Try signing in.");
       return;
     }
-    toast.message(t("app.register.checkEmail"));
-    void navigate({ to: "/app/login" });
+    await enterAppAfterAuth({ prefer: "onboarding" });
   }
 
   async function onGoogle() {

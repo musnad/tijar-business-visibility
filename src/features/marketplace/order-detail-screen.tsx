@@ -4,18 +4,25 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, MapPin, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { OrderTrackTimeline } from "@/features/marketplace/order-track-timeline";
 import { useAuth } from "@/features/auth/auth-context";
-import { fetchOrderDetail, transitionOrder } from "@/services/marketplace-service";
+import {
+  fetchBusinessPayoutAccount,
+  fetchOrderDetail,
+  startFlutterwavePay,
+  transitionOrder,
+} from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import { formatOrderWhen, orderStatusLabel } from "@/utils/order-tracking";
 
 export function OrderDetailScreen({ orderId }: { orderId: string }) {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const [paying, setPaying] = useState(false);
   const detailQuery = useQuery({
     queryKey: ["marketplace-order", orderId, profile?.id ?? "guest"],
     queryFn: async () => {
@@ -27,6 +34,14 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
 
   const order = detailQuery.data?.order;
   const items = detailQuery.data?.items ?? [];
+  const accountQuery = useQuery({
+    queryKey: ["payout-account", order?.business_id],
+    enabled: Boolean(order?.business_id),
+    queryFn: async () => (await fetchBusinessPayoutAccount(order!.business_id)).account,
+  });
+  const account = accountQuery.data;
+  const awaitingPay = order?.status === "pending_payment";
+  const isPod = order?.payment_method === "pod";
 
   return (
     <MarketplaceShell>
@@ -137,8 +152,62 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
             </div>
           </section>
 
-          {order.status === "pending_payment" && (
+          {awaitingPay && account?.payout_account_number ? (
+            <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <h2 className="text-sm font-extrabold">Transfer to this shop</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Send {formatNgn(Number(order.total))} and keep your receipt. The seller confirms when it lands.
+              </p>
+              <dl className="mt-3 space-y-1 text-sm">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-foreground">Bank</dt>
+                  <dd className="font-bold">{account.payout_bank_name}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-foreground">Account name</dt>
+                  <dd className="font-bold">{account.payout_account_name}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-foreground">Account number</dt>
+                  <dd className="font-extrabold tracking-wide">{account.payout_account_number}</dd>
+                </div>
+              </dl>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3 min-h-11 w-full rounded-xl"
+                onClick={() => {
+                  void navigator.clipboard.writeText(account.payout_account_number ?? "");
+                  toast.success("Account number copied");
+                }}
+              >
+                Copy account number
+              </Button>
+            </section>
+          ) : null}
+
+          {awaitingPay && !isPod ? (
             <Button
+              type="button"
+              className="min-h-12 w-full rounded-xl bg-[#1F7A4D] font-bold"
+              disabled={paying}
+              onClick={async () => {
+                setPaying(true);
+                const r = await startFlutterwavePay(order.id);
+                setPaying(false);
+                if (r.error || !r.link) {
+                  toast.error(r.error ?? "Could not open Flutterwave.");
+                  return;
+                }
+                window.location.assign(r.link);
+              }}
+            >
+              {paying ? "Opening…" : "Pay online with Flutterwave"}
+            </Button>
+          ) : null}
+
+          {order.status === "pending_payment" && (
+            <Button>
               type="button"
               variant="outline"
               className="min-h-12 w-full rounded-xl font-bold"

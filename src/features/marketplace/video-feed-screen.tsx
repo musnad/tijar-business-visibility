@@ -54,11 +54,11 @@ import {
   type PublicFeedVideo,
 } from "@/services/video-feed-service";
 import type { PublicProduct } from "@/types/database";
-import { ensureSavedProduct, likeVideoLocal, listFollowedShopIds, loadUserSocial } from "@/lib/shop-social";
+import { ensureSavedProduct, listFollowedShopIds, loadUserSocial } from "@/lib/shop-social";
 import { useDoubleTap } from "@/lib/use-double-tap";
 import { haptic } from "@/lib/haptics";
 import { formatNgn } from "@/utils/money";
-import { isMockFeedId, MOCK_POSTS, MOCK_PRODUCTS } from "@/features/marketplace/feed-mock";
+import { isMockFeedId } from "@/features/marketplace/feed-mock";
 import { useStartShopChat } from "@/features/marketplace/use-start-shop-chat";
 
 type FeedTab = "foryou" | "following" | "nearby";
@@ -67,7 +67,6 @@ const MUTE_KEY = "tijar-feed-muted";
 const POSITION_KEY = "tijar-for-you-video-id";
 const DATA_SAVER_KEY = "tijar-feed-data-saver";
 const EMPTY_VIDEOS: PublicFeedVideo[] = [];
-const MOCK_ID_SET = new Set(MOCK_POSTS.map((v) => v.id));
 
 function compactCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
@@ -137,7 +136,6 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   const [feedTab, setFeedTab] = useState<FeedTab>("foryou");
   const [mockLiked, setMockLiked] = useState(() => new Set(loadUserSocial("guest").likedVideos));
   const [mockFollowing, setMockFollowing] = useState(() => new Set(listFollowedShopIds("guest")));
-  const [mockCartExtra, setMockCartExtra] = useState(0);
 
   useEffect(() => {
     const id = profile?.id ?? "guest";
@@ -169,10 +167,7 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   });
 
   const liveVideos = feedQuery.data ?? EMPTY_VIDEOS;
-  const videos = useMemo(
-    () => [...MOCK_POSTS, ...liveVideos.filter((v) => !MOCK_ID_SET.has(v.id))],
-    [liveVideos],
-  );
+  const videos = liveVideos;
   const liveListings = listingsQuery.data ?? [];
   const productIds = useMemo(
     () => [...new Set(videos.flatMap((v) => v.product_ids ?? []))],
@@ -212,7 +207,6 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
 
   const productsById = useMemo(() => {
     const m = new Map<string, PublicProduct>();
-    for (const p of MOCK_PRODUCTS) m.set(p.id, p);
     for (const p of liveListings) m.set(p.id, p);
     for (const p of productsQuery.data ?? []) m.set(p.id, p);
     return m;
@@ -280,7 +274,7 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
     void recordFeedSignal(activeId, "view");
   }, [activeId]);
 
-  const cartCount = (cartQuery.data?.reduce((n, i) => n + Number(i.quantity), 0) ?? 0) + mockCartExtra;
+  const cartCount = cartQuery.data?.reduce((n, i) => n + Number(i.quantity), 0) ?? 0;
 
   function requireUser(): boolean {
     if (!session || !profile) {
@@ -292,17 +286,16 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   }
 
   const taggedIds = new Set(productIds);
-  const mockProductIds = new Set(MOCK_PRODUCTS.map((p) => p.id));
-  const extraListings = liveListings.filter((p) => !taggedIds.has(p.id) && !mockProductIds.has(p.id));
+  const extraListings = liveListings.filter((p) => !taggedIds.has(p.id));
   const followed = followQuery.data ?? new Set<string>();
   const showPosts =
     feedTab === "nearby"
       ? []
       : feedTab === "following"
-        ? videos.filter((v) => isMockFeedId(v.id) || followed.has(v.business_id))
+        ? videos.filter((v) => followed.has(v.business_id))
         : videos;
   const showListings =
-    feedTab === "nearby" ? [...MOCK_PRODUCTS, ...liveListings] : feedTab === "foryou" ? extraListings : [];
+    feedTab === "nearby" ? liveListings : feedTab === "foryou" ? extraListings : [];
 
   return (
     <MarketplaceShell cartCount={cartCount} hideTopBar variant="feed">
@@ -329,16 +322,9 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                     .map((id) => productsById.get(id))
                     .filter(Boolean) as PublicProduct[];
                   if (tagged.length > 0) return tagged;
-                  if (isMockFeedId(video.id)) {
-                    return (video.product_ids ?? []).map((id) => productsById.get(id)).filter(Boolean) as PublicProduct[];
-                  }
                   return liveListings.filter((p) => p.business_id === video.business_id);
                 })()}
-                liked={
-                  isMockFeedId(video.id)
-                    ? mockLiked.has(video.id)
-                    : (likedQuery.data?.has(video.id) ?? mockLiked.has(video.id))
-                }
+                liked={likedQuery.data?.has(video.id) ?? mockLiked.has(video.id)}
                 saved={savedQuery.data?.has(video.id) ?? false}
                 following={followQuery.data?.has(video.business_id) || mockFollowing.has(video.business_id)}
                 onToggleMute={() => {
@@ -350,15 +336,9 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                 }}
                 onTogglePause={() => setPaused((p) => !p)}
                 onLike={async () => {
+                  if (!requireUser() || !profile) return;
                   haptic();
-                  const actor = profile?.id ?? "guest";
-                  if (isMockFeedId(video.id)) {
-                    const liked = likeVideoLocal(actor, video.id);
-                    setMockLiked((prev) => new Set(prev).add(video.id));
-                    toast.success(liked ? "Liked" : "Liked");
-                    return;
-                  }
-                  const { liked, error } = await toggleVideoLike(actor, video.id);
+                  const { liked, error } = await toggleVideoLike(profile.id, video.id);
                   if (error) toast.error(error);
                   else {
                     void recordFeedSignal(video.id, "like");
@@ -377,11 +357,12 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                   }
                 }}
                 onFollow={async () => {
+                  if (!requireUser() || !profile) return;
                   haptic("success");
                   const { following, error } = await toggleFollowBusiness(
-                    profile?.id ?? "guest",
+                    profile.id,
                     video.business_id,
-                    profile?.full_name,
+                    profile.full_name,
                   );
                   if (error) toast.error(error);
                   else {
@@ -430,12 +411,11 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                   if (!isMockFeedId(video.id)) void recordFeedSignal(video.id, "complete");
                 }}
                 onAddToCart={async (product) => {
+                  if (!requireUser()) return;
                   haptic("success");
                   ensureSavedProduct(profile?.id ?? "guest", product);
                   if (isMockFeedId(product.id) || !profile) {
-                    setMockCartExtra((n) => n + 1);
-                    toast.success("Saved to Saved Products");
-                    void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
+                    toast.message("This listing is no longer available.");
                     return;
                   }
                   if (product.sale_price == null) {
@@ -467,11 +447,12 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
               product={product}
               following={followQuery.data?.has(product.business_id) || mockFollowing.has(product.business_id)}
               onFollow={async () => {
+                if (!requireUser() || !profile) return;
                 haptic("success");
                 const { following, error } = await toggleFollowBusiness(
-                  profile?.id ?? "guest",
+                  profile.id,
                   product.business_id,
-                  profile?.full_name,
+                  profile.full_name,
                 );
                 if (error) toast.error(error);
                 else {
@@ -486,12 +467,11 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                 }
               }}
               onAdd={async () => {
+                if (!requireUser()) return;
                 haptic("success");
                 ensureSavedProduct(profile?.id ?? "guest", product);
                 if (isMockFeedId(product.id) || !profile) {
-                  setMockCartExtra((n) => n + 1);
-                  toast.success("Saved to Saved Products");
-                  void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
+                  toast.message("This listing is no longer available.");
                   return;
                 }
                 if (product.sale_price == null) return;
@@ -784,7 +764,7 @@ function VideoSlide({
     image ? undefined : onTogglePause,
   );
 
-  const likes = video.like_count + (liked && isMockFeedId(video.id) ? 1 : 0);
+  const likes = video.like_count;
 
   return (
     <article
@@ -792,17 +772,10 @@ function VideoSlide({
       className="w-full shrink-0 border-b border-border bg-white pb-3"
     >
       <div className="flex items-center gap-2 px-3 py-2">
-        {isMockFeedId(video.id) ? (
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <SellerAvatar video={video} />
-            <SellerMeta name={video.business_name} verified={video.is_verified} when={when} place={place} />
-          </div>
-        ) : (
-          <Link to="/b/$slug" params={{ slug: video.slug }} className="flex min-w-0 flex-1 items-center gap-2">
-            <SellerAvatar video={video} />
-            <SellerMeta name={video.business_name} verified={video.is_verified} when={when} place={place} />
-          </Link>
-        )}
+        <Link to="/b/$slug" params={{ slug: video.slug }} className="flex min-w-0 flex-1 items-center gap-2">
+          <SellerAvatar video={video} />
+          <SellerMeta name={video.business_name} verified={video.is_verified} when={when} place={place} />
+        </Link>
         <button
           type="button"
           onClick={onFollow}
@@ -968,12 +941,10 @@ function FeedProductCard({ product, onAdd }: { product: PublicProduct; onAdd: ()
   function buyNow() {
     haptic("success");
     if (mock) {
-      toast.success(
-        `Buy now — ${product.name} · ${product.sale_price != null ? formatNgn(Number(product.sale_price)) : ""}`.trim(),
-      );
+      toast.error("This listing is not available.");
       return;
     }
-    void navigate({ to: "/shop/p/$productId", params: { productId: product.id } });
+    void navigate({ to: "/shop/buy", search: { productId: product.id } });
   }
 
   return (
@@ -1185,9 +1156,7 @@ function ProductList({
                 onClick={() => {
                   haptic("success");
                   if (isMockFeedId(product.id)) {
-                    toast.success(
-                      `Buy now — ${product.name} · ${product.sale_price != null ? formatNgn(Number(product.sale_price)) : ""}`.trim(),
-                    );
+                    toast.error("This listing is not available.");
                     return;
                   }
                   void navigate({ to: "/shop/buy", search: { productId: product.id } });
@@ -1203,9 +1172,12 @@ function ProductList({
                 onClick={async () => {
                   haptic("success");
                   ensureSavedProduct(profile?.id ?? "guest", product);
-                  if (isMockFeedId(product.id) || !session || !profile) {
-                    toast.success("Saved to Saved Products");
-                    onAdded();
+                  if (isMockFeedId(product.id)) {
+                    toast.error("This listing is not available.");
+                    return;
+                  }
+                  if (!session || !profile) {
+                    toast.message("Sign in to add items to your cart.");
                     return;
                   }
                   const { error } = await addToCart(profile.id, {

@@ -14,19 +14,18 @@ import { useAuth } from "@/features/auth/auth-context";
 import { isMockFeedId } from "@/features/marketplace/feed-mock";
 import { haptic } from "@/lib/haptics";
 import { clearLocalCart, listLocalCart } from "@/lib/local-cart";
-import { isLivePaymentConfigured } from "@/lib/payments/adapter";
-import { placeLocalCartOrder } from "@/lib/shop-social";
 import { cn } from "@/lib/utils";
 import {
   fetchCart,
   listAddresses,
   placeOrders,
   saveAddress,
+  startFlutterwavePay,
 } from "@/services/marketplace-service";
 import type { CartItem } from "@/types/database";
 import { formatNgn } from "@/utils/money";
 
-type PayMethod = "card" | "transfer" | "pod";
+type PayMethod = "flutterwave" | "transfer" | "pod";
 
 const ngnExact = new Intl.NumberFormat("en-NG", {
   style: "currency",
@@ -67,20 +66,27 @@ export function CheckoutScreen() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const actorId = profile?.id ?? "guest";
-  const paymentReady = isLivePaymentConfigured();
+  const payStatus = useQuery({
+    queryKey: ["payments-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/payments/status");
+      return (await res.json()) as { ready?: boolean };
+    },
+  });
+  const paymentReady = Boolean(payStatus.data?.ready);
 
-  const [pay, setPay] = useState<PayMethod>("card");
+  const [pay, setPay] = useState<PayMethod>("transfer");
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localItems, setLocalItems] = useState<CartItem[]>([]);
   const [addr, setAddr] = useState({
-    full_name: profile?.full_name?.trim() || "John Doe",
-    phone: profile?.phone?.trim() || "+234 812 345 6789",
-    state: "Lagos State",
-    city: "Lagos",
-    lga: "Eti-Osa",
-    street: "12 Adeola Odeku Street, Victoria Island, Lagos",
+    full_name: profile?.full_name?.trim() || "",
+    phone: profile?.phone?.trim() || "",
+    state: "",
+    city: "",
+    lga: "",
+    street: "",
     country: "Nigeria",
   });
 
@@ -140,28 +146,22 @@ export function CheckoutScreen() {
     haptic("success");
     setBusy(true);
 
-    const note = `Pay: ${pay === "card" ? "Card" : pay === "transfer" ? "Bank transfer" : "Pay on delivery"} · ${addr.street}`;
+    const note = `Pay: ${pay === "flutterwave" ? "Flutterwave" : pay === "transfer" ? "Transfer to shop" : "Pay on delivery"} · ${addr.street}`;
 
-    const localOnly = items.every((i) => isMockFeedId(i.product_id) || isMockFeedId(i.id));
-    if (localOnly || !profile) {
-      const placed = placeLocalCartOrder({
-        profileId: actorId,
-        items,
-        fulfilment: "seller_delivery",
-        buyerPhone: addr.phone,
-        buyerNote: note,
-        subtotal,
-        deliveryFee: shipping,
-        tax,
-        total,
-      });
-      clearLocalCart(actorId);
-      await queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
-      await queryClient.invalidateQueries({ queryKey: ["marketplace-cart-v2"] });
-      await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
+    if (!profile) {
       setBusy(false);
-      toast.success("Order placed. Track it in My Orders.");
-      void navigate({ to: "/shop/orders/$orderId", params: { orderId: placed.order.id } });
+      toast.error("Sign in to place an order.");
+      void navigate({ to: "/login" });
+      return;
+    }
+    if (items.some((i) => isMockFeedId(i.product_id) || isMockFeedId(i.id))) {
+      setBusy(false);
+      toast.error("Remove unavailable demo items from your cart.");
+      return;
+    }
+    if (pay === "flutterwave" && !paymentReady) {
+      setBusy(false);
+      toast.error("Online pay is not live yet. Transfer to the shop instead.");
       return;
     }
 
@@ -190,34 +190,36 @@ export function CheckoutScreen() {
       buyerNote: note,
       buyerPhone: addr.phone,
       idempotencyKey: checkoutKey(),
+      paymentMethod: pay,
+      paymentDestination: pay === "flutterwave" ? "platform" : pay === "transfer" ? "seller" : "pod",
     });
     if (placed.error || placed.orders.length === 0) {
-      const fallback = placeLocalCartOrder({
-        profileId: actorId,
-        items,
-        fulfilment: "seller_delivery",
-        buyerPhone: addr.phone,
-        buyerNote: note,
-        subtotal,
-        deliveryFee: shipping,
-        tax,
-        total,
-      });
-      clearLocalCart(actorId);
       setBusy(false);
-      toast.success("Order placed. Track it in My Orders.");
-      await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
-      void navigate({ to: "/shop/orders/$orderId", params: { orderId: fallback.order.id } });
+      const message = placed.error || "Could not place the order. Try again.";
+      setError(message);
+      toast.error(message);
       return;
     }
     sessionStorage.removeItem("tijar-checkout-key");
     clearLocalCart(actorId);
     await queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
     await queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
+    if (pay === "flutterwave") {
+      const flw = await startFlutterwavePay(placed.orders[0]!.id);
+      setBusy(false);
+      if (flw.error || !flw.link) {
+        toast.error(flw.error ?? "Order placed. Open My Orders to try Flutterwave again.");
+        void navigate({ to: "/shop/orders/$orderId", params: { orderId: placed.orders[0]!.id } });
+        return;
+      }
+      window.location.assign(flw.link);
+      return;
+    }
+
     setBusy(false);
     toast.success(
-      paymentReady
-        ? "Order placed. Complete payment with the provider — TIJAR never marks an order paid from this screen."
+      pay === "transfer"
+        ? "Order placed. Transfer to the shop account on the next screen."
         : "Order placed. The seller will confirm. Track it in My Orders.",
     );
     void navigate({ to: "/shop/orders/$orderId", params: { orderId: placed.orders[0]!.id } });
@@ -307,18 +309,18 @@ export function CheckoutScreen() {
                 </h2>
                 <div className="mt-2 overflow-hidden rounded-2xl border border-[#EEF1F5]" role="radiogroup" aria-label="Payment method">
                   <PayRow
-                    selected={pay === "card"}
-                    onSelect={() => setPay("card")}
-                    title="Card"
-                    subtitle="Visa, Mastercard, Verve"
-                    trailing={<CardMarks />}
-                  />
-                  <PayRow
                     selected={pay === "transfer"}
                     onSelect={() => setPay("transfer")}
-                    title="Bank Transfer"
-                    subtitle="Pay directly into our bank account"
+                    title="Transfer to shop"
+                    subtitle="Pay directly into the seller’s bank account"
                     chevron
+                  />
+                  <PayRow
+                    selected={pay === "flutterwave"}
+                    onSelect={() => setPay("flutterwave")}
+                    title="Pay online (Flutterwave)"
+                    subtitle={paymentReady ? "Card, bank, USSD — shop requests payout later" : "Goes live when Flutterwave keys are on the server"}
+                    trailing={<CardMarks />}
                   />
                   <PayRow
                     selected={pay === "pod"}
@@ -329,11 +331,11 @@ export function CheckoutScreen() {
                     last
                   />
                 </div>
-                {pay === "card" ? (
+                {pay === "flutterwave" ? (
                   <p className="mt-2 text-[12px] leading-snug text-muted-foreground">
                     {paymentReady
-                      ? "You will finish card payment with the provider. TIJAR never stores card numbers here."
-                      : "Card is reserved. This places an order request — Paystack/Flutterwave is not charged from this screen."}
+                      ? "You will finish payment on Flutterwave. TIJAR never stores card numbers. The shop can request a payout anytime."
+                      : "Online pay is not live yet. Transfer to the shop, or add Flutterwave keys on the server."}
                   </p>
                 ) : null}
                 {pay === "transfer" ? (

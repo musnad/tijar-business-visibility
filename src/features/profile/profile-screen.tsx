@@ -233,6 +233,12 @@ export function ProfileScreen({
           to="/app/transactions"
         />
         <ProfileMenuRow
+          icon={Wallet}
+          title="Shop payouts"
+          subtitle="Bank details and Flutterwave wallet"
+          to="/app/business/payouts"
+        />
+        <ProfileMenuRow
           icon={Store}
           title={t("app.profile.menuBusiness")}
           subtitle={t("app.profile.menuBusinessHint")}
