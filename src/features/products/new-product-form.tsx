@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormSection } from "@/features/app-layout/form-section";
-import { ProductPhotoField } from "@/features/products/product-photo-field";
+import { ProductPhotosField, type ProductPhotoItem } from "@/features/products/product-photos-field";
 import {
   normalizeMoneyRaw,
   normalizeQtyRaw,
@@ -20,7 +20,7 @@ import { invalidateBusinessQueries } from "@/lib/invalidate-business-queries";
 import { useTranslation } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import { uploadProductImage } from "@/services/product-image-service";
-import { createProduct, updateProductImageUrl } from "@/services/product-service";
+import { createProduct, updateProductImages } from "@/services/product-service";
 import type { ProductKind } from "@/types/database";
 import { saleLineTotals } from "@/utils/product-profit";
 import { formatNgn } from "@/utils/money";
@@ -77,7 +77,7 @@ export function NewProductForm({
   const [serviceType, setServiceType] = useState<"general" | "course" | "mentorship">("general");
   const [startsOn, setStartsOn] = useState("");
   const [endsOn, setEndsOn] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [photos, setPhotos] = useState<ProductPhotoItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -97,13 +97,13 @@ export function NewProductForm({
   const publishErrors = productPublishErrors({
     name,
     sale_price: Number.isFinite(saleNum) ? saleNum : salePrice.trim() ? null : null,
-    image_url: imageFile ? "pending" : null,
+    image_url: photos[0] ? "pending" : null,
     is_active: true,
   });
   const publishWarnings = productPublishWarnings({
     name,
     sale_price: Number.isFinite(saleNum) ? saleNum : null,
-    image_url: imageFile ? "pending" : null,
+    image_url: photos[0] ? "pending" : null,
     is_active: true,
   });
 
@@ -169,7 +169,7 @@ export function NewProductForm({
     if (publishNow && !canPublishProduct({
       name: trimmedName,
       sale_price: cleanedSale != null ? Number(cleanedSale) : null,
-      image_url: imageFile ? "pending" : null,
+      image_url: photos[0] ? "pending" : null,
       is_active: true,
     })) {
       toast.error(publishErrors[0] ?? "Fix catalogue errors before publishing.");
@@ -232,14 +232,16 @@ export function NewProductForm({
         toast.message(error);
       }
 
-      if (product && imageFile) {
+      if (product && photos.length > 0) {
         try {
-          const uploaded = await uploadProductImage(businessId, product.id, imageFile);
-          if (uploaded.publicUrl) {
-            await updateProductImageUrl(product.id, uploaded.publicUrl);
-          } else if (uploaded.error) {
-            toast.message(uploaded.error);
+          const urls: string[] = [];
+          for (const [i, photo] of photos.entries()) {
+            if (!photo.file) continue;
+            const uploaded = await uploadProductImage(businessId, product.id, photo.file, i);
+            if (uploaded.publicUrl) urls.push(uploaded.publicUrl);
+            else if (uploaded.error) toast.message(uploaded.error);
           }
+          if (urls.length > 0) await updateProductImages(product.id, urls);
         } catch {
           toast.message(t("app.products.photoHint"));
         }
@@ -481,12 +483,8 @@ export function NewProductForm({
       )}
 
       <FormSection title={t("app.products.photoSection")} hint={t("app.products.photoHint")}>
-        <div className="flex justify-center rounded-2xl bg-muted/40 p-4">
-          <ProductPhotoField
-            previewUrl={null}
-            onFile={setImageFile}
-            onClear={() => setImageFile(null)}
-          />
+        <div className="rounded-2xl bg-muted/40 p-4">
+          <ProductPhotosField photos={photos} onChange={setPhotos} />
         </div>
       </FormSection>
 

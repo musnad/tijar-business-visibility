@@ -40,6 +40,22 @@ export async function updateProductImageUrl(
   return { error: error?.message ?? null };
 }
 
+export async function updateProductImages(
+  productId: string,
+  urls: string[],
+): Promise<{ error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  const image_url = urls[0] ?? null;
+  const extra_image_urls = urls.slice(1);
+  const withExtra = await supabase
+    .from("products")
+    .update({ image_url, extra_image_urls })
+    .eq("id", productId);
+  if (!withExtra.error) return { error: null };
+  const fallback = await supabase.from("products").update({ image_url }).eq("id", productId);
+  return { error: fallback.error?.message ?? withExtra.error.message };
+}
+
 function mapProductError(message: string): string {
   const m = message.toLowerCase();
   if (m.includes("row-level security") || m.includes("rls") || m.includes("permission")) {
@@ -293,6 +309,7 @@ export async function updateProduct(
     variants: unknown;
     attributes: Record<string, string>;
     image_url: string | null;
+    extra_image_urls: string[];
     is_published: boolean | null;
     video_url: string | null;
     service_type: string;

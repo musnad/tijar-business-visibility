@@ -100,10 +100,16 @@ export function ProfileScreen({
         />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-1.5 text-base font-extrabold text-foreground">
-            {profile.full_name || t("app.profile.unnamed")}
+            {business?.business_name || profile.full_name || t("app.profile.unnamed")}
             {verified && <BadgeCheck className="size-5 shrink-0 text-primary" aria-hidden />}
           </p>
-          <p className="text-xs font-medium text-muted-foreground">{t("app.profile.roleOwner")}</p>
+          {business?.business_name ? (
+            <p className="text-xs font-medium text-muted-foreground">
+              {profile.full_name || t("app.profile.roleOwner")}
+            </p>
+          ) : (
+            <p className="text-xs font-medium text-muted-foreground">{t("app.profile.roleOwner")}</p>
+          )}
           {location && (
             <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="size-3.5 shrink-0 text-primary" />

@@ -954,6 +954,14 @@ export async function saveBusinessPayoutAccount(
   },
 ): Promise<{ error: string | null }> {
   const supabase = getSupabaseBrowserClient();
+  const rpc = await supabase.rpc("save_business_payout_account", {
+    p_business_id: businessId,
+    p_account_name: input.payout_account_name.trim(),
+    p_account_number: input.payout_account_number.replace(/\s+/g, ""),
+    p_bank_name: input.payout_bank_name.trim(),
+    p_bank_code: input.payout_bank_code.trim(),
+  });
+  if (!rpc.error) return { error: null };
   const { error } = await supabase
     .from("businesses")
     .update({
@@ -963,7 +971,7 @@ export async function saveBusinessPayoutAccount(
       payout_bank_code: input.payout_bank_code.trim(),
     })
     .eq("id", businessId);
-  return { error: error?.message ?? null };
+  return { error: error?.message ?? rpc.error.message };
 }
 
 export async function fetchSellerWallet(businessId: string): Promise<{

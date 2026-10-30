@@ -26,8 +26,11 @@ export function DashboardHero({
   return (
     <section className="relative mt-4 overflow-hidden rounded-2xl">
       <div className="relative z-10 pr-[42%]">
-        <h1 className="text-[1.65rem] font-extrabold leading-tight text-foreground">
+        <p className="text-sm font-semibold text-muted-foreground">
           {t(`app.dashboard.greeting.${slot}`)}, {firstName}
+        </p>
+        <h1 className="mt-0.5 text-[1.65rem] font-extrabold leading-tight text-foreground">
+          {business.business_name}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("app.dashboard.growthHint")}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">

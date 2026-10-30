@@ -8,13 +8,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppPageHeader } from "@/features/app-layout/app-page-header";
-import { ProductPhotoField } from "@/features/products/product-photo-field";
+import { ProductPhotosField, type ProductPhotoItem } from "@/features/products/product-photos-field";
 import { ProductCard } from "@/features/marketplace/product-card";
 import { canPublishProduct, productPublishErrors } from "@/lib/catalogue/publish-guard";
 import { parseAttributes, variantsFromSizeColour } from "@/lib/catalogue/variants";
 import { invalidateBusinessQueries } from "@/lib/invalidate-business-queries";
 import { uploadProductImage } from "@/services/product-image-service";
-import { deactivateProduct, getProduct, restoreProduct, setProductPublished, updateProduct, updateProductImageUrl } from "@/services/product-service";
+import { deactivateProduct, getProduct, restoreProduct, setProductPublished, updateProduct, updateProductImages } from "@/services/product-service";
 import type { PublicProduct } from "@/types/database";
 import { formatNgn } from "@/utils/money";
 
@@ -37,7 +37,7 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
   const [salePrice, setSalePrice] = useState("");
   const [sizes, setSizes] = useState("");
   const [colours, setColours] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [photos, setPhotos] = useState<ProductPhotoItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [serviceType, setServiceType] = useState<"general" | "course" | "mentorship">("general");
   const [startsOn, setStartsOn] = useState("");
@@ -51,6 +51,9 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
     setServiceType(product.service_type === "course" || product.service_type === "mentorship" ? product.service_type : "general");
     setStartsOn(product.starts_on ? String(product.starts_on).slice(0, 10) : "");
     setEndsOn(product.ends_on ? String(product.ends_on).slice(0, 10) : "");
+    const extras = product.extra_image_urls ?? [];
+    const urls = [product.image_url, ...extras].filter((u): u is string => Boolean(u));
+    setPhotos([...new Set(urls)].map((url) => ({ url })));
   }, [product]);
 
   const priceNum = salePrice.trim() ? Number(salePrice) : null;
@@ -58,7 +61,7 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
     ? productPublishErrors({
         name,
         sale_price: Number.isFinite(priceNum as number) ? priceNum : null,
-        image_url: product.image_url,
+        image_url: photos[0]?.url ?? product.image_url,
         is_active: product.is_active,
       })
     : [];
@@ -68,21 +71,26 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
     if (publish && !canPublishProduct({
       name,
       sale_price: Number.isFinite(priceNum as number) ? priceNum : null,
-      image_url: product.image_url,
+      image_url: photos[0]?.url ?? product.image_url,
       is_active: product.is_active,
     })) {
       toast.error(publishErrors[0] ?? "Fix validation errors before publishing.");
       return;
     }
     setBusy(true);
-    let imageUrl = product.image_url;
-    if (imageFile) {
-      const uploaded = await uploadProductImage(businessId, product.id, imageFile);
-      if (uploaded.publicUrl) {
-        imageUrl = uploaded.publicUrl;
-        await updateProductImageUrl(product.id, uploaded.publicUrl);
+    const urls: string[] = [];
+    for (const [i, photo] of photos.entries()) {
+      if (photo.file) {
+        const uploaded = await uploadProductImage(businessId, product.id, photo.file, i);
+        if (uploaded.publicUrl) urls.push(uploaded.publicUrl);
+      } else if (photo.url) {
+        urls.push(photo.url);
       }
     }
+    if (urls.length > 0 || photos.length === 0) {
+      await updateProductImages(product.id, urls);
+    }
+    const imageUrl = urls[0] ?? null;
     const attrs = parseAttributes(undefined, undefined);
     const { error } = await updateProduct(product.id, {
       name: name.trim(),
@@ -92,6 +100,7 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
       variants: variantsFromSizeColour(sizes, colours),
       attributes: attrs,
       image_url: imageUrl,
+      extra_image_urls: urls.slice(1),
       is_published: Number.isFinite(priceNum as number) ? true : (publish ?? product.is_published),
       service_type: product.kind === "service" ? serviceType : "general",
       starts_on: product.kind === "service" && startsOn ? startsOn : null,
@@ -122,7 +131,7 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
     description,
     sale_price: Number.isFinite(priceNum as number) ? Number(priceNum) : null,
     unit: product.unit,
-    image_url: product.image_url,
+    image_url: photos[0]?.url ?? product.image_url,
     is_available: product.kind === "service" || Number(product.stock_quantity) > 0,
     business_name: "Your shop",
   };
@@ -166,7 +175,7 @@ export function EditProductForm({ businessId, productId }: { businessId: string;
         )}
         <Input value={sizes} onChange={(e) => setSizes(e.target.value)} placeholder="Sizes (S, M, L)" className="min-h-11 rounded-xl" />
         <Input value={colours} onChange={(e) => setColours(e.target.value)} placeholder="Colours" className="min-h-11 rounded-xl" />
-        <ProductPhotoField previewUrl={product.image_url} onFile={setImageFile} onClear={() => setImageFile(null)} />
+        <ProductPhotosField photos={photos} onChange={setPhotos} />
       </div>
       {publishErrors.length > 0 && (
         <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-primary">

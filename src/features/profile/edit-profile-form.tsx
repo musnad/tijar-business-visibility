@@ -1,6 +1,7 @@
 "use client";
 
 import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -12,20 +13,25 @@ import { profileFormSchema } from "@/features/profile/schemas";
 import { useAuth } from "@/features/auth/auth-context";
 import { useTranslation } from "@/lib/i18n/context";
 import { uploadProfileAvatar } from "@/services/profile-avatar-service";
+import { updateBusinessProfile } from "@/services/business-service";
 import { updateProfile } from "@/services/profile-service";
-import type { Profile } from "@/types/database";
+import type { Business, Profile } from "@/types/database";
 
 export function EditProfileForm({
   profile,
+  business,
   afterSave = "/app/profile",
 }: {
   profile: Profile;
+  business?: Business | null;
   afterSave?: "/app/profile" | "/shop/profile";
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { refreshProfile } = useAuth();
 
+  const [businessName, setBusinessName] = useState(business?.business_name ?? "");
   const [fullName, setFullName] = useState(profile.full_name);
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
@@ -62,15 +68,30 @@ export function EditProfileForm({
       bio: parsed.data.bio || null,
       avatar_url: nextAvatarUrl,
     });
-    setSaving(false);
-
     if (error) {
+      setSaving(false);
       toast.error(error.message);
       return;
     }
+    if (business && businessName.trim().length >= 2 && businessName.trim() !== business.business_name) {
+      const biz = await updateBusinessProfile(business.id, {
+        businessName: businessName.trim(),
+        location: business.location ?? "Nigeria",
+        description: business.description ?? undefined,
+        categoryId: business.category_id ?? undefined,
+        islamicModeEnabled: business.islamic_mode_enabled,
+      });
+      if (biz.error) {
+        setSaving(false);
+        toast.error(biz.error);
+        return;
+      }
+    }
+    setSaving(false);
 
     toast.success(t("app.profile.saved"));
     await refreshProfile();
+    await queryClient.invalidateQueries({ queryKey: ["primary-business"] });
     void navigate({ to: afterSave });
   }
 
@@ -85,6 +106,17 @@ export function EditProfileForm({
         />
         <p className="mt-3 text-center text-xs text-muted-foreground">{t("app.profile.photoHint")}</p>
       </div>
+
+      {business ? (
+        <FormSection title={t("app.business.shopLabel")} hint="This name is shown on your shop, dashboard, and profile.">
+          <Input
+            className="min-h-12 rounded-xl"
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            placeholder={t("app.business.namePlaceholder")}
+          />
+        </FormSection>
+      ) : null}
 
       <FormSection title={t("app.profile.contactSection")} hint={t("app.profile.contactHint")}>
         <Input

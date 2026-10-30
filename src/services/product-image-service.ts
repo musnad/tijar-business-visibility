@@ -24,6 +24,7 @@ export async function uploadProductImage(
   businessId: string,
   productId: string,
   file: File,
+  slot = 0,
 ): Promise<{ publicUrl: string | null; error: string | null }> {
   if (!file.type.startsWith("image/")) {
     return { publicUrl: null, error: "Use a JPG, PNG, WEBP, or GIF photo." };
@@ -54,7 +55,7 @@ export async function uploadProductImage(
             ? "gif"
             : "jpg";
 
-  const path = `${businessId}/${productId}.${ext}`;
+  const path = `${businessId}/${productId}/${slot}.${ext}`;
 
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     upsert: true,

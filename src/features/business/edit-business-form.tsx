@@ -31,6 +31,7 @@ export function EditBusinessForm({ business }: { business: Business }) {
 
   const [businessName, setBusinessName] = useState(business.business_name);
   const [location, setLocation] = useState(business.location ?? "");
+  const [phone, setPhone] = useState(business.public_phone ?? "");
   const [description, setDescription] = useState(business.description ?? "");
   const [categoryId, setCategoryId] = useState(business.category_id ?? "");
   const [islamicMode, setIslamicMode] = useState(business.islamic_mode_enabled);
@@ -85,6 +86,7 @@ export function EditBusinessForm({ business }: { business: Business }) {
       categoryId: parsed.data.categoryId,
       islamicModeEnabled: parsed.data.islamicModeEnabled,
       logoUrl,
+      publicPhone: phone.trim() || null,
     });
     setSaving(false);
 
@@ -95,6 +97,8 @@ export function EditBusinessForm({ business }: { business: Business }) {
 
     toast.success(t("app.business.saved"));
     await queryClient.invalidateQueries({ queryKey: ["primary-business"] });
+    await queryClient.invalidateQueries({ queryKey: ["marketplace-shops"] });
+    await queryClient.invalidateQueries({ queryKey: ["storefront"] });
     void navigate({ to: "/app/business" });
   }
 
@@ -123,6 +127,13 @@ export function EditBusinessForm({ business }: { business: Business }) {
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder={t("app.business.locationPlaceholder")}
+        />
+        <Input
+          className="mt-3 min-h-12 border-0 bg-white/10 text-sm text-primary-foreground placeholder:text-white/40"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Shop phone"
+          inputMode="tel"
         />
       </div>
 

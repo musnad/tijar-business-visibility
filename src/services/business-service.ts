@@ -106,6 +106,7 @@ export type UpdateBusinessProfileInput = {
   categoryId?: string;
   islamicModeEnabled: boolean;
   logoUrl?: string | null;
+  publicPhone?: string | null;
 };
 
 export async function updateBusinessProfile(
@@ -124,6 +125,9 @@ export async function updateBusinessProfile(
   }
   if (input.logoUrl !== undefined) {
     patch.logo_url = input.logoUrl;
+  }
+  if (input.publicPhone !== undefined) {
+    patch.public_phone = input.publicPhone;
   }
 
   const { data, error } = await supabase
