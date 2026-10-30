@@ -12,8 +12,8 @@ export function assertProductsBelongToBusiness(
 }
 
 export function requireShoppingTags(productIds: string[]): { ok: true } | { ok: false; error: string } {
-  if (productIds.length === 0) {
-    return { ok: false, error: "Shopping posts need at least one live product tag." };
+  if (productIds.some((id) => !id)) {
+    return { ok: false, error: "Pick a product from your shop." };
   }
   return { ok: true };
 }

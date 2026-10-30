@@ -115,7 +115,7 @@ export async function createProduct(
     unit: kind === "service" ? "job" : input.unit?.trim() || "piece",
     sale_price: input.salePrice ?? null,
     cost_price: input.costPrice ?? null,
-    stock_quantity: 0,
+    stock_quantity: kind === "service" ? 0 : input.initialStock && input.initialStock > 0 ? 0 : 1,
     low_stock_threshold: kind === "service" ? 0 : (input.lowStockThreshold ?? 5),
     notes: input.notes?.trim() || input.description?.trim() || null,
     description: input.description?.trim() || input.notes?.trim() || null,

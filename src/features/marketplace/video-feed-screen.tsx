@@ -33,6 +33,8 @@ import { addToCart, fetchCart, fetchMarketplaceProducts, toggleFavoriteProduct }
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
 import { parseVariantList } from "@/lib/catalogue/variants";
 import { TijarLogo } from "@/components/brand-logo";
+import { AppLanguageButton } from "@/features/app-layout/app-language-button";
+import { useTranslation } from "@/lib/i18n/context";
 import {
   blockProfile,
   fetchLiveProductsByIds,
@@ -117,6 +119,7 @@ function variantSummary(product: PublicProduct): string | null {
 
 export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string }) {
   const { profile, session } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -517,7 +520,7 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
       <Sheet open={productsOpen} onOpenChange={setProductsOpen}>
         <SheetContent side="bottom" className="max-h-[75vh] overflow-y-auto rounded-t-3xl">
           <SheetHeader>
-            <SheetTitle>Products in this video</SheetTitle>
+            <SheetTitle>{t("shop.feed.productsInVideo")}</SheetTitle>
           </SheetHeader>
           {active ? (
             <ProductList
@@ -537,7 +540,7 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
       <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
         <SheetContent side="bottom" className="max-h-[75vh] overflow-y-auto rounded-t-3xl">
           <SheetHeader>
-            <SheetTitle>Comments</SheetTitle>
+            <SheetTitle>{t("shop.feed.comments")}</SheetTitle>
           </SheetHeader>
           {active ? <CommentsThread videoId={active.id} /> : null}
         </SheetContent>
@@ -606,10 +609,11 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
 
 function FeedTopBar({ tab, onTab }: { tab: FeedTab; onTab: (t: FeedTab) => void }) {
   const { profile, session } = useAuth();
+  const { t } = useTranslation();
   const tabs: { id: FeedTab; label: string }[] = [
-    { id: "foryou", label: "For You" },
-    { id: "following", label: "Following" },
-    { id: "nearby", label: "Nearby" },
+    { id: "foryou", label: t("shop.feed.forYou") },
+    { id: "following", label: t("shop.feed.following") },
+    { id: "nearby", label: t("shop.feed.nearby") },
   ];
   const name = profile?.full_name ?? "";
   const initials = name
@@ -628,26 +632,27 @@ function FeedTopBar({ tab, onTab }: { tab: FeedTab; onTab: (t: FeedTab) => void 
         <Link to="/shop" className="flex min-w-0 flex-1 flex-col justify-center">
           <TijarLogo compact className="h-8 max-w-[148px] object-left" />
           <p className="mt-0.5 text-[9px] font-extrabold uppercase tracking-[0.16em] text-primary">
-            Social Marketplace
+            {t("shop.feed.brand")}
           </p>
         </Link>
+        <AppLanguageButton />
         <Link
           to="/shop/favorites"
-          aria-label="Saved"
+          aria-label={t("shop.feed.saved")}
           className="flex size-11 min-h-11 min-w-11 items-center justify-center text-foreground"
         >
           <Heart className="size-5" />
         </Link>
         <Link
           to="/shop/notifications"
-          aria-label="Notifications"
+          aria-label={t("shop.feed.notifications")}
           className="flex size-11 min-h-11 min-w-11 items-center justify-center text-foreground"
         >
           <Bell className="size-5" />
         </Link>
         <Link
           to={session ? "/shop/profile" : "/login"}
-          aria-label="Profile"
+          aria-label={t("shop.feed.profile")}
           className="flex size-9 min-h-9 min-w-9 items-center justify-center overflow-hidden rounded-full bg-[color:var(--brand-navy,#001B3A)] text-[10px] font-bold text-white"
         >
           {profile?.avatar_url ? (
@@ -751,6 +756,7 @@ function VideoSlide({
     el.pause();
   }, [active, paused, muted, image, src]);
 
+  const { t } = useTranslation();
   const featured = products[0] ?? null;
   const when = timeAgo(video.published_at ?? video.created_at);
   const place = video.category_name;
@@ -784,12 +790,12 @@ function VideoSlide({
             following ? "border border-border bg-white text-foreground" : "bg-primary text-white",
           )}
         >
-          {following ? "Following" : "+ Follow"}
+          {following ? t("shop.feed.followingBtn") : t("shop.feed.follow")}
         </button>
         <button
           type="button"
           onClick={onMore}
-          aria-label="More"
+          aria-label={t("shop.feed.more")}
           className="flex size-11 min-h-11 min-w-11 shrink-0 items-center justify-center text-muted-foreground"
         >
           <MoreHorizontal className="size-5" />
@@ -831,7 +837,7 @@ function VideoSlide({
         <button
           type="button"
           className="absolute inset-0"
-          aria-label="Double tap to like"
+          aria-label={t("shop.feed.doubleTap")}
           onClick={onMediaTap}
         />
         {burst ? (
@@ -841,18 +847,18 @@ function VideoSlide({
 
       <div className="flex items-center justify-between gap-1 px-2">
         <div className="flex items-center">
-          <IconAction label={liked ? "Unlike" : "Like"} count={compactCount(likes)} onClick={onLike}>
+          <IconAction label={liked ? t("shop.feed.unlike") : t("shop.feed.like")} count={compactCount(likes)} onClick={onLike}>
             <Heart className={cn("size-5", liked ? "fill-red-500 text-red-500" : "text-foreground")} />
           </IconAction>
-          <IconAction label="Comments" count={compactCount(video.comment_count)} onClick={onOpenComments}>
+          <IconAction label={t("shop.feed.comments")} count={compactCount(video.comment_count)} onClick={onOpenComments}>
             <MessageCircle className="size-5 text-foreground" />
           </IconAction>
-          <IconAction label="Share" count={compactCount(Math.max(video.view_count, 0))} onClick={onShare}>
+          <IconAction label={t("shop.feed.share")} count={compactCount(Math.max(video.view_count, 0))} onClick={onShare}>
             <Share2 className="size-5 text-foreground" />
           </IconAction>
         </div>
         {featured ? (
-          <IconAction label="Add to cart" onClick={() => onAddToCart(featured)}>
+          <IconAction label={t("shop.feed.addToCart")} onClick={() => onAddToCart(featured)}>
             <ShoppingCart className="size-5 text-foreground" />
           </IconAction>
         ) : null}
@@ -873,7 +879,7 @@ function VideoSlide({
             onClick={onOpenProducts}
             className="flex min-h-11 w-full items-center justify-center rounded-2xl border border-border text-sm font-extrabold text-primary"
           >
-            Shop the look
+            {t("shop.feed.shopTheLook")}
           </button>
         )}
       </div>
@@ -905,14 +911,15 @@ function SellerMeta({
   when: string;
   place: string | null;
 }) {
+  const { t } = useTranslation();
   return (
     <span className="min-w-0">
       <span className="flex items-center gap-1 truncate text-[15px] font-extrabold text-foreground">
         {name}
-        {verified ? <BadgeCheck className="size-4 shrink-0 fill-primary text-white" aria-label="Verified" /> : null}
+        {verified ? <BadgeCheck className="size-4 shrink-0 fill-primary text-white" aria-label={t("shop.explore.verified")} /> : null}
       </span>
       <span className="flex items-center gap-1 truncate text-[11px] text-muted-foreground">
-        {when || "Just now"}
+        {when || t("shop.feed.justNow")}
         {place ? (
           <>
             <span aria-hidden>·</span>
@@ -926,6 +933,7 @@ function SellerMeta({
 }
 
 function FeedProductCard({ product, onAdd }: { product: PublicProduct; onAdd: () => void }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const startChat = useStartShopChat();
   const summary = variantSummary(product);
@@ -961,13 +969,13 @@ function FeedProductCard({ product, onAdd }: { product: PublicProduct; onAdd: ()
             <span className="truncate">{product.name}</span>
             {inStock ? (
               <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-primary">
-                New
+                {t("shop.feed.new")}
               </span>
             ) : null}
           </p>
           <p className="mt-0.5 truncate text-[11px] text-zinc-500">{blurb}</p>
           <p className="mt-1 text-lg font-black text-primary">
-            {product.sale_price != null ? formatNgn(Number(product.sale_price)) : "Ask seller"}
+            {product.sale_price != null ? formatNgn(Number(product.sale_price)) : t("shop.feed.askSeller")}
           </p>
         </div>
       </div>
@@ -977,7 +985,7 @@ function FeedProductCard({ product, onAdd }: { product: PublicProduct; onAdd: ()
           onClick={buyNow}
           className="inline-flex min-h-11 items-center justify-center gap-0.5 rounded-full bg-primary px-3 text-xs font-extrabold text-white"
         >
-          Buy now
+          {t("shop.feed.buyNow")}
           <ChevronRight className="size-4" />
         </button>
         <button
@@ -990,7 +998,7 @@ function FeedProductCard({ product, onAdd }: { product: PublicProduct; onAdd: ()
           className="inline-flex min-h-11 items-center justify-center gap-1 rounded-full border border-primary px-3 text-xs font-extrabold text-primary disabled:opacity-50"
         >
           <ShoppingCart className="size-3.5" />
-          Add to cart
+          {t("shop.feed.addToCart")}
         </button>
       </div>
       <button
@@ -1024,6 +1032,7 @@ function ListingSlide({
   onFollow: () => void;
   onAdd: () => void;
 }) {
+  const { t } = useTranslation();
   const poster = product.image_url || product.extra_image_urls?.[0] || "";
   const slug = product.business_slug;
   const shop = product.business_name ?? "Shop";
@@ -1068,7 +1077,7 @@ function ListingSlide({
             following ? "border border-border bg-white text-foreground" : "bg-primary text-white",
           )}
         >
-          {following ? "Following" : "+ Follow"}
+          {following ? t("shop.feed.followingBtn") : t("shop.feed.follow")}
         </button>
       </div>
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-100">
@@ -1126,9 +1135,10 @@ function ProductList({
 }) {
   const { profile, session } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   if (products.length === 0) {
-    return <p className="mt-4 text-sm text-muted-foreground">No live products tagged on this post.</p>;
+    return <p className="mt-4 text-sm text-muted-foreground">{t("shop.feed.noProducts")}</p>;
   }
 
   return (
@@ -1162,7 +1172,7 @@ function ProductList({
                   void navigate({ to: "/shop/buy", search: { productId: product.id } });
                 }}
               >
-                Buy now
+                {t("shop.feed.buyNow")}
               </Button>
               <Button
                 size="sm"
@@ -1195,7 +1205,7 @@ function ProductList({
                   }
                 }}
               >
-                Add to cart
+                {t("shop.feed.addToCart")}
               </Button>
               <Button
                 size="sm"

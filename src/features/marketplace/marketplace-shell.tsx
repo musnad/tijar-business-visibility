@@ -11,6 +11,7 @@ import { AppLanguageButton } from "@/features/app-layout/app-language-button";
 import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
 import { useAuth } from "@/features/auth/auth-context";
 import { isTijarNativeApp } from "@/lib/tijar-native-app";
+import { useTranslation } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import { countUnreadShopChats, fetchMyBusinessIds } from "@/services/shop-chat-service";
 
@@ -23,6 +24,7 @@ function initials(name: string): string {
 
 function MarketplaceTopBar({ leftSlot }: { leftSlot?: ReactNode }) {
   const { profile, session } = useAuth();
+  const { t } = useTranslation();
   const name = profile?.full_name ?? "";
 
   return (
@@ -41,14 +43,14 @@ function MarketplaceTopBar({ leftSlot }: { leftSlot?: ReactNode }) {
         {!session ? (
           <Button size="sm" className="h-9 rounded-full px-3 text-xs font-bold" asChild>
             <Link to="/register" search={{ intent: "customer" } as never}>
-              Sign up
+              {t("shop.signup")}
             </Link>
           </Button>
         ) : (
           <Link
             to="/shop/profile"
             className="flex size-10 items-center justify-center rounded-full border border-border bg-card text-xs font-bold text-primary"
-            aria-label="Profile"
+            aria-label={t("shop.nav.profile")}
           >
             {initials(name)}
           </Link>
@@ -77,6 +79,7 @@ export function MarketplaceShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { profile } = useAuth();
+  const { t } = useTranslation();
   const nativeApp = isTijarNativeApp();
   const unreadQuery = useQuery({
     queryKey: ["shop-inbox-unread", profile?.id],
@@ -93,18 +96,18 @@ export function MarketplaceShell({
 
   const tabs = feed
     ? [
-        { to: "/shop" as const, label: "Home", icon: Home, exact: true },
-        { to: "/shop/discover" as const, label: "Explore", icon: Compass },
-        { to: "/shop/create" as const, label: "Sell", icon: PlusSquare, forceActive: sellActive },
-        { to: "/shop/enquiries" as const, label: "Messages", icon: MessageCircle, badge: unread },
-        { to: "/shop/profile" as const, label: "Profile", icon: UserRound },
+        { to: "/shop" as const, label: t("shop.nav.home"), icon: Home, exact: true },
+        { to: "/shop/discover" as const, label: t("shop.nav.explore"), icon: Compass },
+        { to: "/shop/create" as const, label: t("shop.nav.sell"), icon: PlusSquare, forceActive: sellActive },
+        { to: "/shop/enquiries" as const, label: t("shop.nav.messages"), icon: MessageCircle, badge: unread },
+        { to: "/shop/profile" as const, label: t("shop.nav.profile"), icon: UserRound },
       ]
     : [
-        { to: "/shop" as const, label: "For You", icon: Clapperboard, exact: true },
-        { to: "/shop/discover" as const, label: "Discover", icon: Compass },
-        { to: "/shop/create" as const, label: "Sell", icon: PlusSquare, forceActive: sellActive },
-        { to: "/shop/browse" as const, label: "Shop", icon: ShoppingBag, badge: cartCount },
-        { to: "/shop/profile" as const, label: "Profile", icon: UserRound },
+        { to: "/shop" as const, label: t("shop.nav.forYou"), icon: Clapperboard, exact: true },
+        { to: "/shop/discover" as const, label: t("shop.nav.discover"), icon: Compass },
+        { to: "/shop/create" as const, label: t("shop.nav.sell"), icon: PlusSquare, forceActive: sellActive },
+        { to: "/shop/browse" as const, label: t("shop.nav.shop"), icon: ShoppingBag, badge: cartCount },
+        { to: "/shop/profile" as const, label: t("shop.nav.profile"), icon: UserRound },
       ];
 
   return (
@@ -132,7 +135,7 @@ export function MarketplaceShell({
             ? "relative border-t border-border bg-white pb-[max(0.55rem,env(safe-area-inset-bottom))]"
             : "sticky bottom-0 app-bottom-nav border-t border-border bg-background/95 backdrop-blur-sm",
         )}
-        aria-label="Marketplace"
+        aria-label={t("shop.nav.shop")}
       >
         <div className="mx-auto grid max-w-lg grid-cols-5 gap-0 px-1">
           {tabs.map((tab) => {
@@ -153,7 +156,7 @@ export function MarketplaceShell({
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
-                <Icon className={cn("size-5", active && "stroke-[2.5]", tab.label === "Profile" && active && "fill-current")} />
+                <Icon className={cn("size-5", active && "stroke-[2.5]", tab.to === "/shop/profile" && active && "fill-current")} />
                 {tab.label}
                 {"badge" in tab && tab.badge && tab.badge > 0 ? (
                   <span className="absolute right-[18%] top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-white">

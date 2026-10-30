@@ -3,8 +3,12 @@ import { ArrowRight, Heart, Landmark, Smartphone, Store, Video } from "lucide-re
 
 import { HeroFeedPhone } from "@/components/hero-feed-phone";
 import { LandingDownloadCta } from "@/components/landing-gamification";
+import { LanguageSelect } from "@/components/site-preferences-controls";
 import { Button } from "@/components/ui/button";
-import { useTranslation } from "@/lib/i18n/context";
+import { useSitePreferences } from "@/lib/i18n/context";
+import { LOCALE_LABELS, LOCALES, type Locale } from "@/lib/i18n/types";
+import { useAuth } from "@/features/auth/auth-context";
+import { updateProfile } from "@/services/profile-service";
 
 const audienceKeys = [
   "home.audience.for.traders",
@@ -27,17 +31,18 @@ const scenes = [
   { src: "/tijar-food-stall.jpg", label: "home.scenes.food", alt: "home.scenes.foodAlt", price: "₦1,800" },
 ] as const;
 
-const languages = [
-  "home.languages.english",
-  "home.languages.hausa",
-  "home.languages.arabic",
-  "home.languages.yoruba",
-  "home.languages.igbo",
-  "home.languages.swahili",
-] as const;
-
 export function SocialLanding() {
-  const { t } = useTranslation();
+  const { t, locale, setLocale } = useSitePreferences();
+  const { profile, refreshProfile } = useAuth();
+
+  function pickLocale(next: Locale) {
+    setLocale(next);
+    if (profile?.id) {
+      void updateProfile(profile.id, { preferred_language: next })
+        .then(() => refreshProfile())
+        .catch(() => {});
+    }
+  }
 
   return (
     <div className="bg-white text-[#0B1F4D]">
@@ -69,6 +74,12 @@ export function SocialLanding() {
               </Button>
             </div>
             <p className="mt-4 text-sm font-semibold text-[#6B7280]">{t("home.heroHint")}</p>
+            <div className="mt-5 max-w-xs">
+              <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.16em] text-[#1F7A4D]">
+                {t("nav.language")}
+              </p>
+              <LanguageSelect />
+            </div>
           </div>
           <HeroFeedPhone className="lg:justify-self-end" />
         </div>
@@ -179,10 +190,19 @@ export function SocialLanding() {
             </p>
             <p className="mt-2 max-w-xl font-bold">{t("home.languages.title")}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {languages.map((key) => (
-                <span key={key} className="rounded-full bg-[#0B1F4D] px-3 py-1.5 text-sm font-semibold text-white">
-                  {t(key)}
-                </span>
+              {LOCALES.map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => pickLocale(code)}
+                  className={
+                    code === locale
+                      ? "rounded-full bg-[#1F7A4D] px-3 py-1.5 text-sm font-semibold text-white"
+                      : "rounded-full bg-[#0B1F4D] px-3 py-1.5 text-sm font-semibold text-white"
+                  }
+                >
+                  {LOCALE_LABELS[code]}
+                </button>
               ))}
             </div>
           </div>

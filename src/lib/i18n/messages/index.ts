@@ -12,6 +12,7 @@ import { publishI18n } from "./publish-i18n";
 import { storefrontI18n } from "./storefront-i18n";
 import { translatorI18n } from "./translator-i18n";
 import { voiceOnboardingI18n } from "./voice-onboarding-i18n";
+import { marketplaceI18n } from "./marketplace-i18n";
 
 import { arMessages } from "./ar";
 import { ffMessages } from "./ff";
@@ -32,6 +33,7 @@ function withLocaleOverlays(base: MessageTree, locale: Locale): MessageTree {
   tree = deepMergeMessages(tree, moderationI18n[locale]);
   tree = deepMergeMessages(tree, translatorI18n[locale]);
   tree = deepMergeMessages(tree, voiceOnboardingI18n[locale]);
+  tree = deepMergeMessages(tree, marketplaceI18n[locale]);
   return tree;
 }
 

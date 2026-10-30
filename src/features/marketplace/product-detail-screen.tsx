@@ -15,6 +15,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
 import { parseVariantList } from "@/lib/catalogue/variants";
 import { haptic } from "@/lib/haptics";
+import { useTranslation } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import { isProductLiked, likeProduct, isProductSaved } from "@/lib/shop-social";
 import { useDoubleTap } from "@/lib/use-double-tap";
@@ -43,6 +44,7 @@ function colourHex(label: string): string {
 }
 
 export function ProductDetailScreen({ productId }: { productId: string }) {
+  const { t } = useTranslation();
   const { profile, session } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -201,7 +203,7 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
             <TijarLogo variant="mark" className="h-8 w-auto" />
           </Link>
           <div className="text-center">
-            <h1 className="text-[15px] font-extrabold text-[color:var(--brand-navy,#001B3A)]">Product Details</h1>
+            <h1 className="text-[15px] font-extrabold text-[color:var(--brand-navy,#001B3A)]">{t("shop.product.details")}</h1>
             <span className="mx-auto mt-1 block h-0.5 w-16 rounded-full bg-[color:var(--brand-navy,#001B3A)]" />
           </div>
           <div className="flex items-center justify-end gap-1">
@@ -427,7 +429,7 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
               onClick={() => void add(false)}
             >
               <ShoppingBag className="mr-1.5 size-4" />
-              {busy === "cart" ? "Adding…" : "Add to Cart"}
+              {busy === "cart" ? t("shop.product.adding") : t("shop.product.addToCart")}
             </Button>
             <Button
               type="button"
@@ -436,7 +438,7 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
               onClick={() => void add(true)}
             >
               <Zap className="mr-1.5 size-4 fill-current" />
-              {busy === "buy" ? "…" : "Buy Now"}
+              {busy === "buy" ? "…" : t("shop.product.buyNow")}
             </Button>
           </div>
         )}

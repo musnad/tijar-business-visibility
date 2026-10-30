@@ -37,10 +37,17 @@ export function AppLanguageButton() {
   const { profile, refreshProfile } = useAuth();
   const syncedProfileId = useRef<string | null>(null);
 
-  // On first profile load, adopt the language saved on the account.
+  // Keep the language picked on this device. If none is stored, use the account.
   useEffect(() => {
     if (!profile?.id || syncedProfileId.current === profile.id) return;
     syncedProfileId.current = profile.id;
+    const stored = typeof window !== "undefined" ? window.localStorage.getItem("tijar-locale") : null;
+    if (stored && isLocale(stored)) {
+      if (profile.preferred_language !== stored) {
+        void updateProfile(profile.id, { preferred_language: stored }).then(() => refreshProfile()).catch(() => {});
+      }
+      return;
+    }
     const saved = profile.preferred_language;
     if (saved && isLocale(saved) && saved !== locale) {
       setLocale(saved);

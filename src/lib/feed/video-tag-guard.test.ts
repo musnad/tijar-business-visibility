@@ -18,8 +18,9 @@ describe("assertProductsBelongToBusiness", () => {
 });
 
 describe("requireShoppingTags", () => {
-  it("requires a product on shopping posts", () => {
-    expect(requireShoppingTags([]).ok).toBe(false);
+  it("allows a post with no product, and rejects empty ids", () => {
+    expect(requireShoppingTags([]).ok).toBe(true);
     expect(requireShoppingTags(["p1"]).ok).toBe(true);
+    expect(requireShoppingTags([""]).ok).toBe(false);
   });
 });

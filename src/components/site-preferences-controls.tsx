@@ -1,8 +1,14 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
+import { toast } from "sonner";
+
 import { LOCALE_LABELS, LOCALES, type Locale } from "@/lib/i18n/types";
 import { useSitePreferences } from "@/lib/i18n/context";
+import { messages } from "@/lib/i18n/messages";
+import { resolveMessage } from "@/lib/i18n/resolve";
+import { useAuth } from "@/features/auth/auth-context";
+import { updateProfile } from "@/services/profile-service";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,10 +29,21 @@ export function LanguageSelect({
   onLocaleChange?: (locale: Locale) => void;
 }) {
   const { locale, setLocale, t } = useSitePreferences();
+  const { profile, refreshProfile } = useAuth();
 
   function handleChange(value: string) {
     const next = value as Locale;
     setLocale(next);
+    const said =
+      resolveMessage(messages[next], "app.layout.languageChanged") ??
+      resolveMessage(messages.en, "app.layout.languageChanged") ??
+      "Language changed";
+    toast.success(`${said} · ${LOCALE_LABELS[next]}`);
+    if (profile?.id) {
+      void updateProfile(profile.id, { preferred_language: next })
+        .then(() => refreshProfile())
+        .catch(() => {});
+    }
     onLocaleChange?.(next);
   }
 
@@ -86,8 +103,8 @@ export function SitePreferencesControls({
 }) {
   return (
     <div className={stacked ? "flex flex-col gap-3" : "flex flex-wrap items-center gap-2"}>
-      <LanguageSelect compact={compact} className={stacked ? "w-full" : undefined} />
-      <ThemeToggle className={compact ? "size-9" : undefined} />
+      <LanguageSelect compact={compact} {...(stacked ? { className: "w-full" } : {})} />
+      <ThemeToggle {...(compact ? { className: "size-9" } : {})} />
     </div>
   );
 }

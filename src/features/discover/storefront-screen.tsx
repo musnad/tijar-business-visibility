@@ -57,7 +57,7 @@ function productBadge(p: PublicProduct): string | null {
 }
 
 function StoreProductCard({ product: p, canPost }: { product: PublicProduct; canPost?: boolean }) {
-  const badge = productBadge(p);
+  const badge = productBadge(p) || p.category_name;
   return (
     <div>
       <Link
@@ -78,6 +78,10 @@ function StoreProductCard({ product: p, canPost }: { product: PublicProduct; can
               )}
             >
               {badge}
+            </span>
+          ) : p.kind === "service" ? (
+            <span className="absolute left-2 top-2 rounded-md bg-[#0B1F4D] px-2 py-0.5 text-[10px] font-extrabold text-white">
+              Service
             </span>
           ) : null}
         </div>
@@ -178,7 +182,7 @@ export function StorefrontScreen({ slug }: { slug: string }) {
     return [...map.entries()];
   }, [products]);
 
-  const featured = products.slice(0, 8);
+  const featured = products;
   const followerCount = following ? 1 : 0;
   const productCount = products.length;
   const rating = null;
@@ -449,7 +453,7 @@ export function StorefrontScreen({ slug }: { slug: string }) {
               <nav className="grid grid-cols-3 px-2" aria-label="Storefront sections">
                 {(
                   [
-                    ["featured", "Featured"],
+                    ["featured", "Products"],
                     ["collections", "Collections"],
                     ["about", "About"],
                   ] as const
@@ -480,7 +484,7 @@ export function StorefrontScreen({ slug }: { slug: string }) {
                 {tab === "featured" ? (
                   <>
                     <div className="mb-3 flex items-center justify-between">
-                      <h2 className="text-[1.05rem] font-extrabold text-[#0B1F4D]">Featured Products</h2>
+                      <h2 className="text-[1.05rem] font-extrabold text-[#0B1F4D]">Products</h2>
                       <button
                         type="button"
                         className="text-[13px] font-semibold text-[#1F7A4D]"

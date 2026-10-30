@@ -13,7 +13,7 @@ import { fetchCart, fetchMarketplaceProducts } from "@/services/marketplace-serv
 export function ShopBrowseScreen() {
   const { profile } = useAuth();
   const [q, setQ] = useState("");
-  const [availableOnly, setAvailableOnly] = useState(true);
+  const [availableOnly, setAvailableOnly] = useState(false);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
 

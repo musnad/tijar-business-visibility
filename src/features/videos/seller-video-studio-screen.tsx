@@ -28,24 +28,13 @@ import { Input } from "@/components/ui/input";
 import { haptic } from "@/lib/haptics";
 import { inspectShoppingMedia, MAX_VIDEO_SEC, MIN_VIDEO_SEC } from "@/lib/video/file-guard";
 import { cn } from "@/lib/utils";
-import { listProducts } from "@/services/product-service";
+import { uploadProductImage } from "@/services/product-image-service";
+import { createProduct, listProducts, updateProductImageUrl } from "@/services/product-service";
 import { submitStudioVideo } from "@/services/video-studio-service";
 import type { Product } from "@/types/database";
 import { formatNgn } from "@/utils/money";
 
 const CAPTION_MAX = 500;
-
-function skuOf(product: Product): string {
-  const letters = product.name
-    .split(/\s+/)
-    .map((w) => w[0] ?? "")
-    .join("")
-    .replace(/[^A-Za-z0-9]/g, "")
-    .toUpperCase()
-    .slice(0, 3);
-  const tail = product.id.replace(/-/g, "").slice(-4).toUpperCase();
-  return `${letters || "SKU"}-${tail}`;
-}
 
 function fmtTime(sec: number): string {
   const s = Math.max(0, Math.floor(sec));
@@ -86,6 +75,9 @@ export function SellerVideoStudioScreen({
   const [tagDraft, setTagDraft] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [productId, setProductId] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+  const [saveToProducts, setSaveToProducts] = useState(true);
   const [picking, setPicking] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -120,12 +112,8 @@ export function SellerVideoStudioScreen({
   }, [previewUrl]);
 
   useEffect(() => {
-    if (products.length === 0) return;
-    setProductId((cur) => {
-      if (cur && products.some((p) => p.id === cur)) return cur;
-      if (initialProductId && products.some((p) => p.id === initialProductId)) return initialProductId;
-      return products[0]!.id;
-    });
+    if (!initialProductId) return;
+    if (products.some((p) => p.id === initialProductId)) setProductId(initialProductId);
   }, [products, initialProductId]);
 
   useEffect(() => {
@@ -185,8 +173,9 @@ export function SellerVideoStudioScreen({
 
   function validate(): boolean {
     const next: typeof errors = {};
-    if (!productId) next.product = "Select the product this post will sell.";
-    if (!file) next.media = `Record or upload a video (${MIN_VIDEO_SEC}–${MAX_VIDEO_SEC} seconds).`;
+    const hasNew = newName.trim().length > 0 && Number(newPrice.replace(/,/g, "")) > 0;
+    if (!productId && !hasNew) next.product = "Pick a product, or type a name and price.";
+    if (!file) next.media = "Add a photo or a short video.";
     if (caption.length > CAPTION_MAX) next.caption = `Caption must be ${CAPTION_MAX} characters or less.`;
     setErrors(next);
     if (next.product) toast.error(next.product);
@@ -297,21 +286,47 @@ export function SellerVideoStudioScreen({
   }, [autoCamera]);
 
   async function publish() {
-    if (!validate() || !file || !productId) {
+    if (!validate() || !file) {
       setStep("compose");
       return;
     }
     setBusy(true);
     setProgress({ pct: 4, label: "Preparing…" });
+    let tagId = productId;
+    const makingNew = !productId && newName.trim().length > 0 && Number(newPrice.replace(/,/g, "")) > 0;
+    if (makingNew && saveToProducts) {
+      const sale = Number(newPrice.replace(/,/g, ""));
+      const created = await createProduct(businessId, profileId, {
+        name: newName.trim(),
+        kind: "goods",
+        unit: "piece",
+        salePrice: sale,
+        isPublished: true,
+        initialStock: 1,
+      });
+      if (created.error && !created.product) {
+        setBusy(false);
+        setProgress(null);
+        toast.error(created.error);
+        return;
+      }
+      tagId = created.product?.id ?? null;
+      if (tagId && kind === "image") {
+        const uploaded = await uploadProductImage(businessId, tagId, file);
+        if (uploaded.publicUrl) await updateProductImageUrl(tagId, uploaded.publicUrl);
+      }
+    }
     const hashtags = tags.map((t) => `#${t.replace(/\s+/g, "")}`).join(" ");
-    const fullCaption = [caption.trim(), hashtags].filter(Boolean).join(" ");
+    const fullCaption = [caption.trim() || (makingNew ? newName.trim() : ""), hashtags].filter(Boolean).join(" ");
     const r = await submitStudioVideo({
       businessId,
       profileId,
       file,
       caption: fullCaption,
-      productIds: [productId],
-      products: products.map((p) => ({ id: p.id, business_id: p.business_id })),
+      productIds: tagId ? [tagId] : [],
+      products: products.map((p) => ({ id: p.id, business_id: p.business_id })).concat(
+        tagId && !products.some((p) => p.id === tagId) ? [{ id: tagId, business_id: businessId }] : [],
+      ),
       attribution: "business",
       rightsAttested: true,
       onProgress: (pct, label) => setProgress({ pct, label }),
@@ -323,12 +338,18 @@ export function SellerVideoStudioScreen({
       return;
     }
     haptic("success");
-    toast.success("Posted to For You with Buy Now for this product.");
+    toast.success(
+      tagId
+        ? "Posted. Customers can see it on For You and in your shop."
+        : "Posted to For You.",
+    );
     if (r.videoId) sessionStorage.setItem("tijar-for-you-video-id", r.videoId);
     await queryClient.invalidateQueries({ queryKey: ["video-feed"] });
     await queryClient.invalidateQueries({ queryKey: ["for-you-listings"] });
     await queryClient.invalidateQueries({ queryKey: ["seller-videos"] });
     await queryClient.invalidateQueries({ queryKey: ["marketplace-products"] });
+    await queryClient.invalidateQueries({ queryKey: ["create-products", businessId] });
+    await queryClient.invalidateQueries({ queryKey: ["products-dashboard", businessId] });
     void navigate({ to: "/shop", search: r.videoId ? { v: r.videoId } : {} });
   }
 
@@ -380,19 +401,23 @@ export function SellerVideoStudioScreen({
       >
         {helpOpen ? (
           <div className="mt-2 rounded-2xl border border-[#EEF1F5] bg-[#F8FAF9] p-3 text-[12px] leading-relaxed text-[#4B5563]">
-            Tag one live product. The post goes to For You with Buy Now into checkout. Videos must be {MIN_VIDEO_SEC}–{MAX_VIDEO_SEC} seconds. TIJAR does not collect card numbers here.
+            Add a photo or a short video. Pick something from Products, or type a name and price. When you post, you can save it in Products so it stays in your shop.
           </div>
         ) : null}
 
         {step === "review" ? (
           <ReviewStep
             product={product}
+            newName={newName}
+            newPrice={newPrice}
+            saveToProducts={saveToProducts}
             previewUrl={previewUrl}
             kind={kind}
             caption={caption}
             tags={tags}
             busy={busy}
             progress={progress}
+            onSaveChange={setSaveToProducts}
             onBack={() => setStep("compose")}
             onPublish={() => void publish()}
           />
@@ -404,27 +429,19 @@ export function SellerVideoStudioScreen({
               </span>
               <div>
                 <h1 className="text-[1.35rem] font-extrabold leading-tight tracking-tight text-[#0B1F4D]">
-                  Create Post / Create Video
+                  Create post
                 </h1>
-                <p className="mt-0.5 text-[13px] text-[#6B7280]">Showcase your product and reach global buyers.</p>
+                <p className="mt-0.5 text-[13px] text-[#6B7280]">Photo or video. Pick a product, then post.</p>
               </div>
             </div>
 
             <section className="mt-5" aria-labelledby="product-heading">
               <h2 id="product-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#0B1F4D]">
                 <ShoppingBag className="size-4 text-[#1F7A4D]" />
-                Select Product
+                What are you selling?
               </h2>
               {productsQuery.isLoading ? (
-                <p className="mt-2 text-sm text-muted-foreground">Loading your catalogue…</p>
-              ) : products.length === 0 ? (
-                <div className="mt-2 rounded-2xl border border-dashed border-[#D1D5DB] p-4 text-center">
-                  <p className="text-sm font-bold text-[#0B1F4D]">Add a product first</p>
-                  <p className="mt-1 text-[12px] text-muted-foreground">Posts must sell a SKU from your shop.</p>
-                  <Button className="mt-3 min-h-10 rounded-xl bg-[#0B1F4D] text-white hover:bg-[#0B1F4D]/90" asChild>
-                    <Link to="/app/products/new">Add product</Link>
-                  </Button>
-                </div>
+                <p className="mt-2 text-sm text-muted-foreground">Loading your products…</p>
               ) : product && !picking ? (
                 <div className={cn("mt-2 rounded-2xl border p-3", errors.product ? "border-red-300" : "border-[#EEF1F5]")}>
                   <div className="flex items-center gap-3">
@@ -436,7 +453,9 @@ export function SellerVideoStudioScreen({
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] font-extrabold text-[#0B1F4D]">{product.name}</p>
-                      <p className="text-[12px] text-[#9CA3AF]">SKU: {skuOf(product)}</p>
+                      {product.catalogue_category ? (
+                        <p className="text-[12px] text-[#6B7280]">{product.catalogue_category}</p>
+                      ) : null}
                       {product.sale_price != null ? (
                         <p className="text-[12px] font-semibold text-[#1F7A4D]">{formatNgn(Number(product.sale_price))}</p>
                       ) : null}
@@ -450,39 +469,71 @@ export function SellerVideoStudioScreen({
                     className="mt-2 text-[13px] font-bold text-[#1F7A4D]"
                     onClick={() => setPicking(true)}
                   >
-                    Change Product ›
+                    Change product
                   </button>
                 </div>
               ) : (
-                <ul className="mt-2 space-y-2">
-                  {products.map((p) => (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-2xl border p-3 text-left",
-                          p.id === productId ? "border-[#1F7A4D] bg-[#F3FBF6]" : "border-[#EEF1F5]",
-                        )}
-                        onClick={() => {
-                          setProductId(p.id);
-                          setPicking(false);
-                          setErrors((e) => ({ ...e, product: undefined }));
-                        }}
-                      >
-                        {p.image_url ? (
-                          // eslint-disable-next-line @next-next/no-img-element
-                          <img src={p.image_url} alt="" className="size-14 rounded-xl object-cover" />
-                        ) : (
-                          <span className="size-14 rounded-xl bg-muted" />
-                        )}
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-extrabold text-[#0B1F4D]">{p.name}</span>
-                          <span className="block text-[12px] text-[#9CA3AF]">SKU: {skuOf(p)}</span>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  {products.length > 0 ? (
+                    <ul className="mt-2 space-y-2">
+                      {products.map((p) => (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            className={cn(
+                              "flex w-full items-center gap-3 rounded-2xl border p-3 text-left",
+                              p.id === productId ? "border-[#1F7A4D] bg-[#F3FBF6]" : "border-[#EEF1F5]",
+                            )}
+                            onClick={() => {
+                              setProductId(p.id);
+                              setNewName("");
+                              setNewPrice("");
+                              setPicking(false);
+                              setErrors((e) => ({ ...e, product: undefined }));
+                            }}
+                          >
+                            {p.image_url ? (
+                              // eslint-disable-next-line @next-next/no-img-element
+                              <img src={p.image_url} alt="" className="size-14 rounded-xl object-cover" />
+                            ) : (
+                              <span className="size-14 rounded-xl bg-muted" />
+                            )}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-extrabold text-[#0B1F4D]">{p.name}</span>
+                              <span className="block text-[12px] font-semibold text-[#1F7A4D]">
+                                {p.sale_price != null ? formatNgn(Number(p.sale_price)) : "No price"}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-[13px] text-muted-foreground">No products yet. Add a name and price below.</p>
+                  )}
+                  <div className="mt-3 rounded-2xl border border-dashed border-[#D1D5DB] p-3">
+                    <p className="text-[13px] font-extrabold text-[#0B1F4D]">Or add a new one</p>
+                    <Input
+                      className="mt-2 min-h-11 rounded-xl"
+                      value={newName}
+                      onChange={(e) => {
+                        setNewName(e.target.value);
+                        setProductId(null);
+                      }}
+                      placeholder="Name"
+                    />
+                    <Input
+                      className="mt-2 min-h-11 rounded-xl"
+                      value={newPrice}
+                      inputMode="decimal"
+                      onChange={(e) => {
+                        setNewPrice(e.target.value);
+                        setProductId(null);
+                      }}
+                      placeholder="Price in ₦"
+                    />
+                  </div>
+                </>
               )}
               {errors.product ? <p className="mt-1 text-[12px] font-semibold text-red-600">{errors.product}</p> : null}
             </section>
@@ -490,7 +541,7 @@ export function SellerVideoStudioScreen({
             <section className="mt-5" aria-labelledby="video-heading">
               <h2 id="video-heading" className="flex items-center gap-1.5 text-[15px] font-extrabold text-[#0B1F4D]">
                 <Video className="size-4 text-[#1F7A4D]" />
-                Add Video
+                Photo or video
               </h2>
               <div className={cn("relative mt-2 overflow-hidden rounded-2xl bg-[#111827]", errors.media && "ring-2 ring-red-400")}>
                 {camLive ? (
@@ -578,7 +629,7 @@ export function SellerVideoStudioScreen({
                 <input
                   ref={cameraInputRef}
                   type="file"
-                  accept="video/*"
+                  accept="video/*,image/*"
                   capture="environment"
                   className="sr-only"
                   onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
@@ -588,7 +639,7 @@ export function SellerVideoStudioScreen({
                 <span className="text-[#1F7A4D]" aria-hidden>
                   ↻
                 </span>
-                Direct camera or upload · {MIN_VIDEO_SEC} to {MAX_VIDEO_SEC} seconds
+                    Photo, or a video of {MIN_VIDEO_SEC} to {MAX_VIDEO_SEC} seconds
               </p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {camLive ? (
@@ -727,30 +778,42 @@ export function SellerVideoStudioScreen({
 
 function ReviewStep({
   product,
+  newName,
+  newPrice,
+  saveToProducts,
   previewUrl,
   kind,
   caption,
   tags,
   busy,
   progress,
+  onSaveChange,
   onBack,
   onPublish,
 }: {
   product: Product | null;
+  newName: string;
+  newPrice: string;
+  saveToProducts: boolean;
   previewUrl: string | null;
   kind: "image" | "video" | null;
   caption: string;
   tags: string[];
   busy: boolean;
   progress: { pct: number; label: string } | null;
+  onSaveChange: (next: boolean) => void;
   onBack: () => void;
   onPublish: () => void;
 }) {
+  const listingName = product?.name ?? newName.trim();
+  const isNew = !product && Boolean(newName.trim());
   return (
     <div className="pt-3">
-      <h1 className="text-[1.35rem] font-extrabold text-[#0B1F4D]">Post to marketplace</h1>
+      <h1 className="text-[1.35rem] font-extrabold text-[#0B1F4D]">Ready to post?</h1>
       <p className="mt-1 text-[13px] text-[#6B7280]">
-        This goes live on For You with Buy Now for {product?.name ?? "the tagged product"}.
+        {listingName
+          ? `This goes to For You${product || saveToProducts ? " with Buy now" : ""}.`
+          : "This goes to For You."}
       </p>
       {previewUrl ? (
         kind === "video" ? (
@@ -761,10 +824,33 @@ function ReviewStep({
           <img src={previewUrl} alt="" className="mt-4 aspect-[16/9] w-full rounded-2xl object-cover" />
         )
       ) : null}
-      {product ? (
+      {listingName ? (
         <p className="mt-3 text-sm font-extrabold text-[#0B1F4D]">
-          {product.name} · SKU {skuOf(product)}
+          {listingName}
+          {product?.sale_price != null
+            ? ` · ${formatNgn(Number(product.sale_price))}`
+            : newPrice
+              ? ` · ₦${newPrice}`
+              : ""}
         </p>
+      ) : null}
+      {isNew ? (
+        <label className="mt-4 flex items-start gap-3 rounded-2xl border border-[#EEF1F5] bg-[#F8FAF9] p-3 text-sm text-[#0B1F4D]">
+          <input
+            type="checkbox"
+            className="mt-1 size-4"
+            checked={saveToProducts}
+            onChange={(e) => onSaveChange(e.target.checked)}
+          />
+          <span>
+            <span className="font-extrabold">Save in Products</span>
+            <span className="mt-0.5 block text-[13px] font-medium text-[#6B7280]">
+              Keep name, price, and photo in your business dashboard so it stays in the shop.
+            </span>
+          </span>
+        </label>
+      ) : product ? (
+        <p className="mt-3 text-[13px] text-[#6B7280]">This is already in your Products list.</p>
       ) : null}
       {caption ? <p className="mt-2 text-sm text-[#4B5563]">{caption}</p> : null}
       {tags.length ? (
@@ -788,7 +874,7 @@ function ReviewStep({
           disabled={busy}
           onClick={onPublish}
         >
-          {busy ? "Posting…" : "Post to For You"}
+          {busy ? "Posting…" : "Post"}
         </Button>
       </div>
     </div>

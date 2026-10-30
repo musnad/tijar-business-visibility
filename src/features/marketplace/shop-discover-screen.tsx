@@ -16,10 +16,12 @@ import { useMemo, useState } from "react";
 import { TijarLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppLanguageButton } from "@/features/app-layout/app-language-button";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { ProductCard } from "@/features/marketplace/product-card";
 import { useAuth } from "@/features/auth/auth-context";
 import { haptic } from "@/lib/haptics";
+import { useTranslation } from "@/lib/i18n/context";
 import { AREA_PRESETS } from "@/lib/maps/provider";
 import { cn } from "@/lib/utils";
 import { listBusinessCategories } from "@/services/business-service";
@@ -40,20 +42,21 @@ import type { PublicProduct } from "@/types/database";
 type Tab = "products" | "services" | "sellers" | "categories";
 
 const PRICE_CHIPS = [
-  { id: "any", label: "Any price", min: "", max: "" },
-  { id: "under10", label: "Under ₦10k", min: "", max: "10000" },
-  { id: "mid", label: "₦10k–₦30k", min: "10000", max: "30000" },
-  { id: "premium", label: "₦30k+", min: "30000", max: "" },
-] as const;
+  { id: "any" as const, labelKey: "shop.explore.anyPrice", min: "", max: "" },
+  { id: "under10" as const, labelKey: "shop.explore.under10", min: "", max: "10000" },
+  { id: "mid" as const, labelKey: "shop.explore.mid", min: "10000", max: "30000" },
+  { id: "premium" as const, labelKey: "shop.explore.premium", min: "30000", max: "" },
+];
 
 export function ShopDiscoverScreen() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<Tab>("products");
   const [category, setCategory] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [availableOnly, setAvailableOnly] = useState(true);
+  const [availableOnly, setAvailableOnly] = useState(false);
   const [attribute, setAttribute] = useState("");
   const [centre, setCentre] = useState<{ lat: number; lng: number } | null>(null);
   const [centreLabel, setCentreLabel] = useState("");
@@ -156,26 +159,26 @@ export function ShopDiscoverScreen() {
   function useMyLocation() {
     haptic();
     if (!("geolocation" in navigator)) {
-      setGeoMessage("Location is not available on this device. Pick a city instead.");
+      setGeoMessage(t("shop.explore.noLocation"));
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCentre({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setCentreLabel("Near you");
-        setGeoMessage("Showing shops near this device. Your pin is not published.");
+        setCentreLabel("__near__");
+        setGeoMessage(t("shop.explore.showingNear"));
       },
-      () => setGeoMessage("Location permission denied. Pick a city or browse the full catalogue."),
+      () => setGeoMessage(t("shop.explore.locationDenied")),
       { timeout: 10_000, maximumAge: 300_000 },
     );
   }
 
   const cartCount = cartQuery.data?.reduce((n, i) => n + Number(i.quantity), 0) ?? 0;
   const tabs: { id: Tab; label: string }[] = [
-    { id: "products", label: "Products" },
-    { id: "services", label: "Services" },
-    { id: "sellers", label: "Sellers" },
-    { id: "categories", label: "Categories" },
+    { id: "products", label: t("shop.explore.products") },
+    { id: "services", label: t("shop.explore.services") },
+    { id: "sellers", label: t("shop.explore.sellers") },
+    { id: "categories", label: t("shop.explore.categories") },
   ];
   const activePrice = PRICE_CHIPS.find((c) => c.min === minPrice && c.max === maxPrice)?.id ?? "any";
   const resultCount =
@@ -190,16 +193,19 @@ export function ShopDiscoverScreen() {
             <div className="flex min-w-0 items-center gap-2.5">
               <TijarLogo variant="mark" className="h-8 w-auto shrink-0" />
               <div className="min-w-0">
-                <h1 className="text-[22px] font-extrabold leading-none tracking-tight text-foreground">Explore</h1>
-                <p className="mt-1 truncate text-[11px] font-medium text-muted-foreground">Find products, services and shops</p>
+                <h1 className="text-[22px] font-extrabold leading-none tracking-tight text-foreground">{t("shop.explore.title")}</h1>
+                <p className="mt-1 truncate text-[11px] font-medium text-muted-foreground">{t("shop.explore.find")}</p>
               </div>
             </div>
-            <Button type="button" variant="outline" size="sm" className="min-h-11 rounded-full px-3" asChild>
-              <Link to="/shop/nearby">
-                <MapPin className="mr-1 size-4" />
-                Map
-              </Link>
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <AppLanguageButton />
+              <Button type="button" variant="outline" size="sm" className="min-h-11 rounded-full px-3" asChild>
+                <Link to="/shop/nearby">
+                  <MapPin className="mr-1 size-4" />
+                  {t("shop.explore.map")}
+                </Link>
+              </Button>
+            </div>
           </div>
 
           <div className="px-4 pb-3">
@@ -213,13 +219,13 @@ export function ShopDiscoverScreen() {
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => window.setTimeout(() => setShowSuggestions(false), 180)}
-                placeholder="Search TIJAR"
+                placeholder={t("shop.explore.search")}
                 className="h-11 rounded-full border-border bg-muted/70 pl-10 pr-10"
               />
               {query ? (
                 <button
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t("shop.explore.clearSearch")}
                   className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground"
                   onClick={() => setQuery("")}
                 >
@@ -263,7 +269,7 @@ export function ShopDiscoverScreen() {
             </div>
           </div>
 
-          <nav className="grid grid-cols-4" aria-label="Explore">
+          <nav className="grid grid-cols-4" aria-label={t("shop.explore.title")}>
             {tabs.map((item) => {
               const active = tab === item.id;
               return (
@@ -306,7 +312,7 @@ export function ShopDiscoverScreen() {
                   activePrice === chip.id ? "bg-primary text-white" : "bg-muted text-foreground",
                 )}
               >
-                {chip.label}
+                {t(chip.labelKey)}
               </button>
             ))}
             <button
@@ -317,11 +323,11 @@ export function ShopDiscoverScreen() {
               }}
               className={cn(
                 "inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full px-3.5 text-[12px] font-bold",
-                centreLabel === "Near you" ? "bg-primary text-white" : "bg-muted text-foreground",
+                centreLabel === "__near__" ? "bg-primary text-white" : "bg-muted text-foreground",
               )}
             >
               <MapPin className="size-3.5" />
-              Near me
+              {t("shop.explore.nearMe")}
             </button>
             <button
               type="button"
@@ -335,7 +341,7 @@ export function ShopDiscoverScreen() {
               )}
             >
               <SlidersHorizontal className="size-3.5" />
-              Filters
+              {t("shop.explore.filters")}
             </button>
           </div>
 
@@ -346,7 +352,7 @@ export function ShopDiscoverScreen() {
                 onChange={(e) => setCategory(e.target.value)}
                 className="min-h-11 appearance-none rounded-xl border border-input bg-white px-3 text-sm font-medium"
               >
-                <option value="">All categories</option>
+                <option value="">{t("shop.explore.allCategories")}</option>
                 {categoryNames.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -354,13 +360,13 @@ export function ShopDiscoverScreen() {
                 ))}
               </select>
               <select
-                value={centreLabel === "Near you" ? "" : centreLabel}
+                value={centreLabel === "__near__" ? "" : centreLabel}
                 onChange={(e) => {
                   const preset = AREA_PRESETS.find((a) => a.name === e.target.value);
                   if (preset) {
                     setCentre({ lat: preset.lat, lng: preset.lng });
                     setCentreLabel(preset.name);
-                    setGeoMessage(`Showing shops around ${preset.name}.`);
+                    setGeoMessage(`${t("shop.explore.showingAround")} ${preset.name}.`);
                   } else {
                     setCentre(null);
                     setCentreLabel("");
@@ -369,7 +375,7 @@ export function ShopDiscoverScreen() {
                 }}
                 className="min-h-11 appearance-none rounded-xl border border-input bg-white px-3 text-sm font-medium"
               >
-                <option value="">All areas</option>
+                <option value="">{t("shop.explore.allAreas")}</option>
                 {AREA_PRESETS.map((a) => (
                   <option key={a.name} value={a.name}>
                     {a.name}
@@ -379,12 +385,12 @@ export function ShopDiscoverScreen() {
               <Input
                 value={attribute}
                 onChange={(e) => setAttribute(e.target.value)}
-                placeholder="Size, colour, or detail"
+                placeholder={t("shop.explore.attributePlaceholder")}
                 className="h-11 rounded-xl bg-white"
               />
               <label className="flex min-h-11 items-center gap-2 rounded-xl bg-white px-3 text-sm font-medium">
                 <input type="checkbox" checked={availableOnly} onChange={(e) => setAvailableOnly(e.target.checked)} />
-                In stock only
+                {t("shop.explore.inStock")}
               </label>
             </div>
           ) : null}
@@ -392,9 +398,9 @@ export function ShopDiscoverScreen() {
           {geoMessage ? <p className="px-4 pb-2 text-[11px] text-muted-foreground">{geoMessage}</p> : null}
 
           {tab === "products" && !query && featuredShops.length > 0 ? (
-            <section className="pb-2" aria-label="Shops">
+            <section className="pb-2" aria-label={t("shop.explore.shops")}>
               <div className="flex items-center justify-between px-4 pb-2">
-                <h2 className="text-[13px] font-extrabold tracking-tight">Shops to follow</h2>
+                <h2 className="text-[13px] font-extrabold tracking-tight">{t("shop.explore.shopsToFollow")}</h2>
                 <button
                   type="button"
                   className="text-[12px] font-bold text-primary"
@@ -403,7 +409,7 @@ export function ShopDiscoverScreen() {
                     setTab("sellers");
                   }}
                 >
-                  See all
+                  {t("shop.explore.seeAll")}
                 </button>
               </div>
               <ul className="flex gap-3 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -431,7 +437,9 @@ export function ShopDiscoverScreen() {
           ) : null}
 
           <p className="px-4 pb-2 pt-1 text-[12px] font-semibold text-muted-foreground">
-            {loading ? "Loading catalogue…" : `${resultCount} ${resultCount === 1 ? "result" : "results"}`}
+            {loading
+              ? t("shop.explore.loading")
+              : `${resultCount} ${resultCount === 1 ? t("shop.explore.result") : t("shop.explore.results")}`}
             {category ? ` · ${category}` : ""}
           </p>
 
@@ -453,7 +461,8 @@ export function ShopDiscoverScreen() {
                       <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                     </span>
                     <span className="mt-1 text-[11px] font-semibold text-muted-foreground">
-                      {categoryCounts.get(c) ?? 0} listing{(categoryCounts.get(c) ?? 0) === 1 ? "" : "s"}
+                      {categoryCounts.get(c) ?? 0}{" "}
+                      {(categoryCounts.get(c) ?? 0) === 1 ? t("shop.explore.listing") : t("shop.explore.listings")}
                     </span>
                   </button>
                 </li>
@@ -465,8 +474,8 @@ export function ShopDiscoverScreen() {
             <>
               {filteredProducts.length === 0 && !loading ? (
                 <EmptyExplore
-                  title={tab === "services" ? "No services match" : "No products match"}
-                  body="Try another search, price chip, or clear filters."
+                  title={tab === "services" ? t("shop.explore.noServices") : t("shop.explore.noMatch")}
+                  body={t("shop.explore.tryAnother")}
                 />
               ) : (
                 <ul className="grid grid-cols-2 gap-2.5 px-4 pb-6">
@@ -483,7 +492,7 @@ export function ShopDiscoverScreen() {
           {tab === "sellers" && (
             <>
               {filteredSellers.length === 0 && !loading ? (
-                <EmptyExplore title="No shops match" body="Search a shop name or pick a city in Filters." />
+                <EmptyExplore title={t("shop.explore.noShops")} body={t("shop.explore.noShopsBody")} />
               ) : (
                 <ul className="space-y-2 px-4 pb-6">
                   {filteredSellers.map((shop) => (
@@ -505,13 +514,13 @@ export function ShopDiscoverScreen() {
                           <p className="flex items-center gap-1 font-extrabold">
                             <span className="truncate">{shop.business_name}</span>
                             {shop.is_verified ? (
-                              <BadgeCheck className="size-4 shrink-0 fill-primary text-white" aria-label="Verified" />
+                              <BadgeCheck className="size-4 shrink-0 fill-primary text-white" aria-label={t("shop.explore.verified")} />
                             ) : null}
                           </p>
                           <p className="truncate text-[12px] text-muted-foreground">
-                            {shop.category_name ?? "Marketplace shop"}
+                            {shop.category_name ?? t("shop.explore.marketplaceShop")}
                             {"product_count" in shop && shop.product_count
-                              ? ` · ${shop.product_count} listing${shop.product_count === 1 ? "" : "s"}`
+                              ? ` · ${shop.product_count} ${shop.product_count === 1 ? t("shop.explore.listing") : t("shop.explore.listings")}`
                               : ""}
                           </p>
                           <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground">

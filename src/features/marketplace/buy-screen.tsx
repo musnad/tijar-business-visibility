@@ -20,10 +20,12 @@ import {
 } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/context";
 
 type PayChoice = "transfer" | "flutterwave";
 
 export function BuyScreen({ productId }: { productId?: string }) {
+  const { t } = useTranslation();
   const { profile, session } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -63,7 +65,7 @@ export function BuyScreen({ productId }: { productId?: string }) {
     if (productId && typeof window !== "undefined") {
       sessionStorage.setItem("tijar-after-login", `/shop/buy?productId=${encodeURIComponent(productId)}`);
     }
-    toast.error("Sign in to buy.");
+    toast.error(t("shop.buy.signIn"));
     void navigate({ to: "/login" });
   }
 
@@ -144,20 +146,20 @@ export function BuyScreen({ productId }: { productId?: string }) {
           <button type="button" className="flex size-10 items-center justify-center" onClick={() => history.back()} aria-label="Back">
             <ArrowLeft className="size-5" />
           </button>
-          <h1 className="text-lg font-extrabold text-[#0B1F4D]">Buy</h1>
+          <h1 className="text-lg font-extrabold text-[#0B1F4D]">{t("shop.buy.title")}</h1>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8">
           {!productId ? (
             <p className="text-sm text-muted-foreground">
-              Pick a product first.{" "}
+              {t("shop.buy.pickFirst")}{" "}
               <Link to="/shop" className="font-bold text-primary">
-                Browse
+                {t("shop.buy.browse")}
               </Link>
             </p>
           ) : productQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-muted-foreground">{t("shop.buy.loading")}</p>
           ) : !product ? (
-            <p className="text-sm text-destructive">Product not found.</p>
+            <p className="text-sm text-destructive">{t("shop.buy.notFound")}</p>
           ) : (
             <>
               <div className="flex gap-3 rounded-2xl border border-border p-3">
@@ -174,7 +176,7 @@ export function BuyScreen({ productId }: { productId?: string }) {
                 </div>
               </div>
 
-              <label className="mt-4 block text-sm font-bold">Quantity</label>
+              <label className="mt-4 block text-sm font-bold">{t("shop.buy.quantity")}</label>
               <div className="mt-1 flex items-center gap-2">
                 <Button type="button" variant="outline" className="size-10 rounded-xl p-0" onClick={() => setQty((n) => Math.max(1, n - 1))}>
                   −
@@ -185,22 +187,22 @@ export function BuyScreen({ productId }: { productId?: string }) {
                 </Button>
               </div>
 
-              <p className="mt-4 text-sm font-bold">How you will get it</p>
+              <p className="mt-4 text-sm font-bold">{t("shop.buy.fulfilment")}</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <Button type="button" variant={fulfilment === "pickup" ? "default" : "outline"} className="rounded-xl" onClick={() => setFulfilment("pickup")}>
-                  Pickup
+                  {t("shop.buy.pickup")}
                 </Button>
                 <Button type="button" variant={fulfilment === "seller_delivery" ? "default" : "outline"} className="rounded-xl" onClick={() => setFulfilment("seller_delivery")}>
-                  Delivery
+                  {t("shop.buy.delivery")}
                 </Button>
               </div>
 
-              <label className="mt-4 block text-sm font-bold">Phone</label>
-              <Input className="mt-1 min-h-11 rounded-xl" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="For the seller to reach you" />
-              <label className="mt-3 block text-sm font-bold">Note (optional)</label>
-              <Input className="mt-1 min-h-11 rounded-xl" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Colour, size, pickup time…" />
+              <label className="mt-4 block text-sm font-bold">{t("shop.buy.phone")}</label>
+              <Input className="mt-1 min-h-11 rounded-xl" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("shop.buy.phonePlaceholder")} />
+              <label className="mt-3 block text-sm font-bold">{t("shop.buy.note")}</label>
+              <Input className="mt-1 min-h-11 rounded-xl" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("shop.buy.notePlaceholder")} />
 
-              <p className="mt-5 text-sm font-extrabold text-[#0B1F4D]">Pay how?</p>
+              <p className="mt-5 text-sm font-extrabold text-[#0B1F4D]">{t("shop.buy.payHow")}</p>
               <div className="mt-2 space-y-2">
                 <button
                   type="button"
@@ -212,9 +214,9 @@ export function BuyScreen({ productId }: { productId?: string }) {
                 >
                   <Landmark className="mt-0.5 size-5 text-primary" />
                   <span>
-                    <span className="block text-sm font-extrabold">Transfer to this shop</span>
+                    <span className="block text-sm font-extrabold">{t("shop.buy.transfer")}</span>
                     <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                      Send money straight to the seller’s bank account.
+                      {t("shop.buy.transferHint")}
                     </span>
                   </span>
                 </button>
@@ -228,11 +230,9 @@ export function BuyScreen({ productId }: { productId?: string }) {
                 >
                   <Smartphone className="mt-0.5 size-5 text-primary" />
                   <span>
-                    <span className="block text-sm font-extrabold">Pay online (Flutterwave)</span>
+                    <span className="block text-sm font-extrabold">{t("shop.buy.flutterwave")}</span>
                     <span className="mt-0.5 block text-[12px] text-muted-foreground">
-                      {flutterReady
-                        ? "Card, bank, USSD. TIJAR holds it until the shop requests a payout."
-                        : "Ready as soon as Flutterwave keys are on the server. You can still transfer to the shop."}
+                      {flutterReady ? t("shop.buy.flutterReady") : t("shop.buy.flutterSoon")}
                     </span>
                   </span>
                 </button>
@@ -242,35 +242,35 @@ export function BuyScreen({ productId }: { productId?: string }) {
                 <div className="mt-3 rounded-2xl border border-[#EEF1F5] bg-[#F8FAFC] p-3 text-sm">
                   <p className="flex items-center gap-1.5 font-extrabold text-[#0B1F4D]">
                     <Building2 className="size-4" />
-                    Shop account
+                    {t("shop.buy.shopAccount")}
                   </p>
                   {accountQuery.isLoading ? (
                     <p className="mt-2 text-muted-foreground">Loading account…</p>
                   ) : account?.payout_account_number ? (
                     <dl className="mt-2 space-y-1 text-[13px]">
                       <div className="flex justify-between gap-2">
-                        <dt className="text-muted-foreground">Bank</dt>
+                        <dt className="text-muted-foreground">{t("shop.buy.bank")}</dt>
                         <dd className="font-bold">{account.payout_bank_name}</dd>
                       </div>
                       <div className="flex justify-between gap-2">
-                        <dt className="text-muted-foreground">Account name</dt>
+                        <dt className="text-muted-foreground">{t("shop.buy.accountName")}</dt>
                         <dd className="font-bold">{account.payout_account_name}</dd>
                       </div>
                       <div className="flex justify-between gap-2">
-                        <dt className="text-muted-foreground">Account number</dt>
+                        <dt className="text-muted-foreground">{t("shop.buy.accountNumber")}</dt>
                         <dd className="font-extrabold tracking-wide">{account.payout_account_number}</dd>
                       </div>
                     </dl>
                   ) : (
                     <p className="mt-2 text-[13px] text-muted-foreground">
-                      This shop has not published a bank account. Choose Flutterwave or message the seller.
+                      {t("shop.buy.noAccount")}
                     </p>
                   )}
                 </div>
               ) : null}
 
               <div className="mt-5 flex justify-between text-sm">
-                <span className="text-muted-foreground">Total</span>
+                <span className="text-muted-foreground">{t("shop.buy.total")}</span>
                 <span className="text-lg font-extrabold text-[#0B1F4D]">{formatNgn(total)}</span>
               </div>
               <Button
@@ -279,7 +279,7 @@ export function BuyScreen({ productId }: { productId?: string }) {
                 disabled={busy}
                 onClick={() => void confirm()}
               >
-                {busy ? "Working…" : pay === "flutterwave" ? "Pay with Flutterwave" : "Place order & show transfer"}
+                {busy ? t("shop.buy.working") : pay === "flutterwave" ? t("shop.buy.payFlutter") : t("shop.buy.placeTransfer")}
               </Button>
             </>
           )}

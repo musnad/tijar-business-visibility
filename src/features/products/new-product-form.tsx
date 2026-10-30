@@ -252,7 +252,7 @@ export function NewProductForm({
         return;
       }
 
-      toast.success(t("app.products.saved"), {
+      toast.success(parsed.data.isPublished ? "Saved. Customers can see this in your shop." : t("app.products.saved"), {
         description: product.name,
         icon: <CheckCircle2 className="size-4" />,
       });

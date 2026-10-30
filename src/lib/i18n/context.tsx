@@ -43,10 +43,12 @@ function readStoredTheme(): ThemeMode {
 export function SitePreferencesProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
   const [theme, setThemeState] = useState<ThemeMode>("light");
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setLocaleState(readStoredLocale());
     setThemeState(readStoredTheme());
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -54,9 +56,10 @@ export function SitePreferencesProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = locale;
     document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
     document.documentElement.classList.toggle("dark", theme === "dark");
+    if (!hydrated) return;
     window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [locale, theme]);
+  }, [locale, theme, hydrated]);
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);

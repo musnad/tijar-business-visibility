@@ -35,8 +35,10 @@ export async function submitStudioVideo(input: StudioSubmitInput): Promise<{ err
   const tags = requireShoppingTags(input.productIds);
   if (!tags.ok) return { error: tags.error };
   const owned = input.products.filter((p) => input.productIds.includes(p.id));
-  const guard = assertProductsBelongToBusiness(input.businessId, owned);
-  if (!guard.ok) return { error: guard.error };
+  if (input.productIds.length > 0) {
+    const guard = assertProductsBelongToBusiness(input.businessId, owned);
+    if (!guard.ok) return { error: guard.error };
+  }
 
   const inspected = await inspectShoppingMedia(input.file, { durationHintMs: input.durationHintMs });
   if (!inspected.ok) return { error: inspected.error };
@@ -106,14 +108,16 @@ export async function submitStudioVideo(input: StudioSubmitInput): Promise<{ err
   }
   if (rowErr) return { error: rowErr.message };
 
-  const rows = input.productIds.map((productId, sort_order) => ({
-    video_post_id: id,
-    product_id: productId,
-    sort_order,
-  }));
-  report(82, "Linking product to the marketplace…");
-  const { error: tagErr } = await supabase.from("video_post_products").insert(rows);
-  if (tagErr) return { error: tagErr.message };
+  if (input.productIds.length > 0) {
+    const rows = input.productIds.map((productId, sort_order) => ({
+      video_post_id: id,
+      product_id: productId,
+      sort_order,
+    }));
+    report(82, "Linking product to the marketplace…");
+    const { error: tagErr } = await supabase.from("video_post_products").insert(rows);
+    if (tagErr) return { error: tagErr.message };
+  }
 
   if (goLive && input.productIds.length > 0) {
     await supabase

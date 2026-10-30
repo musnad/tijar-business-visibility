@@ -13,6 +13,7 @@ import { formatNgn } from "@/utils/money";
 import type { PublicProduct } from "@/types/database";
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/context";
 
 export function ProductCard({
   product,
@@ -22,6 +23,7 @@ export function ProductCard({
   compact?: boolean;
 }) {
   const { profile, session } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -81,9 +83,11 @@ export function ProductCard({
             <span className="text-[10px] font-semibold">No photo</span>
           </div>
         )}
-        {product.kind === "service" && (
+        {(product.kind === "service" || product.category_name || product.attributes?.badge) && (
           <span className="absolute left-2 top-2 rounded-full bg-background/95 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary shadow-sm">
-            {serviceLabel(product)}
+            {product.kind === "service"
+              ? serviceLabel(product)
+              : product.attributes?.badge?.trim() || product.category_name}
           </span>
         )}
         <button
@@ -125,7 +129,7 @@ export function ProductCard({
               void navigate({ to: "/shop/buy", search: { productId: product.id } });
             }}
           >
-            Buy now
+            {t("shop.feed.buyNow")}
           </button>
         ) : null}
       </div>

@@ -23,10 +23,12 @@ import type { ReactNode } from "react";
 
 import { TijarLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
+import { AppLanguageButton } from "@/features/app-layout/app-language-button";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
 import { canUseBusinessMode } from "@/lib/account-mode";
 import { haptic } from "@/lib/haptics";
+import { useTranslation } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import { listFollowedPeople, listPeopleFollowers } from "@/lib/shop-social";
 import {
@@ -51,6 +53,7 @@ function Frame({ children }: { children: ReactNode }) {
 }
 
 export function ShopProfileScreen() {
+  const { t } = useTranslation();
   const { profile, session, loading } = useAuth();
 
   const favQuery = useQuery({
@@ -84,44 +87,44 @@ export function ShopProfileScreen() {
     return (
       <Frame>
         <ProfileChrome />
-        <p className="px-4 pt-8 text-center text-sm text-muted-foreground">Loading profile…</p>
+        <p className="px-4 pt-8 text-center text-sm text-muted-foreground">{t("shop.profile.loading")}</p>
       </Frame>
     );
   }
 
   const demo = !session || !profile;
-  const name = demo ? "TIJAR member" : profile.full_name?.trim() || "TIJAR member";
-  const username = demo ? "guest" : handleFromName(name, profile.email);
+  const name = demo ? t("shop.profile.member") : profile.full_name?.trim() || t("shop.profile.member");
+  const username = demo ? t("shop.profile.guest") : handleFromName(name, profile.email);
   const verified = !demo && canUseBusinessMode(profile);
   const followers = listPeopleFollowers(profile?.id).length;
   const following = (followsQuery.data?.length ?? 0) + listFollowedPeople(profile?.id ?? "guest").length;
   const saved = favQuery.data ?? 0;
   const bio = demo
-    ? "Sign in to save shops, orders, and your profile."
-    : profile.bio?.trim() || "Tell shops who you are. Your bio is only shown on your profile.";
+    ? t("shop.profile.guestBio")
+    : profile.bio?.trim() || t("shop.profile.defaultBio");
   const address = addressQuery.data?.find((a) => a.is_default) ?? addressQuery.data?.[0];
   const location = demo
     ? ""
-    : [address?.city, address?.state].filter(Boolean).join(", ") || "Location private";
+    : [address?.city, address?.state].filter(Boolean).join(", ") || t("shop.profile.locationPrivate");
   const photo = demo ? null : profile.avatar_url;
   const notifBadge = unreadQuery.data ?? 0;
 
   const menu: { to: string; label: string; icon: LucideIcon; badge?: number }[] = [
     ...(canUseBusinessMode(profile)
       ? [
-          { to: "/app", label: "Business dashboard", icon: LayoutDashboard },
-          { to: "/shop/studio", label: "AI Marketing Studio", icon: Sparkles },
+          { to: "/app", label: t("shop.profile.dashboard"), icon: LayoutDashboard },
+          { to: "/shop/studio", label: t("shop.profile.studio"), icon: Sparkles },
         ]
       : []),
-    { to: "/app/learn", label: "Learn", icon: BookOpen },
-    { to: "/translate", label: "Translate", icon: Languages },
-    { to: "/shop/orders", label: "My Orders", icon: Package },
-    { to: "/shop/favorites", label: "Saved Products", icon: Heart },
-    { to: "/shop/follows", label: "Following", icon: Building2 },
-    { to: "/shop/followers", label: "Followers", icon: UserRound },
-    { to: "/shop/notifications", label: "Notifications", icon: Bell, badge: notifBadge },
-    { to: "/shop/settings", label: "Settings", icon: Settings },
-    { to: "/shop/help", label: "Help", icon: CircleHelp },
+    { to: "/app/learn", label: t("shop.profile.learn"), icon: BookOpen },
+    { to: "/translate", label: t("shop.profile.translate"), icon: Languages },
+    { to: "/shop/orders", label: t("shop.profile.orders"), icon: Package },
+    { to: "/shop/favorites", label: t("shop.profile.savedProducts"), icon: Heart },
+    { to: "/shop/follows", label: t("shop.profile.following"), icon: Building2 },
+    { to: "/shop/followers", label: t("shop.profile.followers"), icon: UserRound },
+    { to: "/shop/notifications", label: t("shop.profile.notifications"), icon: Bell, badge: notifBadge },
+    { to: "/shop/settings", label: t("shop.profile.settings"), icon: Settings },
+    { to: "/shop/help", label: t("shop.profile.help"), icon: CircleHelp },
   ];
 
   return (
@@ -131,7 +134,7 @@ export function ShopProfileScreen() {
         className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        <section className="flex items-start gap-3 px-4 pt-2" aria-label="Profile">
+        <section className="flex items-start gap-3 px-4 pt-2" aria-label={t("shop.nav.profile")}>
           {photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -156,14 +159,14 @@ export function ShopProfileScreen() {
             <h1 className="flex items-center gap-1.5 text-[22px] font-extrabold leading-tight tracking-tight text-[color:var(--brand-navy,#001B3A)]">
               <span className="truncate">{name}</span>
               {verified ? (
-                <BadgeCheck className="size-5 shrink-0 fill-primary text-white" aria-label="Verified profile" />
+                <BadgeCheck className="size-5 shrink-0 fill-primary text-white" aria-label={t("shop.profile.verified")} />
               ) : null}
             </h1>
             <p className="text-[13px] font-medium text-muted-foreground">@{username}</p>
-            <div className="mt-2.5 grid grid-cols-3 divide-x divide-border" role="group" aria-label="Profile stats">
-              <Stat value={followers} label="Followers" to="/shop/followers" />
-              <Stat value={following} label="Following" to="/shop/follows" />
-              <Stat value={saved} label="Saved" to="/shop/favorites" />
+            <div className="mt-2.5 grid grid-cols-3 divide-x divide-border" role="group" aria-label={t("shop.nav.profile")}>
+              <Stat value={followers} label={t("shop.profile.followers")} to="/shop/followers" />
+              <Stat value={following} label={t("shop.profile.following")} to="/shop/follows" />
+              <Stat value={saved} label={t("shop.profile.saved")} to="/shop/favorites" />
             </div>
           </div>
         </section>
@@ -181,7 +184,7 @@ export function ShopProfileScreen() {
 
         {demo ? (
           <Button className="mx-4 mt-4 min-h-12 w-[calc(100%-2rem)] rounded-full border-2 border-[color:var(--brand-navy,#001B3A)] bg-white font-extrabold text-[color:var(--brand-navy,#001B3A)] hover:bg-muted" asChild>
-            <Link to="/login">Sign in</Link>
+            <Link to="/login">{t("shop.signIn")}</Link>
           </Button>
         ) : (
           <Button
@@ -189,11 +192,11 @@ export function ShopProfileScreen() {
             className="mx-4 mt-4 min-h-12 w-[calc(100%-2rem)] rounded-full border-2 border-[color:var(--brand-navy,#001B3A)] font-extrabold text-[color:var(--brand-navy,#001B3A)]"
             asChild
           >
-            <Link to="/shop/edit-profile">Edit Profile</Link>
+            <Link to="/shop/edit-profile">{t("shop.profile.edit")}</Link>
           </Button>
         )}
 
-        <nav className="mt-4" aria-label="Account">
+        <nav className="mt-4" aria-label={t("shop.profile.account")}>
           <ul>
             {menu.map((item, index) => {
               const Icon = item.icon;
@@ -227,13 +230,17 @@ export function ShopProfileScreen() {
 }
 
 function ProfileChrome() {
+  const { t } = useTranslation();
   return (
-    <header className="shrink-0 px-6 pb-2 pt-[max(0.65rem,env(safe-area-inset-top))] text-center">
-      <Link to="/shop" className="inline-block max-w-[160px]" aria-label="TIJAR home">
+    <header className="relative shrink-0 px-6 pb-2 pt-[max(0.65rem,env(safe-area-inset-top))] text-center">
+      <div className="absolute right-3 top-[max(0.65rem,env(safe-area-inset-top))]">
+        <AppLanguageButton />
+      </div>
+      <Link to="/shop" className="inline-block max-w-[160px]" aria-label={t("shop.profile.home")}>
         <TijarLogo compact className="mx-auto max-w-[160px]" />
       </Link>
       <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-        Global · Trusted · Trade
+        {t("shop.profile.tagline")}
       </p>
     </header>
   );
