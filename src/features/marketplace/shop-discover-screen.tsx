@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
@@ -64,12 +64,17 @@ export function ShopDiscoverScreen() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const productsQuery = useQuery({
+  const productsQuery = useInfiniteQuery({
     queryKey: ["marketplace-products-browse"],
-    queryFn: async () => {
-      const r = await fetchMarketplaceProducts(200);
+    queryFn: async ({ pageParam }) => {
+      const r = await fetchMarketplaceProducts(36, pageParam);
       if (r.error) throw new Error(r.error);
-      return r.data;
+      return r;
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => {
+      if (last.data.length < 36) return undefined;
+      return last.data[last.data.length - 1]?.created_at ?? undefined;
     },
   });
   const shopsQuery = useQuery({
@@ -90,7 +95,19 @@ export function ShopDiscoverScreen() {
     queryFn: async () => (await fetchCart(profile!.id)).items,
   });
 
-  const products = productsQuery.data ?? [];
+  const products = useMemo(() => {
+    const pages = productsQuery.data?.pages ?? [];
+    const seen = new Set<string>();
+    const out: PublicProduct[] = [];
+    for (const page of pages) {
+      for (const product of page.data) {
+        if (seen.has(product.id)) continue;
+        seen.add(product.id);
+        out.push(product);
+      }
+    }
+    return out;
+  }, [productsQuery.data]);
   const shops = shopsQuery.data ?? [];
 
   const categoryNames = useMemo(() => {
@@ -183,7 +200,7 @@ export function ShopDiscoverScreen() {
   const activePrice = PRICE_CHIPS.find((c) => c.min === minPrice && c.max === maxPrice)?.id ?? "any";
   const resultCount =
     tab === "sellers" ? filteredSellers.length : tab === "categories" ? categoryNames.length : filteredProducts.length;
-  const loading = products.length === 0 && (productsQuery.isLoading || shopsQuery.isLoading);
+  const loading = products.length === 0 && (productsQuery.isPending || shopsQuery.isLoading);
 
   return (
     <MarketplaceShell cartCount={cartCount} hideTopBar variant="feed">
@@ -525,13 +542,32 @@ export function ShopDiscoverScreen() {
                   body={t("shop.explore.tryAnother")}
                 />
               ) : (
-                <ul className="grid grid-cols-2 gap-2.5 px-4 pb-6">
-                  {filteredProducts.map((product) => (
-                    <li key={product.id}>
-                      <ProductCard product={product} compact />
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="grid grid-cols-2 gap-2.5 px-4 pb-6">
+                    {loading
+                      ? Array.from({ length: 6 }, (_, i) => (
+                          <li key={`sk-${i}`} className="aspect-square animate-pulse rounded-xl bg-zinc-100" />
+                        ))
+                      : filteredProducts.map((product) => (
+                          <li key={product.id}>
+                            <ProductCard product={product} compact />
+                          </li>
+                        ))}
+                  </ul>
+                  {productsQuery.hasNextPage ? (
+                    <div className="px-4 pb-8">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-11 w-full rounded-full"
+                        disabled={productsQuery.isFetchingNextPage}
+                        onClick={() => void productsQuery.fetchNextPage()}
+                      >
+                        {productsQuery.isFetchingNextPage ? t("shop.explore.loading") : "Load more"}
+                      </Button>
+                    </div>
+                  ) : null}
+                </>
               )}
             </>
           )}

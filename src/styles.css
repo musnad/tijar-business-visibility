@@ -1142,3 +1142,18 @@ html.tijar-android-webview footer[data-site-footer] {
     font-size: 0.875rem;
   }
 }
+
+@keyframes feed-heart {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.55);
+  }
+  40% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}

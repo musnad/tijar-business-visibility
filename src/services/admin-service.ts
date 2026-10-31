@@ -12,8 +12,8 @@ export type AdminTransaction = Transaction & {
 };
 
 export type AdminOrder = MarketplaceOrder & {
-  businesses?: { business_name: string } | null;
-  buyer?: { full_name: string; email: string | null } | null;
+  businesses?: { business_name: string; public_phone?: string | null } | null;
+  buyer?: { full_name: string; email: string | null; phone?: string | null } | null;
 };
 
 export type AdminPayment = {
@@ -63,6 +63,10 @@ export async function reviewBusinessUpgrade(
   return { error: error?.message ?? null };
 }
 
+export type AdminBusiness = Business & {
+  owner?: { full_name: string | null; phone: string | null; email: string | null } | null;
+};
+
 export async function fetchAdminProfiles(): Promise<{
   profiles: Profile[];
   error: string | null;
@@ -72,23 +76,29 @@ export async function fetchAdminProfiles(): Promise<{
     .from("profiles")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(500);
-  if (error) return { profiles: [], error: error.message };
+    .limit(800);
+  if (error) {
+    const fallback = await supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(800);
+    if (fallback.error) return { profiles: [], error: fallback.error.message };
+    return { profiles: (fallback.data ?? []) as Profile[], error: null };
+  }
   return { profiles: (data ?? []) as Profile[], error: null };
 }
 
 export async function fetchAdminBusinesses(): Promise<{
-  businesses: Business[];
+  businesses: AdminBusiness[];
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
+  const joined = await supabase
     .from("businesses")
-    .select("*")
+    .select("*, owner:profiles!businesses_owner_id_fkey(full_name, phone, email)")
     .order("updated_at", { ascending: false })
-    .limit(500);
+    .limit(800);
+  if (!joined.error) return { businesses: (joined.data ?? []) as AdminBusiness[], error: null };
+  const { data, error } = await supabase.from("businesses").select("*").order("updated_at", { ascending: false }).limit(800);
   if (error) return { businesses: [], error: error.message };
-  return { businesses: (data ?? []) as Business[], error: null };
+  return { businesses: (data ?? []) as AdminBusiness[], error: null };
 }
 
 export async function fetchAdminOrders(): Promise<{
@@ -98,7 +108,7 @@ export async function fetchAdminOrders(): Promise<{
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from("orders")
-    .select("*, businesses(business_name), buyer:profiles!orders_buyer_profile_id_fkey(full_name, email)")
+    .select("*, businesses(business_name, public_phone), buyer:profiles!orders_buyer_profile_id_fkey(full_name, email, phone)")
     .order("created_at", { ascending: false })
     .limit(400);
   if (error) {
@@ -165,6 +175,39 @@ export async function setBusinessVerification(
   }
   const { error } = await supabase.from("businesses").update(patch).eq("id", businessId);
   return { error: error?.message ?? null };
+}
+
+export async function approveAllBusinesses(): Promise<{
+  applications: number;
+  shops: number;
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc("admin_approve_all_businesses");
+  if (!error) {
+    const row = (data ?? {}) as { applications?: number; shops?: number };
+    return { applications: Number(row.applications ?? 0), shops: Number(row.shops ?? 0), error: null };
+  }
+  if (!/schema cache|could not find the function|does not exist/i.test(error.message)) {
+    return { applications: 0, shops: 0, error: error.message };
+  }
+
+  const pending = await fetchAdminUpgradeRequests();
+  let applications = 0;
+  for (const req of pending.requests.filter((r) => r.status === "pending")) {
+    const r = await reviewBusinessUpgrade(req.id, true, "Approved in bulk");
+    if (!r.error) applications += 1;
+  }
+  const shops = await fetchAdminBusinesses();
+  let approved = 0;
+  for (const biz of shops.businesses) {
+    if (biz.moderation_status === "suspended") continue;
+    const r = await setBusinessVerification(biz.id, "verified");
+    if (r.error) continue;
+    if (!biz.is_published) await setBusinessPublished(biz.id, true);
+    approved += 1;
+  }
+  return { applications, shops: approved, error: null };
 }
 
 export async function setBusinessPublished(

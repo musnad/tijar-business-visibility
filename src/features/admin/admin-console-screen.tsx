@@ -16,6 +16,7 @@ import {
   Building2,
   ClipboardList,
   Download,
+  Phone,
   Percent,
   Search,
   ShieldCheck,
@@ -49,6 +50,7 @@ import {
 } from "@/lib/admin";
 import { cn } from "@/lib/utils";
 import {
+  approveAllBusinesses,
   fetchAdminBusinesses,
   fetchAdminOrders,
   fetchAdminPayments,
@@ -59,12 +61,13 @@ import {
   setBusinessPublished,
   setBusinessVerification,
   shopName,
+  type AdminBusiness,
   type AdminOrder,
   type AdminTransaction,
   type KycStatus,
 } from "@/services/admin-service";
 import { fetchMyPlatformRoles, setListingModeration } from "@/services/discover-service";
-import type { Business, Profile } from "@/types/database";
+import type { Profile } from "@/types/database";
 import { formatNgn, formatNgnCompact } from "@/utils/money";
 
 type Tab =
@@ -165,6 +168,25 @@ function EmptyState({ title, body }: { title: string; body: string }) {
   );
 }
 
+function recordedPhone(...candidates: Array<string | null | undefined>): string | null {
+  for (const value of candidates) {
+    const phone = value?.trim();
+    if (phone) return phone;
+  }
+  return null;
+}
+
+function PhoneLink({ phone }: { phone?: string | null }) {
+  const value = recordedPhone(phone);
+  if (!value) return <span className="text-muted-foreground">No phone</span>;
+  return (
+    <a href={`tel:${value.replace(/\s+/g, "")}`} className="inline-flex items-center gap-1 font-semibold tabular-nums text-primary">
+      <Phone className="size-3.5" />
+      {value}
+    </a>
+  );
+}
+
 export function AdminConsoleScreen() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
@@ -173,6 +195,7 @@ export function AdminConsoleScreen() {
   const [userKind, setUserKind] = useState<"all" | AccountCategory>("all");
   const [ratePct, setRatePct] = useState(DEFAULT_PLATFORM_COMMISSION_RATE * 100);
   const [notesById, setNotesById] = useState<Record<string, string>>({});
+  const [approvingAll, setApprovingAll] = useState(false);
   const commissionRate = Math.max(0, ratePct) / 100;
 
   const rolesQuery = useQuery({
@@ -346,6 +369,19 @@ export function AdminConsoleScreen() {
     return notesById[id] ?? "";
   }
 
+  async function approveEverything() {
+    if (approvingAll) return;
+    if (!window.confirm("Approve every pending application and live every shop that is not suspended?")) return;
+    setApprovingAll(true);
+    const r = await approveAllBusinesses();
+    setApprovingAll(false);
+    if (r.error) toast.error(r.error);
+    else {
+      toast.success(`Approved ${r.applications} applications and ${r.shops} shops.`);
+      void refreshAll();
+    }
+  }
+
   if (rolesQuery.isLoading && !isTijarSuperAdminEmail(profile?.email)) {
     return <p className="mt-8 text-muted-foreground">Checking admin access…</p>;
   }
@@ -374,11 +410,11 @@ export function AdminConsoleScreen() {
   function exportUsers() {
     downloadAdminCsv(
       `tijar-users-${stamp()}.csv`,
-      ["Name", "Email", "Phone", "Category", "Account mode", "Onboarding", "Spend", "Business making", "Commission", "Joined"],
+      ["Name", "Email", "User phone", "Category", "Account mode", "Onboarding", "Spend", "Business making", "Commission", "Joined"],
       userLedger.map(({ user, kind, spend, making, commission }) => [
         user.full_name,
         user.email,
-        user.phone,
+        recordedPhone(user.phone) ?? "",
         categoryLabel(kind),
         user.account_mode ?? "business",
         user.onboarding_status,
@@ -394,11 +430,13 @@ export function AdminConsoleScreen() {
   function exportBusinesses() {
     downloadAdminCsv(
       `tijar-businesses-${stamp()}.csv`,
-      ["Business", "Owner id", "Phone", "KYC", "Listing", "Published", "Ledger sales", "Marketplace sales", "Gross", "Commission", "Net"],
+      ["Business", "Owner", "Owner phone", "Shop phone", "WhatsApp", "KYC", "Listing", "Published", "Ledger sales", "Marketplace sales", "Gross", "Commission", "Net"],
       businessLedger.map(({ biz, ledger, market, gross, commission, net }) => [
         biz.business_name,
-        biz.owner_id,
-        biz.public_phone,
+        biz.owner?.full_name ?? biz.owner_id,
+        recordedPhone(biz.owner?.phone) ?? "",
+        recordedPhone(biz.public_phone, biz.owner?.phone) ?? "",
+        recordedPhone(biz.public_whatsapp, biz.public_phone) ?? "",
         biz.verification_status,
         biz.moderation_status,
         biz.is_published ? "yes" : "no",
@@ -436,7 +474,7 @@ export function AdminConsoleScreen() {
       orders.map((order) => [
         order.order_number,
         order.buyer?.full_name,
-        order.buyer?.email ?? order.buyer_phone,
+        recordedPhone(order.buyer?.phone, order.buyer_phone) ?? order.buyer?.email,
         shopName(order),
         order.status,
         order.sale_transaction_id ? "confirmed_sale" : order.buyer_marked_paid_at ? "buyer_paid_now" : order.payment_method,
@@ -470,7 +508,7 @@ export function AdminConsoleScreen() {
   const q = query.trim();
   const kycRows = businesses.filter((b) =>
     matchesQuery(
-      [b.business_name, b.public_phone, b.location, b.verification_status, b.moderation_status].join(" "),
+      [b.business_name, b.public_phone, b.public_whatsapp, b.owner?.phone, b.owner?.full_name, b.location, b.verification_status, b.moderation_status].join(" "),
       q,
     ),
   );
@@ -480,14 +518,14 @@ export function AdminConsoleScreen() {
     return matchesQuery([user.full_name, user.email, user.phone, user.account_mode, kind].join(" "), q);
   });
   const bizFinanceRows = businessLedger.filter(({ biz }) =>
-    matchesQuery([biz.business_name, biz.public_phone, biz.location, biz.public_slug].join(" "), q),
+    matchesQuery([biz.business_name, biz.public_phone, biz.public_whatsapp, biz.owner?.phone, biz.owner?.full_name, biz.location, biz.public_slug].join(" "), q),
   );
   const txRows = transactions.filter((t) =>
     matchesQuery([shopName(t), t.type, t.description, t.payment_method].join(" "), q),
   );
   const orderRows = orders.filter((o) =>
     matchesQuery(
-      [o.order_number, shopName(o), o.status, o.buyer?.full_name, o.buyer?.email, o.buyer_phone].join(" "),
+      [o.order_number, shopName(o), o.status, o.buyer?.full_name, o.buyer?.email, o.buyer?.phone, o.buyer_phone, o.businesses?.public_phone].join(" "),
       q,
     ),
   );
@@ -501,9 +539,19 @@ export function AdminConsoleScreen() {
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight lg:text-3xl">Admin console</h1>
             <p className="mt-1 text-sm text-white/85">{profile?.email ?? TIJAR_SUPER_ADMIN_EMAIL}</p>
           </div>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wide">
-            Super admin
-          </span>
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <span className="self-end rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wide">
+              Super admin
+            </span>
+            <Button
+              className="rounded-full bg-white font-extrabold text-primary hover:bg-white/90"
+              disabled={approvingAll}
+              onClick={() => void approveEverything()}
+            >
+              <BadgeCheck className="mr-1.5 size-4" />
+              {approvingAll ? "Approving…" : "Approve all businesses"}
+            </Button>
+          </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
           <Kpi icon={Users} label="Users" value={String(stats.users)} hint={`${stats.newUsersToday} today`} />
@@ -707,9 +755,18 @@ export function AdminConsoleScreen() {
 
       {tab === "kyc" && (
         <section className="mt-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Approve business identity (KYC). Queue first, then every shop.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              Approve shops one by one, or clear the whole queue.
+            </p>
+            <Button
+              className="rounded-xl font-bold"
+              disabled={approvingAll || stats.pendingKyc + stats.pendingApps === 0}
+              onClick={() => void approveEverything()}
+            >
+              {approvingAll ? "Approving…" : `Approve all (${stats.pendingKyc + stats.pendingApps})`}
+            </Button>
+          </div>
           {kycQueue.length === 0 && q === "" && (
             <EmptyState title="No KYC waiting" body="Submitted and in-review businesses will appear here." />
           )}
@@ -734,6 +791,16 @@ export function AdminConsoleScreen() {
 
       {tab === "applications" && (
         <ul className="mt-4 space-y-3">
+          <li className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
+            <p className="text-sm font-semibold">Pending applications: {stats.pendingApps}</p>
+            <Button
+              className="rounded-xl font-bold"
+              disabled={approvingAll || stats.pendingApps === 0}
+              onClick={() => void approveEverything()}
+            >
+              {approvingAll ? "Approving…" : "Approve all applications"}
+            </Button>
+          </li>
           {upgrades.filter((r) => matchesQuery([r.business_name, r.phone, r.city, r.status].join(" "), q)).length === 0 && (
             <EmptyState title="No applications" body="Customer requests to open a business account land here." />
           )}
@@ -745,7 +812,13 @@ export function AdminConsoleScreen() {
                   <div>
                     <p className="font-extrabold">{req.business_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {[req.street, req.city, req.state].filter(Boolean).join(", ")} · {req.phone}
+                      {[req.street, req.city, req.state].filter(Boolean).join(", ") || "No address"}
+                    </p>
+                    <p className="mt-1 text-sm">
+                      <PhoneLink phone={req.phone} />
+                      {req.whatsapp && req.whatsapp !== req.phone ? (
+                        <span className="ml-2 text-xs text-muted-foreground">WhatsApp {req.whatsapp}</span>
+                      ) : null}
                     </p>
                     {req.description ? <p className="mt-2 text-sm">{req.description}</p> : null}
                   </div>
@@ -799,17 +872,23 @@ export function AdminConsoleScreen() {
       {tab === "businesses" && (
         <AdminTable
           empty="No businesses yet."
-          headers={["Business", "Making", "Commission", "Net", "KYC", "Listing", "Actions"]}
+          headers={["Business", "Shop phone", "Owner phone", "Making", "KYC", "Listing", "Actions"]}
         >
-          {bizFinanceRows.map(({ biz, gross, commission, net }) => (
+          {bizFinanceRows.map(({ biz, gross }) => (
             <tr key={biz.id} className="border-t border-border align-top">
               <td className="px-3 py-3">
                 <p className="font-semibold">{biz.business_name}</p>
-                <p className="text-[11px] text-muted-foreground">{biz.public_phone ?? "—"} · {biz.public_location_label ?? biz.location ?? "—"}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {biz.owner?.full_name ?? "Owner"} · {biz.public_location_label ?? biz.location ?? "—"}
+                </p>
+              </td>
+              <td className="px-3 py-3">
+                <PhoneLink phone={recordedPhone(biz.public_phone, biz.public_whatsapp, biz.owner?.phone)} />
+              </td>
+              <td className="px-3 py-3">
+                <PhoneLink phone={recordedPhone(biz.owner?.phone, biz.public_phone)} />
               </td>
               <td className="px-3 py-3 font-extrabold tabular-nums">{formatNgn(gross)}</td>
-              <td className="px-3 py-3 tabular-nums text-muted-foreground">{formatNgn(commission)}</td>
-              <td className="px-3 py-3 font-semibold tabular-nums">{formatNgn(net)}</td>
               <td className="px-3 py-3">
                 <StatusPill label={biz.verification_status} tone={kycTone(biz.verification_status)} />
               </td>
@@ -821,6 +900,22 @@ export function AdminConsoleScreen() {
               </td>
               <td className="px-3 py-3">
                 <div className="flex flex-wrap gap-1.5">
+                  {biz.verification_status !== "verified" ? (
+                    <Button
+                      size="sm"
+                      className="h-8 rounded-lg text-xs"
+                      onClick={async () => {
+                        const { error } = await setBusinessVerification(biz.id, "verified");
+                        if (error) toast.error(error);
+                        else {
+                          toast.success("Shop approved");
+                          void refreshAll();
+                        }
+                      }}
+                    >
+                      Approve
+                    </Button>
+                  ) : null}
                   <Button
                     size="sm"
                     variant="outline"
@@ -876,7 +971,7 @@ export function AdminConsoleScreen() {
               </button>
             ))}
           </div>
-          <AdminTable empty="No users in this category." headers={["Name", "Category", "Spend", "Business making", "Email", "Joined"]}>
+          <AdminTable empty="No users in this category." headers={["Name", "Phone", "Category", "Spend", "Making", "Joined"]}>
             {userRows.map((row) => (
               <UserRow key={row.user.id} row={row} />
             ))}
@@ -982,7 +1077,10 @@ function UserRow({
     <tr className="border-t border-border">
       <td className="px-3 py-2.5">
         <p className="font-semibold">{user.full_name || "—"}</p>
-        <p className="text-[11px] text-muted-foreground">{user.phone ?? "—"}</p>
+        <p className="text-[11px] text-muted-foreground">{user.email ?? "—"}</p>
+      </td>
+      <td className="px-3 py-2.5">
+        <PhoneLink phone={user.phone} />
       </td>
       <td className="px-3 py-2.5">
         <StatusPill
@@ -992,7 +1090,6 @@ function UserRow({
       </td>
       <td className="px-3 py-2.5 font-extrabold tabular-nums">{formatNgn(spend)}</td>
       <td className="px-3 py-2.5 tabular-nums">{formatNgn(making)}</td>
-      <td className="px-3 py-2.5 text-muted-foreground">{user.email ?? "—"}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{formatWhen(user.created_at)}</td>
     </tr>
   );
@@ -1020,7 +1117,8 @@ function OrderRow({ order, rate }: { order: AdminOrder; rate: number }) {
       <td className="px-3 py-2.5 font-semibold">{order.order_number}</td>
       <td className="px-3 py-2.5">
         <p>{order.buyer?.full_name ?? "Buyer"}</p>
-        <p className="text-[11px] text-muted-foreground">{order.buyer?.email ?? order.buyer_phone ?? "—"}</p>
+        <p className="text-[11px] text-muted-foreground">{order.buyer?.email ?? "—"}</p>
+        <p className="text-[11px]"><PhoneLink phone={recordedPhone(order.buyer?.phone, order.buyer_phone)} /></p>
       </td>
       <td className="px-3 py-2.5">{shopName(order)}</td>
       <td className="px-3 py-2.5">
@@ -1058,7 +1156,7 @@ function KycCard({
   onNotes,
   onAction,
 }: {
-  biz: Business;
+  biz: AdminBusiness;
   notes: string;
   onNotes: (value: string) => void;
   onAction: (status: KycStatus) => Promise<void>;
@@ -1069,7 +1167,13 @@ function KycCard({
         <div className="min-w-0">
           <p className="font-extrabold">{biz.business_name}</p>
           <p className="text-xs text-muted-foreground">
-            {biz.public_phone ?? "No phone"} · {biz.public_location_label ?? biz.location ?? "No location"}
+            {biz.owner?.full_name ?? "Owner"} · {biz.public_location_label ?? biz.location ?? "No location"}
+          </p>
+          <p className="mt-1 text-sm">
+            Shop <PhoneLink phone={recordedPhone(biz.public_phone, biz.public_whatsapp, biz.owner?.phone)} />
+          </p>
+          <p className="text-sm">
+            Owner <PhoneLink phone={recordedPhone(biz.owner?.phone, biz.public_phone)} />
           </p>
           {biz.description ? <p className="mt-2 line-clamp-2 text-sm">{biz.description}</p> : null}
           {biz.moderation_notes ? (

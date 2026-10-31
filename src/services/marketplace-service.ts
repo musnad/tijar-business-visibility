@@ -49,16 +49,18 @@ const MARKETPLACE_PRODUCT_SELECT =
 const MARKETPLACE_PRODUCT_SELECT_LEGACY =
   "id, business_id, name, kind, description, sale_price, unit, image_url, is_available";
 
-export async function fetchMarketplaceProducts(limit = 120): Promise<{
+export async function fetchMarketplaceProducts(limit = 48, before?: string | null): Promise<{
   data: PublicProduct[];
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  let { data, error } = await supabase
+  let query = supabase
     .from("public_business_products")
     .select(MARKETPLACE_PRODUCT_SELECT)
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (before) query = query.lt("created_at", before);
+  let { data, error } = await query;
   if (error && /created_at/i.test(error.message)) {
     const retry = await supabase
       .from("public_business_products")
@@ -778,6 +780,7 @@ export async function requestBusinessUpgrade(input: {
   note?: string;
 }): Promise<{ error: string | null }> {
   const supabase = getSupabaseBrowserClient();
+  const phone = input.phone.trim();
   const { error } = await supabase.from("business_upgrade_requests").insert({
     profile_id: input.profileId,
     business_name: input.businessName.trim(),
@@ -787,7 +790,7 @@ export async function requestBusinessUpgrade(input: {
     street: input.street.trim(),
     city: input.city.trim(),
     state: input.state.trim(),
-    phone: input.phone.trim(),
+    phone,
     whatsapp: input.whatsapp?.trim() || null,
     shop_image_url: input.shopImageUrl,
     latitude: input.latitude ?? null,
@@ -796,6 +799,9 @@ export async function requestBusinessUpgrade(input: {
     note: input.note?.trim() || null,
     status: "pending",
   });
+  if (!error && phone) {
+    await supabase.from("profiles").update({ phone }).eq("id", input.profileId).is("phone", null);
+  }
   return { error: error?.message ?? null };
 }
 

@@ -80,25 +80,30 @@ export function resolveCoverSrc(coverPath: string | null): string | null {
   return supabase.storage.from("business-videos").getPublicUrl(coverPath).data.publicUrl;
 }
 
-export async function fetchPublicVideoFeed(): Promise<{
+export const FEED_PAGE_SIZE = 12;
+
+export async function fetchPublicVideoFeed(opts?: {
+  limit?: number;
+  before?: string | null;
+}): Promise<{
   videos: PublicFeedVideo[];
   error: string | null;
 }> {
+  const limit = opts?.limit ?? FEED_PAGE_SIZE;
+  const before = opts?.before ?? null;
   const supabase = getSupabaseBrowserClient();
-  const fromView = await supabase
-    .from("public_video_feed")
-    .select("*")
-    .order("published_at", { ascending: false })
-    .limit(80);
+  let query = supabase.from("public_video_feed").select("*").order("published_at", { ascending: false }).limit(limit);
+  if (before) query = query.lt("published_at", before);
+  const fromView = await query;
   if (!fromView.error && (fromView.data?.length ?? 0) > 0) {
     return { videos: await attachShopNames((fromView.data ?? []) as PublicFeedVideo[]), error: null };
   }
   if (fromView.error && !/schema cache|column|media_kind|does not exist/i.test(fromView.error.message)) {
-    const fallback = await loadFeedFromPosts();
+    const fallback = await loadFeedFromPosts(undefined, limit, before);
     if (fallback.videos.length > 0) return fallback;
     return { videos: [], error: fromView.error.message };
   }
-  const fallback = await loadFeedFromPosts();
+  const fallback = await loadFeedFromPosts(undefined, limit, before);
   if (fallback.videos.length > 0) return fallback;
   return { videos: await attachShopNames((fromView.data ?? []) as PublicFeedVideo[]), error: null };
 }
@@ -119,7 +124,11 @@ export async function fetchPostsForBusiness(businessId: string): Promise<PublicF
   return fallback.videos;
 }
 
-async function loadFeedFromPosts(businessId?: string): Promise<{ videos: PublicFeedVideo[]; error: string | null }> {
+async function loadFeedFromPosts(
+  businessId?: string,
+  limit = 80,
+  before?: string | null,
+): Promise<{ videos: PublicFeedVideo[]; error: string | null }> {
   const supabase = getSupabaseBrowserClient();
   let query = supabase
     .from("video_posts")
@@ -128,7 +137,8 @@ async function loadFeedFromPosts(businessId?: string): Promise<{ videos: PublicF
     )
     .eq("status", "ready")
     .order("created_at", { ascending: false })
-    .limit(80);
+    .limit(limit);
+  if (before) query = query.lt("created_at", before);
   if (businessId) query = query.eq("business_id", businessId);
   const posts = await query;
   let rows = posts.data;
@@ -140,7 +150,8 @@ async function loadFeedFromPosts(businessId?: string): Promise<{ videos: PublicF
       )
       .eq("status", "ready")
       .order("created_at", { ascending: false })
-      .limit(80);
+      .limit(limit);
+    if (before) retryQuery = retryQuery.lt("created_at", before);
     if (businessId) retryQuery = retryQuery.eq("business_id", businessId);
     const retry = await retryQuery;
     if (retry.error) return { videos: [], error: retry.error.message };
@@ -250,12 +261,24 @@ export async function fetchFeedViewerSignals(profileId: string | null): Promise<
   };
 }
 
-export async function rankAndLoadFeed(profileId: string | null): Promise<{
+export async function rankAndLoadFeed(
+  profileId: string | null,
+  opts?: { limit?: number; before?: string | null },
+): Promise<{
   videos: PublicFeedVideo[];
+  nextCursor: string | null;
   error: string | null;
 }> {
-  const raw = await fetchPublicVideoFeed();
-  if (raw.error) return raw;
+  const limit = opts?.limit ?? FEED_PAGE_SIZE;
+  const raw = await fetchPublicVideoFeed({ limit, before: opts?.before ?? null });
+  if (raw.error) return { videos: [], nextCursor: null, error: raw.error };
+  const last = raw.videos[raw.videos.length - 1];
+  const nextCursor = raw.videos.length >= limit ? (last?.published_at ?? last?.created_at ?? null) : null;
+
+  if (opts?.before) {
+    return { videos: raw.videos, nextCursor, error: null };
+  }
+
   const signals = await fetchFeedViewerSignals(profileId);
   const productIds = [...new Set(raw.videos.flatMap((v) => v.product_ids ?? []))];
   const live = await fetchLiveProductsByIds(productIds);
@@ -294,7 +317,7 @@ export async function rankAndLoadFeed(profileId: string | null): Promise<{
     ranked.filter((r) => r.score > -1000).map((r) => r.videoId),
     byId,
   );
-  return { videos: ordered.map((id) => byId.get(id)!).filter(Boolean), error: null };
+  return { videos: ordered.map((id) => byId.get(id)!).filter(Boolean), nextCursor, error: null };
 }
 
 export async function fetchLiveProductsByIds(ids: string[]): Promise<{

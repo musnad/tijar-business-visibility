@@ -1,6 +1,11 @@
+import { lazy, Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { VideoCreateScreen } from "@/features/marketplace/video-create-screen";
+import { RouteFallback } from "@/components/route-fallback";
+
+const VideoCreateScreen = lazy(() =>
+  import("@/features/marketplace/video-create-screen").then((m) => ({ default: m.VideoCreateScreen })),
+);
 
 export const Route = createFileRoute("/shop/create")({
   validateSearch: (s: Record<string, unknown>) => {
@@ -16,5 +21,9 @@ export const Route = createFileRoute("/shop/create")({
 
 function CreatePage() {
   const { camera, productId } = Route.useSearch();
-  return <VideoCreateScreen openCamera={camera} productId={productId} />;
+  return (
+    <Suspense fallback={<RouteFallback />}>
+      <VideoCreateScreen openCamera={camera} productId={productId} />
+    </Suspense>
+  );
 }

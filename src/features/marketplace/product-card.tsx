@@ -13,6 +13,7 @@ import { formatNgn } from "@/utils/money";
 import type { PublicProduct } from "@/types/database";
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
 import { displayShopName, shopLinkSlug } from "@/lib/shop-names";
+import { FeedImage } from "@/components/media/feed-image";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -65,18 +66,17 @@ export function ProductCard({
       to="/shop/p/$productId"
       params={{ productId: product.id }}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(15,40,50,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md",
+        "group relative flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgba(15,40,50,0.04)] will-change-transform transition-transform duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md",
         compact && "rounded-xl",
       )}
     >
       <div className={cn("relative overflow-hidden bg-muted", compact ? "aspect-[4/3]" : "aspect-square")}>
         {product.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <FeedImage
             src={product.image_url}
             alt=""
-            className="size-full object-cover transition duration-300 group-hover:scale-[1.03]"
-            loading="lazy"
+            width={compact ? 360 : 480}
+            className="size-full object-cover will-change-transform transition-transform duration-300 group-hover:scale-[1.03]"
           />
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-1 bg-[linear-gradient(145deg,oklch(0.96_0.02_175),oklch(0.93_0.03_195))] text-muted-foreground">

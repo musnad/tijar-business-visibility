@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   BadgeCheck,
@@ -15,7 +15,17 @@ import {
   ShoppingBag,
   ShoppingCart,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +44,8 @@ import { addToCart, fetchCart, fetchMarketplaceProducts, toggleFavoriteProduct }
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
 import { parseVariantList } from "@/lib/catalogue/variants";
 import { TijarLogo } from "@/components/brand-logo";
+import { FeedImage } from "@/components/media/feed-image";
+import { FeedSkeleton } from "@/features/marketplace/feed-skeleton";
 import { AppLanguageButton } from "@/features/app-layout/app-language-button";
 import { useTranslation } from "@/lib/i18n/context";
 import {
@@ -45,6 +57,7 @@ import {
   fetchVideoComments,
   muteProfile,
   postVideoComment,
+  FEED_PAGE_SIZE,
   rankAndLoadFeed,
   recordFeedSignal,
   reportVideo,
@@ -66,10 +79,45 @@ import { useStartShopChat } from "@/features/marketplace/use-start-shop-chat";
 
 type FeedTab = "foryou" | "following" | "nearby";
 
-const MUTE_KEY = "tijar-feed-muted";
 const POSITION_KEY = "tijar-for-you-video-id";
 const DATA_SAVER_KEY = "tijar-feed-data-saver";
 const EMPTY_VIDEOS: PublicFeedVideo[] = [];
+const EMPTY_PRODUCTS: PublicProduct[] = [];
+const SLIDE_STYLE = {
+  contentVisibility: "auto" as const,
+  containIntrinsicSize: "auto 820px",
+};
+
+type FeedActions = {
+  onLike: (video: PublicFeedVideo) => void;
+  onSave: (video: PublicFeedVideo) => void;
+  onFollowShop: (businessId: string, businessName: string) => void;
+  onShare: (video: PublicFeedVideo) => void;
+  onOpenProducts: (videoId: string) => void;
+  onOpenComments: (videoId: string) => void;
+  onMore: (videoId: string) => void;
+  onEnded: (videoId: string) => void;
+  onAddProduct: (video: PublicFeedVideo | null, product: PublicProduct) => void;
+  onTogglePause: () => void;
+};
+
+const FeedActionsContext = createContext<FeedActions | null>(null);
+
+function useFeedActions(): FeedActions {
+  const ctx = useContext(FeedActionsContext);
+  if (!ctx) throw new Error("FeedActionsContext missing");
+  return ctx;
+}
+
+function productsForVideo(
+  video: PublicFeedVideo,
+  productsById: Map<string, PublicProduct>,
+  listingsByBusiness: Map<string, PublicProduct[]>,
+): PublicProduct[] {
+  const tagged = (video.product_ids ?? []).map((id) => productsById.get(id)).filter(Boolean) as PublicProduct[];
+  if (tagged.length > 0) return tagged;
+  return listingsByBusiness.get(video.business_id) ?? EMPTY_PRODUCTS;
+}
 
 function compactCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
@@ -125,11 +173,7 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   const queryClient = useQueryClient();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [activeId, setActiveId] = useState<string | null>(initialVideoId ?? null);
-  const [muted, setMuted] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.localStorage.getItem(MUTE_KEY) !== "0";
-  });
-  const [dataSaver, setDataSaver] = useState(() => {
+  const [dataSaver] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(DATA_SAVER_KEY) === "1";
   });
@@ -140,37 +184,53 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   const [feedTab, setFeedTab] = useState<FeedTab>("foryou");
   const [mockLiked, setMockLiked] = useState(() => new Set(loadUserSocial("guest").likedVideos));
   const [mockFollowing, setMockFollowing] = useState(() => new Set(listFollowedShopIds("guest")));
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = profile?.id ?? "guest";
     setMockFollowing(new Set(listFollowedShopIds(id)));
     setMockLiked(new Set(loadUserSocial(id).likedVideos));
   }, [profile?.id]);
-  const reducedMotion =
-    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const feedQuery = useQuery({
+  const feedQuery = useInfiniteQuery({
     queryKey: ["video-feed", profile?.id ?? "anon"],
-    queryFn: async () => {
-      const r = await rankAndLoadFeed(profile?.id ?? null);
+    queryFn: async ({ pageParam }) => {
+      const r = await rankAndLoadFeed(profile?.id ?? null, {
+        limit: FEED_PAGE_SIZE,
+        before: pageParam,
+      });
       if (r.error) throw new Error(r.error);
-      return r.videos;
+      return r;
     },
-    staleTime: 5_000,
-    refetchOnMount: "always",
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.nextCursor,
+    staleTime: 60_000,
+    refetchOnMount: false,
   });
 
   const listingsQuery = useQuery({
     queryKey: ["for-you-listings"],
     queryFn: async () => {
-      const r = await fetchMarketplaceProducts(80);
+      const r = await fetchMarketplaceProducts(24);
       if (r.error) throw new Error(r.error);
       return r.data;
     },
-    staleTime: 20_000,
+    staleTime: 60_000,
   });
 
-  const liveVideos = feedQuery.data ?? EMPTY_VIDEOS;
+  const liveVideos = useMemo(() => {
+    const pages = feedQuery.data?.pages ?? [];
+    const seen = new Set<string>();
+    const out: PublicFeedVideo[] = [];
+    for (const page of pages) {
+      for (const video of page.videos) {
+        if (seen.has(video.id)) continue;
+        seen.add(video.id);
+        out.push(video);
+      }
+    }
+    return out.length ? out : EMPTY_VIDEOS;
+  }, [feedQuery.data]);
   const liveListings = listingsQuery.data ?? [];
   const productIds = useMemo(
     () => [...new Set(liveVideos.flatMap((v) => v.product_ids ?? []))],
@@ -186,6 +246,7 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
       if (r.error) throw new Error(r.error);
       return r.products;
     },
+    staleTime: 60_000,
   });
 
   const likedQuery = useQuery({
@@ -214,6 +275,16 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
     for (const p of productsQuery.data ?? []) m.set(p.id, p);
     return m;
   }, [liveListings, productsQuery.data]);
+
+  const listingsByBusiness = useMemo(() => {
+    const m = new Map<string, PublicProduct[]>();
+    for (const p of liveListings) {
+      const list = m.get(p.business_id);
+      if (list) list.push(p);
+      else m.set(p.business_id, [p]);
+    }
+    return m;
+  }, [liveListings]);
 
   const videos = useMemo(() => {
     return liveVideos.map((video) => {
@@ -303,6 +374,158 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
     return true;
   }
 
+  const patchFeedLike = useCallback(
+    (videoId: string, liked: boolean) => {
+      queryClient.setQueryData(["video-likes", profile?.id], (prev: Set<string> | undefined) => {
+        const next = new Set(prev ?? []);
+        if (liked) next.add(videoId);
+        else next.delete(videoId);
+        return next;
+      });
+      queryClient.setQueryData(
+        ["video-feed", profile?.id ?? "anon"],
+        (old: { pages: Array<{ videos: PublicFeedVideo[]; nextCursor: string | null }>; pageParams: unknown[] } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              videos: page.videos.map((v) =>
+                v.id === videoId
+                  ? { ...v, like_count: Math.max(0, Number(v.like_count) + (liked ? 1 : -1)) }
+                  : v,
+              ),
+            })),
+          };
+        },
+      );
+    },
+    [profile?.id, queryClient],
+  );
+
+  const feedActions = useMemo<FeedActions>(
+    () => ({
+      onTogglePause: () => setPaused((p) => !p),
+      onLike: (video) => {
+        void (async () => {
+          if (!requireUser() || !profile) return;
+          haptic();
+          const { liked, error } = await toggleVideoLike(profile.id, video.id);
+          if (error) toast.error(error);
+          else {
+            void recordFeedSignal(video.id, "like");
+            setMockLiked((prev) => {
+              const copy = new Set(prev);
+              if (liked) copy.add(video.id);
+              else copy.delete(video.id);
+              return copy;
+            });
+            patchFeedLike(video.id, liked);
+          }
+        })();
+      },
+      onSave: (video) => {
+        void (async () => {
+          if (!requireUser() || !profile) return;
+          const { saved, error } = await toggleVideoSave(profile.id, video.id);
+          if (error) toast.error(error);
+          else {
+            toast.success(saved ? "Saved" : "Removed");
+            void queryClient.invalidateQueries({ queryKey: ["video-saves"] });
+          }
+        })();
+      },
+      onFollowShop: (businessId, businessName) => {
+        void (async () => {
+          if (!requireUser() || !profile) return;
+          haptic("success");
+          const { following, error } = await toggleFollowBusiness(profile.id, businessId, profile.full_name);
+          if (error) toast.error(error);
+          else {
+            setMockFollowing((prev) => {
+              const copy = new Set(prev);
+              if (following) copy.add(businessId);
+              else copy.delete(businessId);
+              return copy;
+            });
+            toast.success(following ? `Following ${businessName}` : "Unfollowed");
+            void queryClient.invalidateQueries({ queryKey: ["video-follows"] });
+            void queryClient.invalidateQueries({ queryKey: ["followed-shops"] });
+            void queryClient.invalidateQueries({ queryKey: ["shop-followers"] });
+          }
+        })();
+      },
+      onShare: (video) => {
+        void (async () => {
+          haptic();
+          const url = `${window.location.origin}/shop?v=${video.id}`;
+          try {
+            if (navigator.share) await navigator.share({ title: video.business_name, url });
+            else {
+              await navigator.clipboard.writeText(url);
+              toast.success("Link copied");
+            }
+            if (!isMockFeedId(video.id)) void recordFeedSignal(video.id, "share");
+          } catch {
+            /* cancelled */
+          }
+        })();
+      },
+      onOpenProducts: (videoId) => {
+        setActiveId(videoId);
+        setProductsOpen(true);
+        void recordFeedSignal(videoId, "product_tap");
+      },
+      onOpenComments: (videoId) => {
+        haptic();
+        setActiveId(videoId);
+        setCommentsOpen(true);
+      },
+      onMore: (videoId) => {
+        setActiveId(videoId);
+        setMoreOpen(true);
+      },
+      onEnded: (videoId) => {
+        if (!isMockFeedId(videoId)) void recordFeedSignal(videoId, "complete");
+      },
+      onAddProduct: (video, product) => {
+        void (async () => {
+          if (!requireUser()) return;
+          haptic("success");
+          ensureSavedProduct(profile?.id ?? "guest", product);
+          if (isMockFeedId(product.id) || !profile) {
+            toast.message("This listing is no longer available.");
+            return;
+          }
+          if (product.sale_price == null) {
+            toast.message("This listing has no price yet.");
+            return;
+          }
+          const { error } = await addToCart(profile.id, {
+            businessId: product.business_id,
+            productId: product.id,
+            productName: product.name,
+            unit: product.unit,
+            unitPrice: Number(product.sale_price),
+            imageUrl: product.image_url,
+          });
+          if (error) toast.error(error);
+          else {
+            toast.success("Added to cart and Saved Products");
+            void queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
+            void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
+            if (video && !isMockFeedId(video.id)) void recordFeedSignal(video.id, "add_to_cart");
+          }
+        })();
+      },
+    }),
+    [patchFeedLike, profile, queryClient, session],
+  );
+
+  const fetchNextPage = feedQuery.fetchNextPage;
+  const hasNextPage = feedQuery.hasNextPage;
+  const isFetchingNextPage = feedQuery.isFetchingNextPage;
+
   const taggedIds = new Set(productIds);
   const extraListings = liveListings.filter((p) => !taggedIds.has(p.id));
   const followed = followQuery.data ?? new Set<string>();
@@ -314,148 +537,61 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
         : videos;
   const showListings =
     feedTab === "nearby" ? liveListings : feedTab === "foryou" ? extraListings : [];
+  const activeIndex = showPosts.findIndex((v) => v.id === activeId);
+  const productsByVideo = useMemo(() => {
+    const map = new Map<string, PublicProduct[]>();
+    for (const video of showPosts) {
+      map.set(video.id, productsForVideo(video, productsById, listingsByBusiness));
+    }
+    return map;
+  }, [showPosts, productsById, listingsByBusiness]);
+
+  useEffect(() => {
+    const root = scrollerRef.current;
+    const el = loadMoreRef.current;
+    if (!root || !el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { root, rootMargin: "1200px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, showPosts.length]);
 
   return (
     <MarketplaceShell cartCount={cartCount} hideTopBar variant="feed">
       <div className="relative mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col overflow-hidden bg-white text-foreground">
         <FeedTopBar tab={feedTab} onTab={setFeedTab} />
 
+        <FeedActionsContext.Provider value={feedActions}>
         <div
           ref={scrollerRef}
           style={{ WebkitOverflowScrolling: "touch" }}
           className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y [overflow-anchor:none] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
+          {feedQuery.isPending
+            ? Array.from({ length: 3 }, (_, i) => <FeedSkeleton key={`sk-${i}`} />)
+            : null}
           {showPosts.map((video, index) => {
-            const near = activeId === video.id || showPosts.findIndex((v) => v.id === activeId) === index - 1;
+            const idx = activeIndex < 0 ? 0 : activeIndex;
+            const mountMedia = index >= idx - 1 && index <= idx + 2;
+            const preloadNext = !dataSaver && (index === idx + 1 || index === idx + 2);
             return (
               <VideoSlide
                 key={video.id}
                 video={video}
                 active={activeId === video.id}
-                muted
                 paused={paused}
-                preload={near || activeId === video.id}
-                products={(() => {
-                  const tagged = (video.product_ids ?? [])
-                    .map((id) => productsById.get(id))
-                    .filter(Boolean) as PublicProduct[];
-                  if (tagged.length > 0) return tagged;
-                  return liveListings.filter((p) => p.business_id === video.business_id);
-                })()}
+                preload={mountMedia && (preloadNext || activeId === video.id)}
+                eagerPreload={index === idx + 1}
+                products={productsByVideo.get(video.id) ?? EMPTY_PRODUCTS}
                 liked={likedQuery.data?.has(video.id) ?? mockLiked.has(video.id)}
                 saved={savedQuery.data?.has(video.id) ?? false}
                 following={followQuery.data?.has(video.business_id) || mockFollowing.has(video.business_id)}
-                onToggleMute={() => {
-                  setMuted((m) => {
-                    const next = !m;
-                    localStorage.setItem(MUTE_KEY, next ? "1" : "0");
-                    return next;
-                  });
-                }}
-                onTogglePause={() => setPaused((p) => !p)}
-                onLike={async () => {
-                  if (!requireUser() || !profile) return;
-                  haptic();
-                  const { liked, error } = await toggleVideoLike(profile.id, video.id);
-                  if (error) toast.error(error);
-                  else {
-                    void recordFeedSignal(video.id, "like");
-                    toast.success(liked ? "Liked" : "Unliked");
-                    void queryClient.invalidateQueries({ queryKey: ["video-likes"] });
-                    void queryClient.invalidateQueries({ queryKey: ["video-feed"] });
-                  }
-                }}
-                onSave={async () => {
-                  if (!requireUser() || !profile) return;
-                  const { saved, error } = await toggleVideoSave(profile.id, video.id);
-                  if (error) toast.error(error);
-                  else {
-                    toast.success(saved ? "Saved" : "Removed");
-                    void queryClient.invalidateQueries({ queryKey: ["video-saves"] });
-                  }
-                }}
-                onFollow={async () => {
-                  if (!requireUser() || !profile) return;
-                  haptic("success");
-                  const { following, error } = await toggleFollowBusiness(
-                    profile.id,
-                    video.business_id,
-                    profile.full_name,
-                  );
-                  if (error) toast.error(error);
-                  else {
-                    setMockFollowing((prev) => {
-                      const copy = new Set(prev);
-                      if (following) copy.add(video.business_id);
-                      else copy.delete(video.business_id);
-                      return copy;
-                    });
-                    toast.success(following ? `Following ${video.business_name}` : "Unfollowed");
-                    void queryClient.invalidateQueries({ queryKey: ["video-follows"] });
-                    void queryClient.invalidateQueries({ queryKey: ["followed-shops"] });
-                    void queryClient.invalidateQueries({ queryKey: ["shop-followers"] });
-                    void queryClient.invalidateQueries({ queryKey: ["video-feed"] });
-                  }
-                }}
-                onShare={async () => {
-                  haptic();
-                  const url = `${window.location.origin}/shop?v=${video.id}`;
-                  try {
-                    if (navigator.share) await navigator.share({ title: video.business_name, url });
-                    else {
-                      await navigator.clipboard.writeText(url);
-                      toast.success("Link copied");
-                    }
-                    if (!isMockFeedId(video.id)) void recordFeedSignal(video.id, "share");
-                  } catch {
-                    /* user cancelled share */
-                  }
-                }}
-                onOpenProducts={() => {
-                  setActiveId(video.id);
-                  setProductsOpen(true);
-                  void recordFeedSignal(video.id, "product_tap");
-                }}
-                onOpenComments={() => {
-                  haptic();
-                  setActiveId(video.id);
-                  setCommentsOpen(true);
-                }}
-                onMore={() => {
-                  setActiveId(video.id);
-                  setMoreOpen(true);
-                }}
-                onEnded={() => {
-                  if (!isMockFeedId(video.id)) void recordFeedSignal(video.id, "complete");
-                }}
-                onAddToCart={async (product) => {
-                  if (!requireUser()) return;
-                  haptic("success");
-                  ensureSavedProduct(profile?.id ?? "guest", product);
-                  if (isMockFeedId(product.id) || !profile) {
-                    toast.message("This listing is no longer available.");
-                    return;
-                  }
-                  if (product.sale_price == null) {
-                    toast.message("This listing has no price yet.");
-                    return;
-                  }
-                  const { error } = await addToCart(profile.id, {
-                    businessId: product.business_id,
-                    productId: product.id,
-                    productName: product.name,
-                    unit: product.unit,
-                    unitPrice: Number(product.sale_price),
-                    imageUrl: product.image_url,
-                  });
-                  if (error) toast.error(error);
-                  else {
-                    toast.success("Added to cart and Saved Products");
-                    void queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
-                    void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
-                    if (!isMockFeedId(video.id)) void recordFeedSignal(video.id, "add_to_cart");
-                  }
-                }}
               />
             );
           })}
@@ -464,53 +600,9 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
               key={product.id}
               product={product}
               following={followQuery.data?.has(product.business_id) || mockFollowing.has(product.business_id)}
-              onFollow={async () => {
-                if (!requireUser() || !profile) return;
-                haptic("success");
-                const { following, error } = await toggleFollowBusiness(
-                  profile.id,
-                  product.business_id,
-                  profile.full_name,
-                );
-                if (error) toast.error(error);
-                else {
-                  setMockFollowing((prev) => {
-                    const copy = new Set(prev);
-                    if (following) copy.add(product.business_id);
-                    else copy.delete(product.business_id);
-                    return copy;
-                  });
-                  toast.success(following ? `Following ${product.business_name}` : "Unfollowed");
-                  void queryClient.invalidateQueries({ queryKey: ["video-follows"] });
-                }
-              }}
-              onAdd={async () => {
-                if (!requireUser()) return;
-                haptic("success");
-                ensureSavedProduct(profile?.id ?? "guest", product);
-                if (isMockFeedId(product.id) || !profile) {
-                  toast.message("This listing is no longer available.");
-                  return;
-                }
-                if (product.sale_price == null) return;
-                const { error } = await addToCart(profile.id, {
-                  businessId: product.business_id,
-                  productId: product.id,
-                  productName: product.name,
-                  unit: product.unit,
-                  unitPrice: Number(product.sale_price),
-                  imageUrl: product.image_url,
-                });
-                if (error) toast.error(error);
-                else {
-                  toast.success("Added to cart and Saved Products");
-                  void queryClient.invalidateQueries({ queryKey: ["marketplace-cart"] });
-                  void queryClient.invalidateQueries({ queryKey: ["marketplace-favorites"] });
-                }
-              }}
             />
           ))}
-          {!feedQuery.isLoading && showPosts.length === 0 && showListings.length === 0 && (
+          {feedQuery.isPending ? null : showPosts.length === 0 && showListings.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
               <ShoppingBag className="size-10 text-primary/40" />
               <p className="font-extrabold text-foreground">
@@ -527,9 +619,11 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
                 </Link>
               </Button>
             </div>
-          )}
-          <div className="h-6 shrink-0" aria-hidden />
+          ) : null}
+          <div ref={loadMoreRef} className="h-8 shrink-0" aria-hidden />
+          {isFetchingNextPage ? <FeedSkeleton /> : null}
         </div>
+        </FeedActionsContext.Provider>
       </div>
 
       <Sheet open={productsOpen} onOpenChange={setProductsOpen}>
@@ -671,8 +765,7 @@ function FeedTopBar({ tab, onTab }: { tab: FeedTab; onTab: (t: FeedTab) => void 
           className="flex size-9 min-h-9 min-w-9 items-center justify-center overflow-hidden rounded-full bg-[color:var(--brand-navy,#001B3A)] text-[10px] font-bold text-white"
         >
           {profile?.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={profile.avatar_url} alt="" className="size-full object-cover" />
+            <FeedImage src={profile.avatar_url} alt="" eager width={72} />
           ) : (
             initials || "?"
           )}
@@ -704,46 +797,27 @@ function FeedTopBar({ tab, onTab }: { tab: FeedTab; onTab: (t: FeedTab) => void 
   );
 }
 
-function VideoSlide({
+const VideoSlide = memo(function VideoSlide({
   video,
   active,
-  muted,
   paused,
   preload,
+  eagerPreload,
   products,
   liked,
   following,
-  onTogglePause,
-  onLike,
-  onFollow,
-  onShare,
-  onOpenProducts,
-  onOpenComments,
-  onMore,
-  onEnded,
-  onAddToCart,
 }: {
   video: PublicFeedVideo;
   active: boolean;
-  muted: boolean;
   paused: boolean;
   preload: boolean;
+  eagerPreload: boolean;
   products: PublicProduct[];
   liked: boolean;
   saved?: boolean;
   following: boolean;
-  onToggleMute?: () => void;
-  onTogglePause: () => void;
-  onLike: () => void;
-  onSave?: () => void;
-  onFollow: () => void;
-  onShare: () => void;
-  onOpenProducts: () => void;
-  onOpenComments: () => void;
-  onMore: () => void;
-  onEnded: () => void;
-  onAddToCart: (product: PublicProduct) => void;
 }) {
+  const actions = useFeedActions();
   const ref = useRef<HTMLVideoElement>(null);
   const src = resolveVideoSrc(video);
   const poster = resolveCoverSrc(video.cover_path) ?? undefined;
@@ -769,7 +843,7 @@ function VideoSlide({
       return () => el.removeEventListener("canplay", play);
     }
     el.pause();
-  }, [active, paused, muted, image, src]);
+  }, [active, paused, image, src, preload]);
 
   const { t } = useTranslation();
   const featured = products[0] ?? null;
@@ -780,9 +854,9 @@ function VideoSlide({
     () => {
       setBurst(true);
       window.setTimeout(() => setBurst(false), 650);
-      onLike();
+      actions.onLike(video);
     },
-    image ? undefined : onTogglePause,
+    image ? undefined : actions.onTogglePause,
   );
 
   const likes = video.like_count;
@@ -790,6 +864,7 @@ function VideoSlide({
   return (
     <article
       data-video-id={video.id}
+      style={SLIDE_STYLE}
       className="w-full shrink-0 border-b border-border bg-white pb-3"
     >
       <div className="flex items-center gap-2 px-3 py-2">
@@ -803,7 +878,7 @@ function VideoSlide({
         </Link>
         <button
           type="button"
-          onClick={onFollow}
+          onClick={() => actions.onFollowShop(video.business_id, video.business_name)}
           className={cn(
             "inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-extrabold",
             following ? "border border-border bg-white text-foreground" : "bg-primary text-white",
@@ -813,7 +888,7 @@ function VideoSlide({
         </button>
         <button
           type="button"
-          onClick={onMore}
+          onClick={() => actions.onMore(video.id)}
           aria-label={t("shop.feed.more")}
           className="flex size-11 min-h-11 min-w-11 shrink-0 items-center justify-center text-muted-foreground"
         >
@@ -821,10 +896,9 @@ function VideoSlide({
         </button>
       </div>
 
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-100">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-100 [transform:translateZ(0)]">
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={poster || src} alt="" className="h-full w-full object-cover" />
+          <FeedImage src={poster || src} alt="" eager={active || eagerPreload} width={720} />
         ) : preload || active ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption
           <video
@@ -832,26 +906,25 @@ function VideoSlide({
             className="h-full w-full object-cover"
             src={src}
             poster={poster}
-            autoPlay
+            autoPlay={active}
             muted
             playsInline
             loop
-            preload={active ? "auto" : "metadata"}
+            preload={active || eagerPreload ? "auto" : "metadata"}
             onCanPlay={() => {
               if (active && !paused) void ref.current?.play().catch(() => undefined);
             }}
-            onEnded={onEnded}
+            onEnded={() => actions.onEnded(video.id)}
             aria-label={`Video from ${video.business_name}`}
           >
             {video.captions_url ? (
               <track kind="captions" src={video.captions_url} srcLang="en" label="Captions" default />
             ) : null}
           </video>
+        ) : poster ? (
+          <FeedImage src={poster} alt="" eager={false} width={480} />
         ) : (
-          <div
-            className="h-full w-full bg-zinc-200 bg-cover bg-center"
-            style={poster ? { backgroundImage: `url(${poster})` } : undefined}
-          />
+          <div className="h-full w-full bg-zinc-200" />
         )}
         <button
           type="button"
@@ -860,24 +933,36 @@ function VideoSlide({
           onClick={onMediaTap}
         />
         {burst ? (
-          <Heart className="pointer-events-none absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 fill-red-500 text-red-500" />
+          <Heart className="pointer-events-none absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 fill-red-500 text-red-500 will-change-transform [animation:feed-heart_450ms_ease-out]" />
         ) : null}
       </div>
 
       <div className="flex items-center justify-between gap-1 px-2">
         <div className="flex items-center">
-          <IconAction label={liked ? t("shop.feed.unlike") : t("shop.feed.like")} count={compactCount(likes)} onClick={onLike}>
+          <IconAction
+            label={liked ? t("shop.feed.unlike") : t("shop.feed.like")}
+            count={compactCount(likes)}
+            onClick={() => actions.onLike(video)}
+          >
             <Heart className={cn("size-5", liked ? "fill-red-500 text-red-500" : "text-foreground")} />
           </IconAction>
-          <IconAction label={t("shop.feed.comments")} count={compactCount(video.comment_count)} onClick={onOpenComments}>
+          <IconAction
+            label={t("shop.feed.comments")}
+            count={compactCount(video.comment_count)}
+            onClick={() => actions.onOpenComments(video.id)}
+          >
             <MessageCircle className="size-5 text-foreground" />
           </IconAction>
-          <IconAction label={t("shop.feed.share")} count={compactCount(Math.max(video.view_count, 0))} onClick={onShare}>
+          <IconAction
+            label={t("shop.feed.share")}
+            count={compactCount(Math.max(video.view_count, 0))}
+            onClick={() => actions.onShare(video)}
+          >
             <Share2 className="size-5 text-foreground" />
           </IconAction>
         </div>
         {featured ? (
-          <IconAction label={t("shop.feed.addToCart")} onClick={() => onAddToCart(featured)}>
+          <IconAction label={t("shop.feed.addToCart")} onClick={() => actions.onAddProduct(video, featured)}>
             <ShoppingCart className="size-5 text-foreground" />
           </IconAction>
         ) : null}
@@ -891,11 +976,11 @@ function VideoSlide({
 
       <div className="shrink-0 px-3 pb-3 pt-1">
         {featured ? (
-          <FeedProductCard product={featured} onAdd={() => onAddToCart(featured)} />
+          <FeedProductCard product={featured} onAdd={() => actions.onAddProduct(video, featured)} />
         ) : (
           <button
             type="button"
-            onClick={onOpenProducts}
+            onClick={() => actions.onOpenProducts(video.id)}
             className="flex min-h-11 w-full items-center justify-center rounded-2xl border border-border text-sm font-extrabold text-primary"
           >
             {t("shop.feed.shopTheLook")}
@@ -904,14 +989,13 @@ function VideoSlide({
       </div>
     </article>
   );
-}
+});
 
 function SellerAvatar({ video }: { video: PublicFeedVideo }) {
   return (
     <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color:var(--brand-navy,#001B3A)] text-sm font-extrabold text-white ring-1 ring-border">
       {video.business_logo_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={video.business_logo_url} alt="" className="size-full object-cover" />
+        <FeedImage src={video.business_logo_url} alt="" className="size-full" eager width={96} />
       ) : (
         video.business_name.slice(0, 1)
       )}
@@ -978,10 +1062,7 @@ function FeedProductCard({ product, onAdd }: { product: PublicProduct; onAdd: ()
     <div className="rounded-2xl border border-border bg-white p-2.5 text-zinc-900">
       <div className="flex items-center gap-3">
         <div className="size-[4.25rem] shrink-0 overflow-hidden rounded-xl bg-zinc-100">
-          {product.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.image_url} alt="" className="size-full object-cover" />
-          ) : null}
+          {product.image_url ? <FeedImage src={product.image_url} alt="" width={200} /> : null}
         </div>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 truncate text-[15px] font-extrabold leading-tight">
@@ -1040,17 +1121,14 @@ function FeedProductCard({ product, onAdd }: { product: PublicProduct; onAdd: ()
   );
 }
 
-function ListingSlide({
+const ListingSlide = memo(function ListingSlide({
   product,
   following,
-  onFollow,
-  onAdd,
 }: {
   product: PublicProduct;
   following: boolean;
-  onFollow: () => void;
-  onAdd: () => void;
 }) {
+  const actions = useFeedActions();
   const { t } = useTranslation();
   const poster = product.image_url || product.extra_image_urls?.[0] || "";
   const slug = shopLinkSlug(product.business_slug, product.business_id);
@@ -1058,14 +1136,14 @@ function ListingSlide({
   return (
     <article
       data-video-id={`listing:${product.id}`}
+      style={SLIDE_STYLE}
       className="w-full shrink-0 border-b border-border bg-white pb-3"
     >
       <div className="flex items-center gap-2 px-3 py-2">
         <Link to="/b/$slug" params={{ slug }} className="flex min-w-0 flex-1 items-center gap-2">
           <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color:var(--brand-navy,#001B3A)] text-sm font-extrabold text-white">
             {product.business_logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={product.business_logo_url} alt="" className="size-full object-cover" />
+              <FeedImage src={product.business_logo_url} alt="" eager width={96} />
             ) : (
               shop.slice(0, 1)
             )}
@@ -1086,7 +1164,7 @@ function ListingSlide({
         </Link>
         <button
           type="button"
-          onClick={onFollow}
+          onClick={() => actions.onFollowShop(product.business_id, product.business_name ?? "")}
           className={cn(
             "inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-sm font-extrabold",
             following ? "border border-border bg-white text-foreground" : "bg-primary text-white",
@@ -1097,8 +1175,7 @@ function ListingSlide({
       </div>
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-100">
         {poster ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={poster} alt="" className="h-full w-full object-cover" loading="lazy" />
+          <FeedImage src={poster} alt="" width={720} />
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <ShoppingBag className="size-16" />
@@ -1109,11 +1186,11 @@ function ListingSlide({
         <p className="line-clamp-2 shrink-0 px-3 pt-2 text-[14px] text-zinc-800">{product.description}</p>
       ) : null}
       <div className="shrink-0 px-3 pb-3 pt-2">
-        <FeedProductCard product={product} onAdd={onAdd} />
+        <FeedProductCard product={product} onAdd={() => actions.onAddProduct(null, product)} />
       </div>
     </article>
   );
-}
+});
 
 function IconAction({
   label,
@@ -1161,10 +1238,7 @@ function ProductList({
       {products.map((product) => (
         <li key={product.id} className="flex gap-3 rounded-2xl border border-border p-3">
           <div className="size-16 overflow-hidden rounded-xl bg-muted">
-            {product.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={product.image_url} alt="" className="size-full object-cover" />
-            ) : null}
+            {product.image_url ? <FeedImage src={product.image_url} alt="" width={160} /> : null}
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-extrabold">{product.name}</p>

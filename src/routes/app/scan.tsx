@@ -1,11 +1,16 @@
+import { lazy, Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { AppShell } from "@/features/app/app-shell";
 import { AppPageHeader } from "@/features/app-layout/app-page-header";
 import { BackLinkButton } from "@/features/app-layout/back-link-button";
 import { RequireAuth } from "@/features/app/require-auth";
-import { ScanDocumentScreen } from "@/features/scan/scan-document-screen";
+import { RouteFallback } from "@/components/route-fallback";
 import { useTranslation } from "@/lib/i18n/context";
+
+const ScanDocumentScreen = lazy(() =>
+  import("@/features/scan/scan-document-screen").then((m) => ({ default: m.ScanDocumentScreen })),
+);
 
 export const Route = createFileRoute("/app/scan")({
   component: ScanPage,
@@ -29,7 +34,9 @@ function ScanPageContent() {
         subtitle={t("app.scan.subtitle")}
         action={<BackLinkButton to="/app" label={t("app.common.back")} />}
       />
-      <ScanDocumentScreen />
+      <Suspense fallback={<RouteFallback />}>
+        <ScanDocumentScreen />
+      </Suspense>
     </AppShell>
   );
 }
