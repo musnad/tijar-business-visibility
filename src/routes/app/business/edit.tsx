@@ -15,7 +15,7 @@ export const Route = createFileRoute("/app/business/edit")({
 
 function EditBusinessPage() {
   return (
-    <RequireAuth>
+    <RequireAuth requireOnboardingComplete={false}>
       <EditBusinessPageContent />
     </RequireAuth>
   );

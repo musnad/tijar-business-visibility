@@ -31,12 +31,17 @@ export function RequireAuth({
       return;
     }
 
+    const editingShop =
+      pathname.startsWith("/app/business") || pathname.startsWith("/shop/payouts");
+
     // Customers never land on the business dashboard — apply from profile first.
     // Super-admin always keeps dashboard + admin console access.
+    // Shop owners still need /app/business to edit even if account_mode is customer.
     if (
       profile &&
       isCustomerOnly(profile) &&
       !canUseBusinessMode(profile) &&
+      !editingShop &&
       !isTijarSuperAdminEmail(profile.email) &&
       !isTijarSuperAdminEmail(session?.user.email) &&
       pathname.startsWith("/app") &&

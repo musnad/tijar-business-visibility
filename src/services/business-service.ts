@@ -130,40 +130,74 @@ export type UpdateBusinessProfileInput = {
   islamicModeEnabled: boolean;
   logoUrl?: string | null;
   publicPhone?: string | null;
+  publicWhatsapp?: string | null;
 };
 
 export async function updateBusinessProfile(
   businessId: string,
   input: UpdateBusinessProfileInput,
+  profileId?: string | null,
 ): Promise<{ business: Business | null; error: string | null }> {
   const supabase = getSupabaseBrowserClient();
+  if (profileId) {
+    await ensureOwnerMembership(businessId, profileId);
+  }
+
+  const name = input.businessName.trim();
+  if (name.length < 2) {
+    return { business: null, error: "Enter your business name." };
+  }
+
+  const clearLogo = input.logoUrl === null;
+  const rpc = await supabase.rpc("save_business_profile", {
+    p_business_id: businessId,
+    p_business_name: name,
+    p_location: input.location.trim(),
+    p_description: input.description?.trim() ?? "",
+    p_category_id: input.categoryId?.trim() ? input.categoryId : null,
+    p_islamic_mode: input.islamicModeEnabled,
+    p_logo_url: clearLogo ? null : (input.logoUrl ?? null),
+    p_clear_logo: clearLogo,
+    p_public_phone: input.publicPhone?.trim() ?? "",
+    p_public_whatsapp: input.publicWhatsapp?.trim() ?? "",
+  });
+  if (!rpc.error && rpc.data) {
+    return { business: rpc.data as Business, error: null };
+  }
+
   const patch: Record<string, unknown> = {
-    business_name: input.businessName.trim(),
-    location: input.location.trim(),
+    business_name: name,
+    location: input.location.trim() || null,
     description: input.description?.trim() || null,
     islamic_mode_enabled: input.islamicModeEnabled,
+    public_phone: input.publicPhone?.trim() || null,
+    public_whatsapp: input.publicWhatsapp?.trim() || null,
   };
-  if (input.categoryId) {
-    patch.category_id = input.categoryId;
-  }
-  if (input.logoUrl !== undefined) {
-    patch.logo_url = input.logoUrl;
-  }
-  if (input.publicPhone !== undefined) {
-    patch.public_phone = input.publicPhone;
-  }
+  if (input.categoryId?.trim()) patch.category_id = input.categoryId;
+  if (input.logoUrl !== undefined) patch.logo_url = input.logoUrl;
 
   const { data, error } = await supabase
     .from("businesses")
     .update(patch)
     .eq("id", businessId)
     .select("*")
-    .single();
+    .maybeSingle();
 
-  if (error) {
-    return { business: null, error: error.message };
+  if (!error && data) {
+    return { business: data as Business, error: null };
   }
-  return { business: data as Business, error: null };
+
+  const message = error?.message ?? rpc.error?.message ?? "Could not save this shop.";
+  if (/schema cache|column|does not exist|save_business_profile/i.test(message)) {
+    return {
+      business: null,
+      error: "Shop edit is not set up on the database yet. Run migration 000034 in Supabase, then save again.",
+    };
+  }
+  if (/not allowed|row-level security|permission/i.test(message)) {
+    return { business: null, error: "Could not edit this shop. Sign in as the owner and try again." };
+  }
+  return { business: null, error: message };
 }
 
 export async function completeBusinessSetup(

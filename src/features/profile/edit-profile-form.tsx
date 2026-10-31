@@ -74,13 +74,17 @@ export function EditProfileForm({
       return;
     }
     if (business && businessName.trim().length >= 2 && businessName.trim() !== business.business_name) {
-      const biz = await updateBusinessProfile(business.id, {
-        businessName: businessName.trim(),
-        location: business.location ?? "Nigeria",
-        description: business.description ?? undefined,
-        categoryId: business.category_id ?? undefined,
-        islamicModeEnabled: business.islamic_mode_enabled,
-      });
+      const biz = await updateBusinessProfile(
+        business.id,
+        {
+          businessName: businessName.trim(),
+          location: business.location ?? "",
+          description: business.description ?? undefined,
+          categoryId: business.category_id ?? undefined,
+          islamicModeEnabled: business.islamic_mode_enabled,
+        },
+        profile.id,
+      );
       if (biz.error) {
         setSaving(false);
         toast.error(biz.error);

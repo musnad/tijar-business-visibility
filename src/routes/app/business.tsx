@@ -12,7 +12,7 @@ export const Route = createFileRoute("/app/business")({
 
 function BusinessPage() {
   return (
-    <RequireAuth>
+    <RequireAuth requireOnboardingComplete={false}>
       <BusinessPageContent />
     </RequireAuth>
   );
