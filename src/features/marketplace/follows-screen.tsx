@@ -6,24 +6,32 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { FeedImage } from "@/components/media/feed-image";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
-import {
-  listFollowedPeople,
-  listPeopleFollowers,
-  toggleFollowPersonLocal,
-  type SocialPerson,
-} from "@/lib/shop-social";
 import { cn } from "@/lib/utils";
-import { fetchFollowedBusinesses, fetchShopFollowers } from "@/services/marketplace-service";
-import { fetchMyBusinessIds } from "@/services/shop-chat-service";
+import { fetchFollowedBusinesses } from "@/services/marketplace-service";
 import { toggleFollowBusiness } from "@/services/video-feed-service";
+import {
+  fetchFollowersForMe,
+  fetchPeopleIFollow,
+  followBack,
+  toggleFollowPerson,
+  type SocialConnection,
+} from "@/services/social-service";
+
+function Avatar({ name, src }: { name: string; src?: string | null }) {
+  return (
+    <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color:var(--brand-navy,#001B3A)] text-sm font-extrabold text-white">
+      {src ? <FeedImage src={src} alt="" width={88} /> : name.slice(0, 1)}
+    </span>
+  );
+}
 
 export function FollowsScreen() {
   const { profile, session } = useAuth();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"shops" | "people">("shops");
-  const [peopleTick, setPeopleTick] = useState(0);
 
   const shopsQuery = useQuery({
     queryKey: ["followed-shops", profile?.id ?? "guest"],
@@ -34,20 +42,45 @@ export function FollowsScreen() {
     },
   });
 
-  const people = listFollowedPeople(profile?.id ?? "guest");
-  void peopleTick;
-  const suggested: SocialPerson[] = [];
+  const peopleQuery = useQuery({
+    queryKey: ["followed-people", profile?.id],
+    enabled: Boolean(profile?.id),
+    queryFn: async () => {
+      const r = await fetchPeopleIFollow(profile!.id);
+      if (r.error && /does not exist|schema cache/i.test(r.error)) return [];
+      if (r.error) throw new Error(r.error);
+      return r.people;
+    },
+  });
+
+  async function refresh() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["followed-shops"] }),
+      queryClient.invalidateQueries({ queryKey: ["followed-people"] }),
+      queryClient.invalidateQueries({ queryKey: ["shop-followers"] }),
+      queryClient.invalidateQueries({ queryKey: ["video-follows"] }),
+      queryClient.invalidateQueries({ queryKey: ["activity-inbox"] }),
+    ]);
+  }
 
   return (
     <MarketplaceShell>
       <h1 className="text-xl font-extrabold">Following</h1>
       <p className="mt-1 text-sm text-muted-foreground">Shops and people you follow.</p>
       <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl border border-border bg-muted/40 p-1">
-        <button type="button" className={cn("rounded-lg py-2 text-xs font-bold", tab === "shops" ? "bg-card shadow-sm" : "text-muted-foreground")} onClick={() => setTab("shops")}>
+        <button
+          type="button"
+          className={cn("rounded-lg py-2 text-xs font-bold", tab === "shops" ? "bg-card shadow-sm" : "text-muted-foreground")}
+          onClick={() => setTab("shops")}
+        >
           Shops ({shopsQuery.data?.length ?? 0})
         </button>
-        <button type="button" className={cn("rounded-lg py-2 text-xs font-bold", tab === "people" ? "bg-card shadow-sm" : "text-muted-foreground")} onClick={() => setTab("people")}>
-          People ({people.length})
+        <button
+          type="button"
+          className={cn("rounded-lg py-2 text-xs font-bold", tab === "people" ? "bg-card shadow-sm" : "text-muted-foreground")}
+          onClick={() => setTab("people")}
+        >
+          People ({peopleQuery.data?.length ?? 0})
         </button>
       </div>
 
@@ -65,21 +98,24 @@ export function FollowsScreen() {
           <ul className="mt-4 space-y-2">
             {(shopsQuery.data ?? []).map((shop) => (
               <li key={shop.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+                <Avatar name={shop.business_name} src={shop.logo_url} />
                 <Link to="/b/$slug" params={{ slug: shop.slug }} className="min-w-0 flex-1 font-bold">
                   {shop.business_name}
-                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{shop.category_name}</span>
+                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                    {shop.category_name ?? "Shop"}
+                  </span>
                 </Link>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="rounded-full"
+                  className="rounded-full font-bold"
                   onClick={async () => {
-                    const r = await toggleFollowBusiness(profile?.id ?? "guest", shop.id, profile?.full_name);
+                    if (!session || !profile) return toast.message("Sign in to follow shops.");
+                    const r = await toggleFollowBusiness(profile.id, shop.id, profile.full_name);
                     if (r.error) toast.error(r.error);
                     else {
                       toast.success(r.following ? "Following" : "Unfollowed");
-                      void queryClient.invalidateQueries({ queryKey: ["followed-shops"] });
-                      void queryClient.invalidateQueries({ queryKey: ["video-follows"] });
+                      await refresh();
                     }
                   }}
                 >
@@ -91,39 +127,33 @@ export function FollowsScreen() {
         </>
       ) : (
         <>
+          {peopleQuery.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
+          {!peopleQuery.isLoading && (peopleQuery.data?.length ?? 0) === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">You are not following anyone yet. Follow back from Followers.</p>
+          ) : null}
           <ul className="mt-4 space-y-2">
-            {people.map((p) => (
-              <PersonRow key={p.id} person={p} following onToggle={() => {
-                toggleFollowPersonLocal(profile?.id ?? "guest", p, { name: profile?.full_name });
-                setPeopleTick((n) => n + 1);
-                toast.success("Unfollowed");
-              }} />
+            {(peopleQuery.data ?? []).map((person) => (
+              <ConnectionRow
+                key={person.profileId}
+                person={person}
+                onAction={async () => {
+                  if (!profile) return;
+                  const r = await toggleFollowPerson(profile.id, {
+                    id: person.profileId,
+                    name: person.name,
+                    handle: person.handle,
+                    avatarUrl: person.avatarUrl,
+                    kind: "person",
+                  });
+                  if (r.error) toast.error(r.error);
+                  else {
+                    toast.success("Unfollowed");
+                    await refresh();
+                  }
+                }}
+              />
             ))}
           </ul>
-          {suggested.length > 0 ? (
-            <>
-              <h2 className="mt-6 text-sm font-extrabold">People to follow</h2>
-              <ul className="mt-2 space-y-2">
-                {suggested.map((p) => (
-                  <PersonRow
-                    key={p.id}
-                    person={p}
-                    following={false}
-                    onToggle={() => {
-                      toggleFollowPersonLocal(profile?.id ?? "guest", p, { name: profile?.full_name });
-                      setPeopleTick((n) => n + 1);
-                      toast.success(`Following ${p.name}`);
-                    }}
-                  />
-                ))}
-              </ul>
-            </>
-          ) : null}
-          {!session ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              <Link to="/login" className="font-bold text-primary">Sign in</Link> to keep follows on your account.
-            </p>
-          ) : null}
         </>
       )}
     </MarketplaceShell>
@@ -131,71 +161,90 @@ export function FollowsScreen() {
 }
 
 export function FollowersScreen() {
-  const { profile } = useAuth();
-  const bizQuery = useQuery({
-    queryKey: ["my-business-ids", profile?.id],
+  const { profile, session } = useAuth();
+  const queryClient = useQueryClient();
+  const followersQuery = useQuery({
+    queryKey: ["shop-followers", profile?.id],
     enabled: Boolean(profile?.id),
-    queryFn: () => fetchMyBusinessIds(profile!.id),
-  });
-  const shopId = bizQuery.data?.[0] ?? "";
-  const shopFollowers = useQuery({
-    queryKey: ["shop-followers", shopId],
-    enabled: Boolean(shopId),
     queryFn: async () => {
-      const r = await fetchShopFollowers(shopId);
+      const r = await fetchFollowersForMe(profile!.id);
+      if (r.error && /does not exist|schema cache/i.test(r.error)) return [];
       if (r.error) throw new Error(r.error);
       return r.people;
     },
   });
-  const people = listPeopleFollowers(profile?.id);
+
+  async function refresh() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["shop-followers"] }),
+      queryClient.invalidateQueries({ queryKey: ["followed-shops"] }),
+      queryClient.invalidateQueries({ queryKey: ["followed-people"] }),
+      queryClient.invalidateQueries({ queryKey: ["video-follows"] }),
+      queryClient.invalidateQueries({ queryKey: ["activity-inbox"] }),
+    ]);
+  }
 
   return (
     <MarketplaceShell>
       <h1 className="text-xl font-extrabold">Followers</h1>
-      <p className="mt-1 text-sm text-muted-foreground">People who follow you, and shoppers who follow your business.</p>
-
-      <h2 className="mt-5 text-sm font-extrabold">Your shop</h2>
-      {shopFollowers.isLoading && <p className="mt-2 text-sm text-muted-foreground">Loading…</p>}
-      <ul className="mt-2 space-y-2">
-        {(shopFollowers.data ?? []).map((p) => (
-          <li key={p.id} className="rounded-2xl border border-border bg-card p-3">
-            <p className="font-bold">{p.name}</p>
-            <p className="text-xs text-muted-foreground">@{p.handle} · follows your shop</p>
-          </li>
-        ))}
-      </ul>
-      {(shopFollowers.data?.length ?? 0) === 0 && !shopFollowers.isLoading ? (
-        <p className="mt-2 text-sm text-muted-foreground">No shop followers yet. Share your storefront.</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        People and shops that follow you. Follow back so they see you too.
+      </p>
+      {followersQuery.isLoading ? <p className="mt-4 text-sm text-muted-foreground">Loading…</p> : null}
+      {!followersQuery.isLoading && (followersQuery.data?.length ?? 0) === 0 ? (
+        <div className="mt-6 rounded-2xl border border-dashed p-6 text-center">
+          <p className="font-semibold">No followers yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">Share your shop or posts and new followers land here.</p>
+        </div>
       ) : null}
-
-      <h2 className="mt-6 text-sm font-extrabold">Following you</h2>
-      <ul className="mt-2 space-y-2">
-        {people.map((p) => (
-          <li key={p.id} className="rounded-2xl border border-border bg-card p-3">
-            <p className="font-bold">{p.name}</p>
-            <p className="text-xs text-muted-foreground">@{p.handle}</p>
-          </li>
+      <ul className="mt-4 space-y-2">
+        {(followersQuery.data ?? []).map((person) => (
+          <ConnectionRow
+            key={`${person.source}-${person.profileId}`}
+            person={person}
+            onAction={async () => {
+              if (!session || !profile) return toast.message("Sign in to follow back.");
+              const r = await followBack(profile.id, person);
+              if (r.error) toast.error(r.error);
+              else {
+                toast.success(r.following ? `Following ${person.shopName ?? person.name}` : "Unfollowed");
+                await refresh();
+              }
+            }}
+          />
         ))}
       </ul>
-      {people.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">Nobody is following your profile yet.</p> : null}
     </MarketplaceShell>
   );
 }
 
-function PersonRow({ person, following, onToggle }: { person: SocialPerson; following: boolean; onToggle: () => void }) {
+function ConnectionRow({ person, onAction }: { person: SocialConnection; onAction: () => void }) {
+  const hrefShop = person.shopSlug;
   return (
     <li className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-      <span className="flex size-10 items-center justify-center rounded-full bg-muted text-xs font-extrabold">
-        {person.name.slice(0, 1)}
-      </span>
+      {hrefShop ? (
+        <Link to="/b/$slug" params={{ slug: hrefShop }}>
+          <Avatar name={person.shopName ?? person.name} src={person.avatarUrl} />
+        </Link>
+      ) : (
+        <Avatar name={person.name} src={person.avatarUrl} />
+      )}
       <div className="min-w-0 flex-1">
-        <p className="font-bold">{person.name}</p>
-        <p className="text-xs text-muted-foreground">@{person.handle}</p>
+        <p className="truncate font-bold">{person.shopName ?? person.name}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          @{person.handle}
+          {person.source === "shop" ? " · follows your shop" : " · follows you"}
+          {person.theyFollowYou && person.followingThem ? " · friends" : ""}
+        </p>
       </div>
-      <Button size="sm" className={cn("rounded-full", following && "bg-[#0B1F4D]")} variant={following ? "default" : "outline"} onClick={onToggle}>
-        {following ? "Following" : "Follow"}
+      <Button
+        size="sm"
+        className={cn("rounded-full font-bold", person.followingThem && "bg-[color:var(--brand-navy,#001B3A)]")}
+        variant={person.followingThem ? "default" : "outline"}
+        onClick={onAction}
+      >
+        {person.followingThem ? "Following" : person.theyFollowYou ? "Follow back" : "Follow"}
       </Button>
     </li>
   );
 }
-

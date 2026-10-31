@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { NotificationPrefsScreen } from "@/features/marketplace/notification-prefs-screen";
+import { ActivityInboxScreen } from "@/features/marketplace/activity-inbox-screen";
 
 export const Route = createFileRoute("/shop/notifications")({
-  component: NotificationPrefsScreen,
+  component: ActivityInboxScreen,
 });

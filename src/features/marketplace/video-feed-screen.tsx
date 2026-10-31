@@ -452,6 +452,8 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
             void queryClient.invalidateQueries({ queryKey: ["video-follows"] });
             void queryClient.invalidateQueries({ queryKey: ["followed-shops"] });
             void queryClient.invalidateQueries({ queryKey: ["shop-followers"] });
+            void queryClient.invalidateQueries({ queryKey: ["followed-people"] });
+            void queryClient.invalidateQueries({ queryKey: ["activity-inbox"] });
           }
         })();
       },
@@ -719,6 +721,18 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
 function FeedTopBar({ tab, onTab }: { tab: FeedTab; onTab: (t: FeedTab) => void }) {
   const { profile, session } = useAuth();
   const { t } = useTranslation();
+  const unreadQuery = useQuery({
+    queryKey: ["activity-inbox", profile?.id],
+    enabled: Boolean(profile?.id),
+    queryFn: async () => {
+      const { fetchActivityNotifications } = await import("@/services/social-service");
+      const r = await fetchActivityNotifications(profile!.id);
+      if (r.error && /does not exist|schema cache/i.test(r.error)) return { items: [], unread: 0 };
+      if (r.error) throw new Error(r.error);
+      return r;
+    },
+  });
+  const unread = unreadQuery.data?.unread ?? 0;
   const tabs: { id: FeedTab; label: string }[] = [
     { id: "foryou", label: t("shop.feed.forYou") },
     { id: "following", label: t("shop.feed.following") },
@@ -755,9 +769,14 @@ function FeedTopBar({ tab, onTab }: { tab: FeedTab; onTab: (t: FeedTab) => void 
         <Link
           to="/shop/notifications"
           aria-label={t("shop.feed.notifications")}
-          className="flex size-11 min-h-11 min-w-11 items-center justify-center text-foreground"
+          className="relative flex size-11 min-h-11 min-w-11 items-center justify-center text-foreground"
         >
           <Bell className="size-5" />
+          {unread > 0 ? (
+            <span className="absolute right-1.5 top-1.5 min-w-4 rounded-full bg-primary px-1 text-center text-[9px] font-extrabold leading-4 text-white">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          ) : null}
         </Link>
         <Link
           to={session ? "/shop/profile" : "/login"}
@@ -1383,6 +1402,7 @@ function CommentsThread({ videoId }: { videoId: string }) {
             setBody("");
             setReplyTo(null);
             void queryClient.invalidateQueries({ queryKey: ["video-comments", videoId] });
+            void queryClient.invalidateQueries({ queryKey: ["activity-inbox"] });
           }
         }}
       >

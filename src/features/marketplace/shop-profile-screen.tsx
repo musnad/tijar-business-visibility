@@ -32,13 +32,12 @@ import { canUseBusinessMode } from "@/lib/account-mode";
 import { haptic } from "@/lib/haptics";
 import { useTranslation } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
-import { listFollowedPeople, listPeopleFollowers } from "@/lib/shop-social";
 import {
   countFavoriteProducts,
   fetchFollowedBusinesses,
   listAddresses,
 } from "@/services/marketplace-service";
-import { countUnreadShopChats, fetchMyBusinessIds } from "@/services/shop-chat-service";
+import { fetchActivityNotifications, fetchFollowersForMe, fetchPeopleIFollow } from "@/services/social-service";
 
 function handleFromName(name: string, email: string | null): string {
   const fromEmail = email?.split("@")[0]?.replace(/[^a-zA-Z0-9]/g, "") ?? "";
@@ -78,11 +77,33 @@ export function ShopProfileScreen() {
     queryFn: async () => (await listAddresses(profile!.id)).data,
   });
   const unreadQuery = useQuery({
-    queryKey: ["shop-inbox-unread", profile?.id],
+    queryKey: ["activity-inbox", profile?.id],
     enabled: Boolean(profile?.id),
     queryFn: async () => {
-      const ids = await fetchMyBusinessIds(profile!.id);
-      return countUnreadShopChats(profile!.id, ids);
+      const r = await fetchActivityNotifications(profile!.id);
+      if (r.error && /does not exist|schema cache/i.test(r.error)) return { items: [], unread: 0 };
+      if (r.error) throw new Error(r.error);
+      return r;
+    },
+  });
+  const followersQuery = useQuery({
+    queryKey: ["shop-followers", profile?.id],
+    enabled: Boolean(profile?.id),
+    queryFn: async () => {
+      const r = await fetchFollowersForMe(profile!.id);
+      if (r.error && /does not exist|schema cache/i.test(r.error)) return [];
+      if (r.error) throw new Error(r.error);
+      return r.people;
+    },
+  });
+  const peopleFollowQuery = useQuery({
+    queryKey: ["followed-people", profile?.id],
+    enabled: Boolean(profile?.id),
+    queryFn: async () => {
+      const r = await fetchPeopleIFollow(profile!.id);
+      if (r.error && /does not exist|schema cache/i.test(r.error)) return [];
+      if (r.error) throw new Error(r.error);
+      return r.people;
     },
   });
 
@@ -99,8 +120,8 @@ export function ShopProfileScreen() {
   const name = demo ? t("shop.profile.member") : profile.full_name?.trim() || t("shop.profile.member");
   const username = demo ? t("shop.profile.guest") : handleFromName(name, profile.email);
   const verified = !demo && canUseBusinessMode(profile);
-  const followers = listPeopleFollowers(profile?.id).length;
-  const following = (followsQuery.data?.length ?? 0) + listFollowedPeople(profile?.id ?? "guest").length;
+  const followers = followersQuery.data?.length ?? 0;
+  const following = (followsQuery.data?.length ?? 0) + (peopleFollowQuery.data?.length ?? 0);
   const saved = favQuery.data ?? 0;
   const bio = demo
     ? t("shop.profile.guestBio")
@@ -110,7 +131,8 @@ export function ShopProfileScreen() {
     ? ""
     : [address?.city, address?.state].filter(Boolean).join(", ") || t("shop.profile.locationPrivate");
   const photo = demo ? null : profile.avatar_url;
-  const notifBadge = unreadQuery.data ?? 0;
+  const notifBadge = unreadQuery.data?.unread ?? 0;
+  void chatUnreadQuery.data;
 
   const menu: { to: string; label: string; icon: LucideIcon; badge?: number }[] = [
     ...(!demo && (canUseBusinessMode(profile) || shopQuery.data?.business)

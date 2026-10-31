@@ -259,6 +259,8 @@ export function StorefrontScreen({ slug }: { slug: string }) {
     await queryClient.invalidateQueries({ queryKey: ["followed-shops"] });
     await queryClient.invalidateQueries({ queryKey: ["shop-followers"] });
     await queryClient.invalidateQueries({ queryKey: ["video-follows"] });
+    await queryClient.invalidateQueries({ queryKey: ["followed-people"] });
+    await queryClient.invalidateQueries({ queryKey: ["activity-inbox"] });
   }
 
   function onSaveShop() {
