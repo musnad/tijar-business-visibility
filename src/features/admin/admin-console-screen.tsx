@@ -176,6 +176,44 @@ function recordedPhone(...candidates: Array<string | null | undefined>): string 
   return null;
 }
 
+function phoneKey(phone: string): string {
+  return phone.replace(/[^\d+]/g, "");
+}
+
+type LabeledPhone = { label: string; phone: string };
+
+function collectUserPhones(
+  user: Profile,
+  shops: AdminBusiness[],
+  applications: Array<{ profile_id: string; phone: string | null; whatsapp?: string | null }>,
+  userOrders: AdminOrder[],
+): LabeledPhone[] {
+  const seen = new Set<string>();
+  const out: LabeledPhone[] = [];
+  function add(label: string, raw?: string | null) {
+    const phone = raw?.trim();
+    if (!phone) return;
+    const key = phoneKey(phone);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push({ label, phone });
+  }
+  add("Account", user.phone);
+  for (const shop of shops) {
+    add(shop.business_name || "Shop", shop.public_phone);
+    add("WhatsApp", shop.public_whatsapp);
+  }
+  for (const app of applications) {
+    add("Application", app.phone);
+    add("WhatsApp", app.whatsapp);
+  }
+  for (const order of userOrders) {
+    add("Checkout", order.buyer_phone);
+    add("Checkout", order.buyer?.phone);
+  }
+  return out;
+}
+
 function PhoneLink({ phone }: { phone?: string | null }) {
   const value = recordedPhone(phone);
   if (!value) return <span className="text-muted-foreground">No phone</span>;
@@ -184,6 +222,20 @@ function PhoneLink({ phone }: { phone?: string | null }) {
       <Phone className="size-3.5" />
       {value}
     </a>
+  );
+}
+
+function PhoneNumbers({ phones }: { phones: LabeledPhone[] }) {
+  if (phones.length === 0) return <span className="text-muted-foreground">No phone</span>;
+  return (
+    <ul className="space-y-1">
+      {phones.map((item) => (
+        <li key={`${item.label}-${item.phone}`}>
+          <PhoneLink phone={item.phone} />
+          <span className="ml-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{item.label}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -317,9 +369,15 @@ export function AdminConsoleScreen() {
         (n, b) => n + businessGross(b.id, transactions, orders),
         0,
       );
-      return { user, kind, spend, making, commission: commissionOnAmount(spend + making, commissionRate) };
+      const phones = collectUserPhones(
+        user,
+        owned,
+        upgrades.filter((r) => r.profile_id === user.id),
+        orders.filter((o) => o.buyer_profile_id === user.id),
+      );
+      return { user, kind, spend, making, phones, commission: commissionOnAmount(spend + making, commissionRate) };
     });
-  }, [users, businesses, orders, transactions, commissionRate]);
+  }, [users, businesses, orders, transactions, commissionRate, upgrades]);
 
   const businessLedger = useMemo(() => {
     return businesses.map((biz) => {
@@ -410,11 +468,11 @@ export function AdminConsoleScreen() {
   function exportUsers() {
     downloadAdminCsv(
       `tijar-users-${stamp()}.csv`,
-      ["Name", "Email", "User phone", "Category", "Account mode", "Onboarding", "Spend", "Business making", "Commission", "Joined"],
-      userLedger.map(({ user, kind, spend, making, commission }) => [
+      ["Name", "Email", "Phone numbers", "Category", "Account mode", "Onboarding", "Spend", "Business making", "Commission", "Joined"],
+      userLedger.map(({ user, kind, spend, making, commission, phones }) => [
         user.full_name,
         user.email,
-        recordedPhone(user.phone) ?? "",
+        phones.map((p) => `${p.phone} (${p.label})`).join(" | "),
         categoryLabel(kind),
         user.account_mode ?? "business",
         user.onboarding_status,
@@ -513,9 +571,12 @@ export function AdminConsoleScreen() {
     ),
   );
   const kycQueue = kycRows.filter((b) => KYC_QUEUE.includes(b.verification_status as KycStatus));
-  const userRows = userLedger.filter(({ user, kind }) => {
+  const userRows = userLedger.filter(({ user, kind, phones }) => {
     if (userKind !== "all" && kind !== userKind) return false;
-    return matchesQuery([user.full_name, user.email, user.phone, user.account_mode, kind].join(" "), q);
+    return matchesQuery(
+      [user.full_name, user.email, user.phone, user.account_mode, kind, ...phones.map((p) => `${p.phone} ${p.label}`)].join(" "),
+      q,
+    );
   });
   const bizFinanceRows = businessLedger.filter(({ biz }) =>
     matchesQuery([biz.business_name, biz.public_phone, biz.public_whatsapp, biz.owner?.phone, biz.owner?.full_name, biz.location, biz.public_slug].join(" "), q),
@@ -971,7 +1032,7 @@ export function AdminConsoleScreen() {
               </button>
             ))}
           </div>
-          <AdminTable empty="No users in this category." headers={["Name", "Phone", "Category", "Spend", "Making", "Joined"]}>
+          <AdminTable empty="No users in this category." headers={["Name", "Phone numbers", "Category", "Spend", "Business making", "Email", "Joined"]}>
             {userRows.map((row) => (
               <UserRow key={row.user.id} row={row} />
             ))}
@@ -1070,17 +1131,17 @@ function UserRow({
     kind: AccountCategory;
     spend: number;
     making: number;
+    phones: LabeledPhone[];
   };
 }) {
-  const { user, kind, spend, making } = row;
+  const { user, kind, spend, making, phones } = row;
   return (
-    <tr className="border-t border-border">
+    <tr className="border-t border-border align-top">
       <td className="px-3 py-2.5">
         <p className="font-semibold">{user.full_name || "—"}</p>
-        <p className="text-[11px] text-muted-foreground">{user.email ?? "—"}</p>
       </td>
-      <td className="px-3 py-2.5">
-        <PhoneLink phone={user.phone} />
+      <td className="min-w-[11rem] px-3 py-2.5">
+        <PhoneNumbers phones={phones} />
       </td>
       <td className="px-3 py-2.5">
         <StatusPill
@@ -1090,6 +1151,7 @@ function UserRow({
       </td>
       <td className="px-3 py-2.5 font-extrabold tabular-nums">{formatNgn(spend)}</td>
       <td className="px-3 py-2.5 tabular-nums">{formatNgn(making)}</td>
+      <td className="px-3 py-2.5 text-muted-foreground">{user.email ?? "—"}</td>
       <td className="px-3 py-2.5 text-muted-foreground">{formatWhen(user.created_at)}</td>
     </tr>
   );
