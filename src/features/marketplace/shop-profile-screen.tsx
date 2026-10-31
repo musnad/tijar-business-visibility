@@ -10,13 +10,13 @@ import {
   ChevronRight,
   CircleHelp,
   Heart,
-  Landmark,
   Languages,
   LayoutDashboard,
   MapPin,
   Package,
   Settings,
   Sparkles,
+  Store,
   UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -25,7 +25,6 @@ import type { ReactNode } from "react";
 import { TijarLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { AppLanguageButton } from "@/features/app-layout/app-language-button";
-import { BankAccountCard } from "@/features/business/bank-account-card";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
 import { usePrimaryBusiness } from "@/hooks/use-primary-business";
@@ -117,8 +116,8 @@ export function ShopProfileScreen() {
     ...(!demo && (canUseBusinessMode(profile) || shopQuery.data?.business)
       ? [
           { to: "/app", label: t("shop.profile.dashboard"), icon: LayoutDashboard },
+          { to: "/app/business", label: "Business account", icon: Store },
           { to: "/shop/studio", label: t("shop.profile.studio"), icon: Sparkles },
-          { to: "/shop/payouts", label: "Bank account", icon: Landmark },
         ]
       : []),
     { to: "/app/learn", label: t("shop.profile.learn"), icon: BookOpen },
@@ -200,12 +199,6 @@ export function ShopProfileScreen() {
             <Link to="/shop/edit-profile">{t("shop.profile.edit")}</Link>
           </Button>
         )}
-
-        {shopQuery.data?.business ? (
-          <div className="px-4">
-            <BankAccountCard business={shopQuery.data.business} />
-          </div>
-        ) : null}
 
         <nav className="mt-4" aria-label={t("shop.profile.account")}>
           <ul>

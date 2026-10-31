@@ -14,7 +14,6 @@ import {
   Store,
   Settings,
   TrendingUp,
-  Wallet,
   ChevronRight,
   LogOut,
 } from "lucide-react";
@@ -23,7 +22,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/features/auth/auth-service";
-import { BankAccountCard } from "@/features/business/bank-account-card";
 import { AccountModeSwitch } from "@/features/marketplace/account-mode-switch";
 import { ProfileAvatarField } from "@/features/profile/profile-avatar-field";
 import { ProfileMenuRow } from "@/features/profile/profile-menu-row";
@@ -214,8 +212,6 @@ export function ProfileScreen({
         </div>
       )}
 
-      {business ? <BankAccountCard business={business} /> : null}
-
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <ProfileMenuRow
           icon={ClipboardList}
@@ -236,16 +232,10 @@ export function ProfileScreen({
           to="/app/studio"
         />
         <ProfileMenuRow
-          icon={Wallet}
-          title={t("app.profile.menuWallet")}
-          subtitle={t("app.profile.menuWalletHint")}
-          to="/app/business/payouts"
-        />
-        <ProfileMenuRow
           icon={Store}
           title={t("app.profile.menuBusiness")}
           subtitle={t("app.profile.menuBusinessHint")}
-          to="/app/business/edit"
+          to="/app/business"
         />
         <ProfileMenuRow
           icon={Bell}
