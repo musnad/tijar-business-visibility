@@ -14,7 +14,7 @@ import {
   listSavedProducts,
   listShopFollowers,
 } from "@/lib/shop-social";
-import { displayShopName, isBlankShopName, lookupShopProfiles } from "@/lib/shop-names";
+import { displayShopName, lookupShopProfiles } from "@/lib/shop-names";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { CheckoutQuote } from "@/lib/checkout/quote";
 import { isLivePaymentConfigured } from "@/lib/payments/adapter";
@@ -108,14 +108,13 @@ export async function fetchMarketplaceProducts(limit = 120): Promise<{
 
 async function attachProductShopNames(products: PublicProduct[]): Promise<PublicProduct[]> {
   if (products.length === 0) return products;
-  const missing = products.filter((p) => isBlankShopName(p.business_name));
-  const found = missing.length ? await lookupShopProfiles(missing.map((p) => p.business_id)) : new Map();
+  const found = await lookupShopProfiles(products.map((p) => p.business_id));
   return products.map((p) => {
     const shop = found.get(p.business_id);
     return {
       ...p,
       business_name: displayShopName(shop?.business_name ?? p.business_name),
-      business_slug: shop?.slug ?? p.business_slug,
+      business_slug: shop?.slug ?? p.business_slug ?? p.business_id,
       business_logo_url: shop?.logo_url ?? p.business_logo_url,
     };
   });

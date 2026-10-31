@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BadgeCheck, Bell, Camera, Clock, Flag, Heart, MapPin, MessageCircle, Navigation, Phone, Plus, Star } from "lucide-react";
+import { BadgeCheck, Bell, Camera, Clock, Flag, Heart, MapPin, MessageCircle, Navigation, Phone, Play, Plus } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -22,14 +22,22 @@ import { useStartShopChat } from "@/features/marketplace/use-start-shop-chat";
 import { reportListing } from "@/services/marketplace-service";
 import { fetchStorefront, submitEnquiry } from "@/services/discover-service";
 import { fetchMyBusinessIds } from "@/services/shop-chat-service";
+import { displayShopName } from "@/lib/shop-names";
 import { isFollowingShop } from "@/lib/shop-social";
-import { fetchMyFollowedBusinessIds, toggleFollowBusiness } from "@/services/video-feed-service";
+import {
+  fetchMyFollowedBusinessIds,
+  isImagePost,
+  resolveCoverSrc,
+  resolveVideoSrc,
+  toggleFollowBusiness,
+  type PublicFeedVideo,
+} from "@/services/video-feed-service";
 import type { PublicProduct } from "@/types/database";
 import { formatNgn } from "@/utils/money";
 
 const SAVED_SHOPS_KEY = "tijar-saved-shops";
 
-type StoreTab = "featured" | "collections" | "about";
+type StoreTab = "posts" | "featured" | "about";
 
 function readIdList(key: string): string[] {
   try {
@@ -105,6 +113,33 @@ function StoreProductCard({ product: p, canPost }: { product: PublicProduct; can
   );
 }
 
+function ShopPostTile({ video, shopName }: { video: PublicFeedVideo; shopName: string }) {
+  const cover = resolveCoverSrc(video.cover_path);
+  const src = resolveVideoSrc(video);
+  const image = isImagePost(video);
+  const poster = cover || src;
+  return (
+    <Link
+      to="/shop"
+      search={{ v: video.id }}
+      className="relative block aspect-[3/4] overflow-hidden bg-[#F3F4F6]"
+      aria-label={`${image ? "Photo" : "Video"} from ${shopName}`}
+    >
+      {poster ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={poster} alt="" className="size-full object-cover" />
+      ) : (
+        <span className="flex size-full items-center justify-center text-[#9CA3AF]">{shopName.slice(0, 1)}</span>
+      )}
+      {!image ? (
+        <span className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-black/45 text-white">
+          <Play className="size-3 fill-white" />
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 export function StorefrontScreen({ slug }: { slug: string }) {
   const { t, locale } = useTranslation();
   const voiceLang = nkenneLanguageForLocale(locale) ?? "English";
@@ -118,7 +153,7 @@ export function StorefrontScreen({ slug }: { slug: string }) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [reporting, setReporting] = useState(false);
-  const [tab, setTab] = useState<StoreTab>("featured");
+  const [tab, setTab] = useState<StoreTab>("posts");
   const [pull, setPull] = useState(0);
   const [savedTick, setSavedTick] = useState(0);
   const [mockFollowTick, setMockFollowTick] = useState(0);
@@ -185,8 +220,8 @@ export function StorefrontScreen({ slug }: { slug: string }) {
   const featured = products;
   const followerCount = following ? 1 : 0;
   const productCount = products.length;
-  const rating = null;
-  const reviewCount = 0;
+  const postCount = videos.length;
+  const shopTitle = displayShopName(business?.business_name, videos[0]?.business_name ?? products[0]?.business_name);
 
   async function onEnquiry(e: React.FormEvent) {
     e.preventDefault();
@@ -362,12 +397,12 @@ export function StorefrontScreen({ slug }: { slug: string }) {
                   />
                 ) : (
                   <span className="flex size-[4.35rem] shrink-0 items-center justify-center rounded-full border-[3px] border-[#1F7A4D] bg-[#E8F5EE] text-xl font-extrabold text-[#0B1F4D]">
-                    {business.business_name.slice(0, 1)}
+                    {shopTitle.slice(0, 1)}
                   </span>
                 )}
                 <div className="min-w-0 flex-1 pt-0.5">
                   <div className="flex items-center gap-1.5">
-                    <h1 className="truncate text-[1.2rem] font-extrabold leading-tight text-[#0B1F4D]">{business.business_name}</h1>
+                    <h1 className="truncate text-[1.2rem] font-extrabold leading-tight text-[#0B1F4D]">{shopTitle}</h1>
                     {business.is_verified ? <BadgeCheck className="size-[1.15rem] shrink-0 fill-[#1F7A4D] text-white" aria-label="Verified" /> : null}
                   </div>
                   <p className="mt-0.5 text-[13px] text-[#6B7280]">{business.category_name ?? t("app.storefront.defaultCategory")}</p>
@@ -433,19 +468,16 @@ export function StorefrontScreen({ slug }: { slug: string }) {
 
             <section className="grid grid-cols-3 border-y border-[#EEF1F5] py-3">
               <div className="text-center">
-                <p className="text-[1.15rem] font-extrabold leading-none text-[#0B1F4D]">{compactCount(followerCount)}</p>
-                <p className="mt-1 text-[11px] text-[#9CA3AF]">Followers</p>
+                <p className="text-[1.15rem] font-extrabold leading-none text-[#0B1F4D]">{compactCount(postCount)}</p>
+                <p className="mt-1 text-[11px] text-[#9CA3AF]">Posts</p>
               </div>
               <div className="border-x border-[#EEF1F5] text-center">
                 <p className="text-[1.15rem] font-extrabold leading-none text-[#0B1F4D]">{productCount}</p>
                 <p className="mt-1 text-[11px] text-[#9CA3AF]">Products</p>
               </div>
               <div className="text-center">
-                <p className="flex items-center justify-center gap-1 text-[1.15rem] font-extrabold leading-none text-[#0B1F4D]">
-                  {rating != null ? rating.toFixed(1) : "—"}
-                  {rating != null ? <Star className="size-3.5 fill-[#E8B931] text-[#E8B931]" /> : null}
-                </p>
-                <p className="mt-1 text-[11px] text-[#9CA3AF]">{rating != null ? `Rating (${reviewCount})` : "Rating"}</p>
+                <p className="text-[1.15rem] font-extrabold leading-none text-[#0B1F4D]">{compactCount(followerCount)}</p>
+                <p className="mt-1 text-[11px] text-[#9CA3AF]">Followers</p>
               </div>
             </section>
 
@@ -453,8 +485,8 @@ export function StorefrontScreen({ slug }: { slug: string }) {
               <nav className="grid grid-cols-3 px-2" aria-label="Storefront sections">
                 {(
                   [
-                    ["featured", "Products"],
-                    ["collections", "Collections"],
+                    ["posts", "Posts"],
+                    ["featured", "Shop"],
                     ["about", "About"],
                   ] as const
                 ).map(([id, label]) => (
@@ -481,37 +513,27 @@ export function StorefrontScreen({ slug }: { slug: string }) {
 
             <div className="min-h-[20rem] px-4 pb-8 pt-4">
               <div key={tab} className="transition-opacity duration-200">
-                {tab === "featured" ? (
-                  <>
-                    <div className="mb-3 flex items-center justify-between">
-                      <h2 className="text-[1.05rem] font-extrabold text-[#0B1F4D]">Products</h2>
-                      <button
-                        type="button"
-                        className="text-[13px] font-semibold text-[#1F7A4D]"
-                        onClick={() => setTab("collections")}
-                      >
-                        View all {"\u203A"}
-                      </button>
-                    </div>
-                    {featured.length === 0 ? (
-                      <p className="py-10 text-center text-sm text-muted-foreground">{t("app.storefront.noProducts")}</p>
-                    ) : (
-                      <ul className="grid grid-cols-2 gap-3">
-                        {featured.map((p) => (
-                          <li key={p.id}>
-                            <StoreProductCard product={p} canPost={isOwner} />
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
+                {tab === "posts" ? (
+                  videos.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-muted-foreground">
+                      {isOwner ? "No posts yet. Share a photo or video of what you sell." : "This shop has no posts yet."}
+                    </p>
+                  ) : (
+                    <ul className="-mx-4 grid grid-cols-3 gap-px bg-[#EEF1F5]">
+                      {videos.map((v) => (
+                        <li key={v.id}>
+                          <ShopPostTile video={v} shopName={shopTitle} />
+                        </li>
+                      ))}
+                    </ul>
+                  )
                 ) : null}
 
-                {tab === "collections" ? (
+                {tab === "featured" ? (
                   <>
-                    {collections.length === 0 ? (
-                      <p className="py-10 text-center text-sm text-muted-foreground">No collections yet.</p>
-                    ) : (
+                    {featured.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted-foreground">{t("app.storefront.noProducts")}</p>
+                    ) : collections.length > 1 ? (
                       collections.map(([title, items]) => (
                         <section key={title} className="mb-6">
                           <h2 className="mb-3 text-[1.05rem] font-extrabold text-[#0B1F4D]">{title}</h2>
@@ -524,22 +546,15 @@ export function StorefrontScreen({ slug }: { slug: string }) {
                           </ul>
                         </section>
                       ))
+                    ) : (
+                      <ul className="grid grid-cols-2 gap-3">
+                        {featured.map((p) => (
+                          <li key={p.id}>
+                            <StoreProductCard product={p} canPost={isOwner} />
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                    {videos.length > 0 ? (
-                      <section className="mt-2">
-                        <h2 className="mb-3 text-[1.05rem] font-extrabold text-[#0B1F4D]">From the shop</h2>
-                        <ul className="grid grid-cols-3 gap-2">
-                          {videos.slice(0, 6).map((v) => (
-                            <li key={v.id} className="overflow-hidden rounded-xl bg-muted">
-                              <Link to="/shop">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={v.cover_path ?? ""} alt="" className="aspect-[3/4] w-full object-cover" />
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </section>
-                    ) : null}
                   </>
                 ) : null}
 

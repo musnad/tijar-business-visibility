@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
-import { displayShopName } from "@/lib/shop-names";
+import { displayShopName, isBlankShopName, shopLinkSlug } from "@/lib/shop-names";
 import { cn } from "@/lib/utils";
 import { addToCart, fetchCart, fetchMarketplaceProducts, toggleFavoriteProduct } from "@/services/marketplace-service";
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
@@ -171,11 +171,10 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
   });
 
   const liveVideos = feedQuery.data ?? EMPTY_VIDEOS;
-  const videos = liveVideos;
   const liveListings = listingsQuery.data ?? [];
   const productIds = useMemo(
-    () => [...new Set(videos.flatMap((v) => v.product_ids ?? []))],
-    [videos],
+    () => [...new Set(liveVideos.flatMap((v) => v.product_ids ?? []))],
+    [liveVideos],
   );
   const restoredRef = useRef(false);
 
@@ -215,6 +214,21 @@ export function VideoFeedScreen({ initialVideoId }: { initialVideoId?: string })
     for (const p of productsQuery.data ?? []) m.set(p.id, p);
     return m;
   }, [liveListings, productsQuery.data]);
+
+  const videos = useMemo(() => {
+    return liveVideos.map((video) => {
+      const tagged = (video.product_ids ?? []).map((id) => productsById.get(id)).find(Boolean);
+      const sameShop = liveListings.find((p) => p.business_id === video.business_id);
+      const hint = tagged ?? sameShop;
+      if (!hint && !isBlankShopName(video.business_name) && video.slug) return video;
+      return {
+        ...video,
+        business_name: displayShopName(video.business_name, hint?.business_name),
+        slug: shopLinkSlug(video.slug, hint?.business_slug ?? video.business_id),
+        business_logo_url: video.business_logo_url ?? hint?.business_logo_url ?? null,
+      };
+    });
+  }, [liveVideos, liveListings, productsById]);
 
   const active = videos.find((v) => v.id === activeId) ?? videos[0] ?? null;
 
@@ -779,9 +793,13 @@ function VideoSlide({
       className="w-full shrink-0 border-b border-border bg-white pb-3"
     >
       <div className="flex items-center gap-2 px-3 py-2">
-        <Link to="/b/$slug" params={{ slug: video.slug }} className="flex min-w-0 flex-1 items-center gap-2">
+        <Link
+          to="/b/$slug"
+          params={{ slug: shopLinkSlug(video.slug, video.business_id) }}
+          className="flex min-w-0 flex-1 items-center gap-2"
+        >
           <SellerAvatar video={video} />
-          <SellerMeta name={video.business_name} verified={video.is_verified} when={when} place={place} />
+          <SellerMeta name={displayShopName(video.business_name)} verified={video.is_verified} when={when} place={place} />
         </Link>
         <button
           type="button"
@@ -1035,7 +1053,7 @@ function ListingSlide({
 }) {
   const { t } = useTranslation();
   const poster = product.image_url || product.extra_image_urls?.[0] || "";
-  const slug = product.business_slug;
+  const slug = shopLinkSlug(product.business_slug, product.business_id);
   const shop = displayShopName(product.business_name);
   return (
     <article
@@ -1043,33 +1061,29 @@ function ListingSlide({
       className="w-full shrink-0 border-b border-border bg-white pb-3"
     >
       <div className="flex items-center gap-2 px-3 py-2">
-        {slug ? (
-          <Link to="/b/$slug" params={{ slug }} className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color:var(--brand-navy,#001B3A)] text-sm font-extrabold text-white">
-              {product.business_logo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.business_logo_url} alt="" className="size-full object-cover" />
-              ) : (
-                shop.slice(0, 1)
-              )}
+        <Link to="/b/$slug" params={{ slug }} className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color:var(--brand-navy,#001B3A)] text-sm font-extrabold text-white">
+            {product.business_logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={product.business_logo_url} alt="" className="size-full object-cover" />
+            ) : (
+              shop.slice(0, 1)
+            )}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[15px] font-extrabold text-foreground">{shop}</span>
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              {timeAgo(product.created_at) || "Just listed"}
+              {product.category_name ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <MapPin className="size-3" />
+                  {product.category_name}
+                </>
+              ) : null}
             </span>
-            <span className="min-w-0">
-              <span className="block truncate text-[15px] font-extrabold text-foreground">{shop}</span>
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                {timeAgo(product.created_at) || "Just listed"}
-                {product.category_name ? (
-                  <>
-                    <span aria-hidden>·</span>
-                    <MapPin className="size-3" />
-                    {product.category_name}
-                  </>
-                ) : null}
-              </span>
-            </span>
-          </Link>
-        ) : (
-          <span className="min-w-0 flex-1 font-extrabold">{shop}</span>
-        )}
+          </span>
+        </Link>
         <button
           type="button"
           onClick={onFollow}
@@ -1230,8 +1244,8 @@ function ProductList({
       ))}
       <li>
         <Button variant="ghost" className="w-full rounded-xl" asChild>
-          <Link to="/b/$slug" params={{ slug: video.slug }}>
-            Visit {video.business_name}
+          <Link to="/b/$slug" params={{ slug: shopLinkSlug(video.slug, video.business_id) }}>
+            Visit {displayShopName(video.business_name)}
           </Link>
         </Button>
       </li>

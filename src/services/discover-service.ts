@@ -1,6 +1,9 @@
+import { displayShopName, lookupShopProfiles } from "@/lib/shop-names";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { PublicFeedVideo } from "@/services/video-feed-service";
+import { fetchPostsForBusiness, type PublicFeedVideo } from "@/services/video-feed-service";
 import type { Business, BusinessEnquiry, PublicBusiness, PublicProduct } from "@/types/database";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const LISTING_COLUMNS =
   "id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, cover_image_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status";
@@ -51,6 +54,126 @@ export async function fetchNearbyBusinesses(input: {
   return { data: (data ?? []) as PublicBusiness[], error: null };
 }
 
+function asPublicBusiness(row: Record<string, unknown>, fallbackSlug: string): PublicBusiness {
+  return {
+    id: row.id as string,
+    slug: ((row.slug as string | null) || (row.public_slug as string | null) || fallbackSlug).trim(),
+    business_name: displayShopName((row.business_name as string | null) ?? null),
+    description: (row.description as string | null) ?? null,
+    location_text: ((row.location_text as string | null) ?? (row.location as string | null)) ?? null,
+    public_location_label: (row.public_location_label as string | null) ?? null,
+    latitude: (row.latitude as number | null) ?? null,
+    longitude: (row.longitude as number | null) ?? null,
+    logo_url: (row.logo_url as string | null) ?? null,
+    cover_image_url: (row.cover_image_url as string | null) ?? null,
+    category_id: (row.category_id as string | null) ?? null,
+    category_name: (row.category_name as string | null) ?? null,
+    public_phone: (row.public_phone as string | null) ?? null,
+    public_whatsapp: (row.public_whatsapp as string | null) ?? null,
+    opening_hours: ((row.opening_hours as Record<string, string> | null) ?? {}) as Record<string, string>,
+    is_verified: Boolean(row.is_verified) || (row.verification_status as string) === "verified",
+    verification_status: (row.verification_status as string) ?? "unverified",
+    is_informal: (row.is_informal as boolean | undefined) ?? true,
+  };
+}
+
+async function lookupListingBySlug(slug: string): Promise<{ business: PublicBusiness | null; error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  let { data, error } = await supabase.from("public_business_listings").select(LISTING_COLUMNS).eq("slug", slug).maybeSingle();
+  if (error) {
+    const legacy = await supabase.from("public_business_listings").select(LISTING_COLUMNS_LEGACY).eq("slug", slug).maybeSingle();
+    data = legacy.data;
+    error = legacy.error;
+  }
+  if (error && !/schema cache|column|does not exist/i.test(error.message)) {
+    return { business: null, error: error.message };
+  }
+  if (data) return { business: asPublicBusiness(data as Record<string, unknown>, slug), error: null };
+
+  const market = await supabase
+    .from("public_marketplace_businesses")
+    .select("id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, cover_image_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (market.data) return { business: asPublicBusiness(market.data as Record<string, unknown>, slug), error: null };
+
+  const owned = await supabase
+    .from("businesses")
+    .select(
+      "id, public_slug, business_name, description, location, logo_url, cover_image_url, category_id, public_phone, public_whatsapp, opening_hours, latitude, longitude, public_location_label, verification_status, is_informal",
+    )
+    .eq("public_slug", slug)
+    .maybeSingle();
+  if (owned.data) return { business: asPublicBusiness(owned.data as Record<string, unknown>, slug), error: null };
+
+  if (UUID_RE.test(slug)) {
+    const byId = await supabase.from("public_business_listings").select(LISTING_COLUMNS).eq("id", slug).maybeSingle();
+    if (byId.data) return { business: asPublicBusiness(byId.data as Record<string, unknown>, slug), error: null };
+
+    const marketId = await supabase
+      .from("public_marketplace_businesses")
+      .select("id, slug, business_name, description, location_text, public_location_label, latitude, longitude, logo_url, cover_image_url, category_id, category_name, public_phone, public_whatsapp, opening_hours, is_verified, verification_status")
+      .eq("id", slug)
+      .maybeSingle();
+    if (marketId.data) return { business: asPublicBusiness(marketId.data as Record<string, unknown>, slug), error: null };
+
+    const feed = await supabase.from("public_video_feed").select("business_id, slug, business_name, business_logo_url, is_verified, verification_status, category_id, category_name").eq("business_id", slug).limit(1);
+    const post = feed.data?.[0];
+    if (post) {
+      return {
+        business: asPublicBusiness(
+          {
+            id: slug,
+            slug: post.slug,
+            business_name: post.business_name,
+            logo_url: post.business_logo_url,
+            is_verified: post.is_verified,
+            verification_status: post.verification_status,
+            category_id: post.category_id,
+            category_name: post.category_name,
+          },
+          slug,
+        ),
+        error: null,
+      };
+    }
+
+    const product = await supabase
+      .from("public_business_products")
+      .select("business_id, business_name, business_slug, business_logo_url, category_name, is_informal")
+      .eq("business_id", slug)
+      .limit(1);
+    const row = product.data?.[0];
+    if (row) {
+      return {
+        business: asPublicBusiness(
+          {
+            id: slug,
+            slug: row.business_slug,
+            business_name: row.business_name,
+            logo_url: row.business_logo_url,
+            category_name: row.category_name,
+            is_informal: row.is_informal,
+          },
+          slug,
+        ),
+        error: null,
+      };
+    }
+
+    const biz = await supabase
+      .from("businesses")
+      .select(
+        "id, public_slug, business_name, description, location, logo_url, cover_image_url, category_id, public_phone, public_whatsapp, opening_hours, latitude, longitude, public_location_label, verification_status, is_informal",
+      )
+      .eq("id", slug)
+      .maybeSingle();
+    if (biz.data) return { business: asPublicBusiness(biz.data as Record<string, unknown>, slug), error: null };
+  }
+
+  return { business: null, error: null };
+}
+
 export async function fetchStorefront(slug: string): Promise<{
   business: PublicBusiness | null;
   products: PublicProduct[];
@@ -58,24 +181,24 @@ export async function fetchStorefront(slug: string): Promise<{
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  let { data, error } = await supabase
-    .from("public_business_listings")
-    .select(LISTING_COLUMNS)
-    .eq("slug", slug)
-    .maybeSingle();
-  if (error) {
-    const legacy = await supabase
-      .from("public_business_listings")
-      .select(LISTING_COLUMNS_LEGACY)
-      .eq("slug", slug)
-      .maybeSingle();
-    data = legacy.data;
-    error = legacy.error;
-  }
-  if (error) return { business: null, products: [], videos: [], error: error.message };
-  if (!data) return { business: null, products: [], videos: [], error: null };
+  const found = await lookupListingBySlug(slug);
+  if (found.error) return { business: null, products: [], videos: [], error: found.error };
+  if (!found.business) return { business: null, products: [], videos: [], error: null };
 
-  const business = data as PublicBusiness;
+  let business = found.business;
+  const shops = await lookupShopProfiles([business.id]);
+  const shop = shops.get(business.id);
+  if (shop) {
+    business = {
+      ...business,
+      business_name: displayShopName(shop.business_name, business.business_name),
+      slug: shop.slug || business.slug || slug,
+      logo_url: shop.logo_url ?? business.logo_url,
+      is_verified: shop.is_verified ?? business.is_verified,
+      category_name: shop.category_name ?? business.category_name,
+    };
+  }
+
   let productsRes = await supabase
     .from("public_business_products")
     .select(
@@ -92,17 +215,12 @@ export async function fetchStorefront(slug: string): Promise<{
   }
   if (productsRes.error) return { business, products: [], videos: [], error: productsRes.error.message };
 
-  const { data: videos } = await supabase
-    .from("public_video_feed")
-    .select("*")
-    .eq("business_id", business.id)
-    .order("published_at", { ascending: false })
-    .limit(24);
+  const videos = await fetchPostsForBusiness(business.id);
 
   return {
     business,
     products: (productsRes.data ?? []) as PublicProduct[],
-    videos: (videos ?? []) as PublicFeedVideo[],
+    videos,
     error: null,
   };
 }

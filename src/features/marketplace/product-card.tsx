@@ -12,7 +12,7 @@ import { addToCart } from "@/services/marketplace-service";
 import { formatNgn } from "@/utils/money";
 import type { PublicProduct } from "@/types/database";
 import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedule";
-import { displayShopName } from "@/lib/shop-names";
+import { displayShopName, shopLinkSlug } from "@/lib/shop-names";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n/context";
 
@@ -113,7 +113,15 @@ export function ProductCard({
             {formatServiceDates(product)}
           </p>
         )}
-        <p className="mt-1 truncate text-[11px] font-medium text-muted-foreground">
+        <p
+          className="mt-1 truncate text-[11px] font-medium text-muted-foreground underline-offset-2 hover:underline"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const slug = shopLinkSlug(product.business_slug, product.business_id);
+            if (slug) void navigate({ to: "/b/$slug", params: { slug } });
+          }}
+        >
           {displayShopName(product.business_name)}
         </p>
         {product.sale_price != null ? (

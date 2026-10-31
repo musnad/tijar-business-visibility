@@ -16,7 +16,7 @@ import { formatServiceDates, serviceLabel } from "@/lib/catalogue/service-schedu
 import { parseVariantList } from "@/lib/catalogue/variants";
 import { haptic } from "@/lib/haptics";
 import { useTranslation } from "@/lib/i18n/context";
-import { displayShopName } from "@/lib/shop-names";
+import { displayShopName, shopLinkSlug } from "@/lib/shop-names";
 import { cn } from "@/lib/utils";
 import { isProductLiked, likeProduct, isProductSaved } from "@/lib/shop-social";
 import { useDoubleTap } from "@/lib/use-double-tap";
@@ -366,16 +366,14 @@ export function ProductDetailScreen({ productId }: { productId: string }) {
                     <BadgeCheck className="size-4 shrink-0 fill-primary text-white" aria-label="Verified seller" />
                   </p>
                 </div>
-                {product.business_slug ? (
-                  <Link
-                    to="/b/$slug"
-                    params={{ slug: product.business_slug }}
-                    className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full border border-border px-3 text-[12px] font-bold text-[color:var(--brand-navy,#001B3A)]"
-                  >
-                    View Store
-                    <ChevronRight className="size-4" />
-                  </Link>
-                ) : null}
+                <Link
+                  to="/b/$slug"
+                  params={{ slug: shopLinkSlug(product.business_slug, product.business_id) }}
+                  className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full border border-border px-3 text-[12px] font-bold text-[color:var(--brand-navy,#001B3A)]"
+                >
+                  View Store
+                  <ChevronRight className="size-4" />
+                </Link>
               </div>
 
               {colours.length > 0 && (

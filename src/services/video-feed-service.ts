@@ -6,7 +6,7 @@ import {
   loadUserSocial,
   toggleFollowShopLocal,
 } from "@/lib/shop-social";
-import { displayShopName, isBlankShopName, lookupShopProfiles } from "@/lib/shop-names";
+import { displayShopName, isBlankShopName, lookupProfileNames, lookupShopProfiles } from "@/lib/shop-names";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { submitStudioVideo } from "@/services/video-studio-service";
 import type { PublicProduct } from "@/types/database";
@@ -103,9 +103,25 @@ export async function fetchPublicVideoFeed(): Promise<{
   return { videos: await attachShopNames((fromView.data ?? []) as PublicFeedVideo[]), error: null };
 }
 
-async function loadFeedFromPosts(): Promise<{ videos: PublicFeedVideo[]; error: string | null }> {
+export async function fetchPostsForBusiness(businessId: string): Promise<PublicFeedVideo[]> {
+  if (!businessId) return [];
   const supabase = getSupabaseBrowserClient();
-  const posts = await supabase
+  const fromView = await supabase
+    .from("public_video_feed")
+    .select("*")
+    .eq("business_id", businessId)
+    .order("published_at", { ascending: false })
+    .limit(80);
+  if (!fromView.error && (fromView.data?.length ?? 0) > 0) {
+    return attachShopNames((fromView.data ?? []) as PublicFeedVideo[]);
+  }
+  const fallback = await loadFeedFromPosts(businessId);
+  return fallback.videos;
+}
+
+async function loadFeedFromPosts(businessId?: string): Promise<{ videos: PublicFeedVideo[]; error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  let query = supabase
     .from("video_posts")
     .select(
       "id, business_id, profile_id, caption, captions_url, cover_path, playback_url, storage_path, duration_ms, attribution, like_count, comment_count, save_count, view_count, published_at, created_at, media_kind",
@@ -113,9 +129,11 @@ async function loadFeedFromPosts(): Promise<{ videos: PublicFeedVideo[]; error: 
     .eq("status", "ready")
     .order("created_at", { ascending: false })
     .limit(80);
+  if (businessId) query = query.eq("business_id", businessId);
+  const posts = await query;
   let rows = posts.data;
   if (posts.error && /media_kind/i.test(posts.error.message)) {
-    const retry = await supabase
+    let retryQuery = supabase
       .from("video_posts")
       .select(
         "id, business_id, profile_id, caption, captions_url, cover_path, playback_url, storage_path, duration_ms, attribution, like_count, comment_count, save_count, view_count, published_at, created_at",
@@ -123,6 +141,8 @@ async function loadFeedFromPosts(): Promise<{ videos: PublicFeedVideo[]; error: 
       .eq("status", "ready")
       .order("created_at", { ascending: false })
       .limit(80);
+    if (businessId) retryQuery = retryQuery.eq("business_id", businessId);
+    const retry = await retryQuery;
     if (retry.error) return { videos: [], error: retry.error.message };
     rows = retry.data;
   } else if (posts.error) {
@@ -181,14 +201,17 @@ async function loadFeedFromPosts(): Promise<{ videos: PublicFeedVideo[]; error: 
 }
 
 async function attachShopNames(videos: PublicFeedVideo[]): Promise<PublicFeedVideo[]> {
-  const missingIds = videos.filter((v) => isBlankShopName(v.business_name)).map((v) => v.business_id);
-  const found = missingIds.length ? await lookupShopProfiles(missingIds) : new Map();
+  const businessIds = [...new Set(videos.map((v) => v.business_id).filter(Boolean))];
+  const found = businessIds.length ? await lookupShopProfiles(businessIds) : new Map();
+  const stillBlank = videos.filter((v) => isBlankShopName(found.get(v.business_id)?.business_name ?? v.business_name));
+  const people = stillBlank.length ? await lookupProfileNames(stillBlank.map((v) => v.profile_id)) : new Map();
   return videos.map((video) => {
     const shop = found.get(video.business_id);
+    const person = people.get(video.profile_id) ?? null;
     return {
       ...video,
-      business_name: displayShopName(shop?.business_name ?? video.business_name),
-      slug: shop?.slug || video.slug,
+      business_name: displayShopName(shop?.business_name ?? video.business_name, person),
+      slug: shop?.slug || video.slug || video.business_id,
       business_logo_url: shop?.logo_url ?? video.business_logo_url,
       is_verified: shop?.is_verified ?? video.is_verified,
       verification_status: shop?.verification_status ?? video.verification_status,
@@ -301,17 +324,14 @@ export async function fetchLiveProductsByIds(ids: string[]): Promise<{
 }
 
 async function attachProductShopNames(products: PublicProduct[]): Promise<PublicProduct[]> {
-  const missing = products.filter((p) => isBlankShopName(p.business_name));
-  if (missing.length === 0) {
-    return products.map((p) => ({ ...p, business_name: displayShopName(p.business_name) }));
-  }
-  const found = await lookupShopProfiles(missing.map((p) => p.business_id));
+  if (products.length === 0) return products;
+  const found = await lookupShopProfiles(products.map((p) => p.business_id));
   return products.map((p) => {
     const shop = found.get(p.business_id);
     return {
       ...p,
       business_name: displayShopName(shop?.business_name ?? p.business_name),
-      business_slug: shop?.slug ?? p.business_slug,
+      business_slug: shop?.slug ?? p.business_slug ?? p.business_id,
       business_logo_url: shop?.logo_url ?? p.business_logo_url,
     };
   });
