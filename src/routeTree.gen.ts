@@ -73,6 +73,7 @@ import { Route as ShopHelpRouteImport } from './routes/shop/help'
 import { Route as ShopNearbyRouteImport } from './routes/shop/nearby'
 import { Route as ShopNotificationsRouteImport } from './routes/shop/notifications'
 import { Route as ShopOrdersRouteImport } from './routes/shop/orders'
+import { Route as ShopPayoutsRouteImport } from './routes/shop/payouts'
 import { Route as ShopProfileRouteImport } from './routes/shop/profile'
 import { Route as ShopSettingsRouteImport } from './routes/shop/settings'
 import { Route as ShopStudioRouteImport } from './routes/shop/studio'
@@ -432,6 +433,11 @@ const ShopOrdersRoute = ShopOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => ShopRoute,
 } as any)
+const ShopPayoutsRoute = ShopPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => ShopRoute,
+} as any)
 const ShopProfileRoute = ShopProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -687,6 +693,7 @@ export interface FileRoutesByFullPath {
   '/shop/nearby': typeof ShopNearbyRoute
   '/shop/notifications': typeof ShopNotificationsRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
+  '/shop/payouts': typeof ShopPayoutsRoute
   '/shop/profile': typeof ShopProfileRoute
   '/shop/settings': typeof ShopSettingsRoute
   '/shop/studio': typeof ShopStudioRoute
@@ -785,6 +792,7 @@ export interface FileRoutesByTo {
   '/shop/help': typeof ShopHelpRoute
   '/shop/nearby': typeof ShopNearbyRoute
   '/shop/notifications': typeof ShopNotificationsRoute
+  '/shop/payouts': typeof ShopPayoutsRoute
   '/shop/profile': typeof ShopProfileRoute
   '/shop/settings': typeof ShopSettingsRoute
   '/shop/studio': typeof ShopStudioRoute
@@ -890,6 +898,7 @@ export interface FileRoutesById {
   '/shop/nearby': typeof ShopNearbyRoute
   '/shop/notifications': typeof ShopNotificationsRoute
   '/shop/orders': typeof ShopOrdersRouteWithChildren
+  '/shop/payouts': typeof ShopPayoutsRoute
   '/shop/profile': typeof ShopProfileRoute
   '/shop/settings': typeof ShopSettingsRoute
   '/shop/studio': typeof ShopStudioRoute
@@ -996,6 +1005,7 @@ export interface FileRouteTypes {
     | '/shop/nearby'
     | '/shop/notifications'
     | '/shop/orders'
+    | '/shop/payouts'
     | '/shop/profile'
     | '/shop/settings'
     | '/shop/studio'
@@ -1094,6 +1104,7 @@ export interface FileRouteTypes {
     | '/shop/help'
     | '/shop/nearby'
     | '/shop/notifications'
+    | '/shop/payouts'
     | '/shop/profile'
     | '/shop/settings'
     | '/shop/studio'
@@ -1198,6 +1209,7 @@ export interface FileRouteTypes {
     | '/shop/nearby'
     | '/shop/notifications'
     | '/shop/orders'
+    | '/shop/payouts'
     | '/shop/profile'
     | '/shop/settings'
     | '/shop/studio'
@@ -1726,6 +1738,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopOrdersRouteImport
       parentRoute: typeof ShopRoute
     }
+    '/shop/payouts': {
+      id: '/shop/payouts'
+      path: '/payouts'
+      fullPath: '/shop/payouts'
+      preLoaderRoute: typeof ShopPayoutsRouteImport
+      parentRoute: typeof ShopRoute
+    }
     '/shop/profile': {
       id: '/shop/profile'
       path: '/profile'
@@ -2205,6 +2224,7 @@ interface ShopRouteChildren {
   ShopNearbyRoute: typeof ShopNearbyRoute
   ShopNotificationsRoute: typeof ShopNotificationsRoute
   ShopOrdersRoute: typeof ShopOrdersRouteWithChildren
+  ShopPayoutsRoute: typeof ShopPayoutsRoute
   ShopProfileRoute: typeof ShopProfileRoute
   ShopSettingsRoute: typeof ShopSettingsRoute
   ShopStudioRoute: typeof ShopStudioRoute
@@ -2229,6 +2249,7 @@ const ShopRouteChildren: ShopRouteChildren = {
   ShopNearbyRoute: ShopNearbyRoute,
   ShopNotificationsRoute: ShopNotificationsRoute,
   ShopOrdersRoute: ShopOrdersRouteWithChildren,
+  ShopPayoutsRoute: ShopPayoutsRoute,
   ShopProfileRoute: ShopProfileRoute,
   ShopSettingsRoute: ShopSettingsRoute,
   ShopStudioRoute: ShopStudioRoute,

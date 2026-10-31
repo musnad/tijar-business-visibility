@@ -99,6 +99,29 @@ export async function fetchPrimaryBusiness(profileId: string): Promise<{
   return { business, dna: dna as BusinessDna | null, error: null };
 }
 
+export async function fetchOwnedBusinesses(profileId: string): Promise<{
+  businesses: Business[];
+  error: string | null;
+}> {
+  const supabase = getSupabaseBrowserClient();
+  const owned = await supabase.from("businesses").select("*").eq("owner_id", profileId).order("created_at");
+  const map = new Map<string, Business>();
+  for (const row of owned.data ?? []) {
+    map.set(row.id as string, row as Business);
+  }
+  const memberships = await supabase.from("business_members").select("business_id").eq("profile_id", profileId);
+  const missing = [...new Set((memberships.data ?? []).map((r) => r.business_id as string))].filter((id) => !map.has(id));
+  if (missing.length > 0) {
+    const extra = await supabase.from("businesses").select("*").in("id", missing);
+    for (const row of extra.data ?? []) {
+      map.set(row.id as string, row as Business);
+    }
+  }
+  const businesses = [...map.values()];
+  await Promise.all(businesses.map((b) => ensureOwnerMembership(b.id, profileId)));
+  return { businesses, error: owned.error?.message ?? null };
+}
+
 export type UpdateBusinessProfileInput = {
   businessName: string;
   location: string;

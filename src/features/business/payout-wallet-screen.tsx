@@ -1,35 +1,49 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { AppPageHeader } from "@/features/app-layout/app-page-header";
-import { NG_BANKS } from "@/lib/payments/ng-banks";
+import { BankAccountForm } from "@/features/business/bank-account-form";
+import { displayShopName } from "@/lib/shop-names";
+import { fetchOwnedBusinesses } from "@/services/business-service";
 import { fetchSellerOrders } from "@/services/seller-dashboard-service";
-import { saveBusinessPayoutAccount } from "@/services/marketplace-service";
 import { fetchTodayTotals, listRecentTransactions } from "@/services/transaction-service";
 import { formatNgn } from "@/utils/money";
 import type { Business } from "@/types/database";
 
-export function PayoutWalletScreen({ business }: { business: Business }) {
-  const queryClient = useQueryClient();
-  const [name, setName] = useState(business.payout_account_name ?? "");
-  const [number, setNumber] = useState(business.payout_account_number ?? "");
-  const [bankCode, setBankCode] = useState(business.payout_bank_code ?? "058");
-  const [saving, setSaving] = useState(false);
-  const bank = NG_BANKS.find((b) => b.code === bankCode);
+export function PayoutWalletScreen({
+  business,
+  profileId,
+}: {
+  business: Business;
+  profileId?: string;
+}) {
+  const shopsQuery = useQuery({
+    queryKey: ["owned-businesses", profileId],
+    enabled: Boolean(profileId),
+    queryFn: async () => {
+      const r = await fetchOwnedBusinesses(profileId!);
+      if (r.error && r.businesses.length === 0) throw new Error(r.error);
+      return r.businesses.length ? r.businesses : [business];
+    },
+  });
+  const shops = shopsQuery.data?.length ? shopsQuery.data : [business];
+  const [selectedId, setSelectedId] = useState(business.id);
+  const selected = useMemo(
+    () => shops.find((s) => s.id === selectedId) ?? shops[0] ?? business,
+    [shops, selectedId, business],
+  );
 
   const salesQuery = useQuery({
-    queryKey: ["shop-payout-sales", business.id],
+    queryKey: ["shop-payout-sales", selected.id],
     queryFn: async () => {
       const [today, txs, orders] = await Promise.all([
-        fetchTodayTotals(business.id),
-        listRecentTransactions(business.id, 30),
-        fetchSellerOrders(business.id),
+        fetchTodayTotals(selected.id),
+        listRecentTransactions(selected.id, 30),
+        fetchSellerOrders(selected.id),
       ]);
       return {
         todaySales: today.sales,
@@ -45,36 +59,31 @@ export function PayoutWalletScreen({ business }: { business: Business }) {
   const pendingConfirms = (salesQuery.data?.orders ?? []).filter(
     (o) => o.status === "pending_payment" && o.buyer_marked_paid_at,
   ).length;
-  const liveNumber = number.replace(/\s+/g, "").length >= 8;
-
-  async function saveAccount() {
-    if (!name.trim() || number.replace(/\s+/g, "").length < 8) {
-      toast.error("Enter the account name and number.");
-      return;
-    }
-    setSaving(true);
-    const { error } = await saveBusinessPayoutAccount(business.id, {
-      payout_account_name: name,
-      payout_account_number: number,
-      payout_bank_name: bank?.name ?? "Bank",
-      payout_bank_code: bankCode,
-    });
-    setSaving(false);
-    if (error) {
-      toast.error(error);
-      return;
-    }
-    toast.success("Bank account saved. Buyers will see this when they pay.");
-    await queryClient.invalidateQueries({ queryKey: ["primary-business"] });
-    await queryClient.invalidateQueries({ queryKey: ["payout-account", business.id] });
-  }
+  const shopName = displayShopName(selected.business_name);
 
   return (
     <>
       <AppPageHeader
         title="Bank account"
-        subtitle={`${business.business_name} — this is the account number buyers transfer to.`}
+        subtitle={`${shopName} — this is the account number buyers transfer to for this shop.`}
       />
+
+      {shops.length > 1 ? (
+        <label className="mt-4 block text-xs font-bold">
+          Shop
+          <select
+            className="mt-1 min-h-11 w-full rounded-xl border border-input bg-background px-3 text-sm font-semibold"
+            value={selected.id}
+            onChange={(e) => setSelectedId(e.target.value)}
+          >
+            {shops.map((s) => (
+              <option key={s.id} value={s.id}>
+                {displayShopName(s.business_name)}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
 
       <section className="mt-5 rounded-2xl border border-border bg-card p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Today’s shop sales</p>
@@ -90,29 +99,13 @@ export function PayoutWalletScreen({ business }: { business: Business }) {
       </section>
 
       <section className="mt-4 rounded-2xl border border-border bg-card p-4">
-        <h2 className="text-sm font-extrabold">Bank account</h2>
+        <h2 className="text-sm font-extrabold">Bank account for {shopName}</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          {liveNumber ? "This number is shown to buyers on checkout." : "Save this before customers can transfer."}
+          {selected.payout_account_number
+            ? "This number is shown to buyers on checkout for this shop."
+            : "Save this before customers can transfer to this shop."}
         </p>
-        <label className="mt-3 block text-xs font-bold">Account name</label>
-        <Input className="mt-1 min-h-11 rounded-xl" value={name} onChange={(e) => setName(e.target.value)} />
-        <label className="mt-3 block text-xs font-bold">Account number</label>
-        <Input className="mt-1 min-h-11 rounded-xl" inputMode="numeric" value={number} onChange={(e) => setNumber(e.target.value)} />
-        <label className="mt-3 block text-xs font-bold">Bank</label>
-        <select
-          className="mt-1 min-h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
-          value={bankCode}
-          onChange={(e) => setBankCode(e.target.value)}
-        >
-          {NG_BANKS.map((b) => (
-            <option key={b.code} value={b.code}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-        <Button className="mt-3 min-h-11 w-full rounded-xl" disabled={saving} onClick={() => void saveAccount()}>
-          {saving ? "Saving…" : "Save bank account"}
-        </Button>
+        <BankAccountForm key={selected.id} business={selected} />
       </section>
 
       <section className="mt-4 pb-8">

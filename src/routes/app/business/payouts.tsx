@@ -12,7 +12,7 @@ export const Route = createFileRoute("/app/business/payouts")({
 
 function Page() {
   return (
-    <RequireAuth>
+    <RequireAuth requireOnboardingComplete={false}>
       <Content />
     </RequireAuth>
   );
@@ -26,9 +26,9 @@ function Content() {
     <AppShell>
       {isLoading ? <p className="mt-8 text-muted-foreground">…</p> : null}
       {!isLoading && !business ? (
-        <p className="mt-8 text-sm text-muted-foreground">Create a shop first.</p>
+        <p className="mt-8 text-sm text-muted-foreground">Create a shop first, then add the account buyers transfer to.</p>
       ) : null}
-      {business ? <PayoutWalletScreen business={business} /> : null}
+      {business ? <PayoutWalletScreen business={business} profileId={profile?.id} /> : null}
     </AppShell>
   );
 }

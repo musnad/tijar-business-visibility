@@ -16,6 +16,7 @@ import {
 } from "@/lib/shop-social";
 import { displayShopName, lookupShopProfiles } from "@/lib/shop-names";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { ensureOwnerMembership } from "@/services/business-service";
 import type { CheckoutQuote } from "@/lib/checkout/quote";
 import { isLivePaymentConfigured } from "@/lib/payments/adapter";
 import type {
@@ -927,39 +928,40 @@ export async function saveNotificationPreferences(
   return { error: error?.message ?? null };
 }
 
+function asPayoutAccount(row: Record<string, unknown>, businessId: string): import("@/types/database").BusinessPayoutAccount {
+  return {
+    business_id: (row.business_id as string | undefined) ?? (row.id as string | undefined) ?? businessId,
+    business_name: (row.business_name as string) ?? "",
+    payout_account_name: (row.payout_account_name as string | null) ?? null,
+    payout_account_number: (row.payout_account_number as string | null) ?? null,
+    payout_bank_name: (row.payout_bank_name as string | null) ?? null,
+    payout_bank_code: (row.payout_bank_code as string | null) ?? null,
+  };
+}
+
 export async function fetchBusinessPayoutAccount(businessId: string): Promise<{
   account: import("@/types/database").BusinessPayoutAccount | null;
   error: string | null;
 }> {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("public_business_payout_accounts")
-    .select("*")
-    .eq("business_id", businessId)
-    .maybeSingle();
-  if (!error) {
-    return { account: (data as import("@/types/database").BusinessPayoutAccount | null) ?? null, error: null };
+  const rpc = await supabase.rpc("get_business_payout_account", { p_business_id: businessId });
+  const rpcRow = Array.isArray(rpc.data) ? rpc.data[0] : rpc.data;
+  if (!rpc.error && rpcRow) {
+    return { account: asPayoutAccount(rpcRow as Record<string, unknown>, businessId), error: null };
+  }
+  const view = await supabase.from("public_business_payout_accounts").select("*").eq("business_id", businessId).maybeSingle();
+  if (!view.error && view.data) {
+    return { account: asPayoutAccount(view.data as Record<string, unknown>, businessId), error: null };
   }
   const fallback = await supabase
     .from("businesses")
     .select("id, business_name, payout_account_name, payout_account_number, payout_bank_name, payout_bank_code")
     .eq("id", businessId)
     .maybeSingle();
-  if (fallback.error || !fallback.data?.payout_account_number) {
-    return { account: null, error: error.message };
+  if (fallback.data?.payout_account_number) {
+    return { account: asPayoutAccount(fallback.data as Record<string, unknown>, businessId), error: null };
   }
-  const row = fallback.data;
-  return {
-    account: {
-      business_id: row.id as string,
-      business_name: row.business_name as string,
-      payout_account_name: (row.payout_account_name as string | null) ?? null,
-      payout_account_number: (row.payout_account_number as string | null) ?? null,
-      payout_bank_name: (row.payout_bank_name as string | null) ?? null,
-      payout_bank_code: (row.payout_bank_code as string | null) ?? null,
-    },
-    error: null,
-  };
+  return { account: null, error: null };
 }
 
 export async function saveBusinessPayoutAccount(
@@ -970,26 +972,55 @@ export async function saveBusinessPayoutAccount(
     payout_bank_name: string;
     payout_bank_code: string;
   },
+  profileId?: string | null,
 ): Promise<{ error: string | null }> {
   const supabase = getSupabaseBrowserClient();
+  const name = input.payout_account_name.trim();
+  const number = input.payout_account_number.replace(/\D/g, "");
+  if (name.length < 2) return { error: "Enter the account name." };
+  if (number.length < 8 || number.length > 12) return { error: "Enter a valid account number (8–12 digits)." };
+
+  if (profileId) {
+    await ensureOwnerMembership(businessId, profileId);
+  } else {
+    const { data: sessionData } = await supabase.auth.getUser();
+    const authId = sessionData.user?.id;
+    if (authId) {
+      const profile = await supabase.from("profiles").select("id").eq("auth_id", authId).maybeSingle();
+      if (profile.data?.id) await ensureOwnerMembership(businessId, profile.data.id as string);
+    }
+  }
+
   const rpc = await supabase.rpc("save_business_payout_account", {
     p_business_id: businessId,
-    p_account_name: input.payout_account_name.trim(),
-    p_account_number: input.payout_account_number.replace(/\s+/g, ""),
+    p_account_name: name,
+    p_account_number: number,
     p_bank_name: input.payout_bank_name.trim(),
     p_bank_code: input.payout_bank_code.trim(),
   });
   if (!rpc.error) return { error: null };
-  const { error } = await supabase
+
+  const { data, error } = await supabase
     .from("businesses")
     .update({
-      payout_account_name: input.payout_account_name.trim(),
-      payout_account_number: input.payout_account_number.replace(/\s+/g, ""),
+      payout_account_name: name,
+      payout_account_number: number,
       payout_bank_name: input.payout_bank_name.trim(),
       payout_bank_code: input.payout_bank_code.trim(),
     })
-    .eq("id", businessId);
-  return { error: error?.message ?? rpc.error.message };
+    .eq("id", businessId)
+    .select("id")
+    .maybeSingle();
+  if (!error && data?.id) return { error: null };
+
+  const message = error?.message ?? rpc.error.message;
+  if (/schema cache|column|payout_account/i.test(message)) {
+    return { error: "Bank account is not set up on the database yet. Run migration 000033 in Supabase, then save again." };
+  }
+  if (/not allowed|row-level security|permission/i.test(message)) {
+    return { error: "Could not save this shop’s bank account. Sign in as the shop owner and try again." };
+  }
+  return { error: message };
 }
 
 export async function fetchSellerWallet(businessId: string): Promise<{

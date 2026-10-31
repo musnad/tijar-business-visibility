@@ -10,6 +10,7 @@ import {
   ChevronRight,
   CircleHelp,
   Heart,
+  Landmark,
   Languages,
   LayoutDashboard,
   MapPin,
@@ -24,8 +25,10 @@ import type { ReactNode } from "react";
 import { TijarLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { AppLanguageButton } from "@/features/app-layout/app-language-button";
+import { BankAccountCard } from "@/features/business/bank-account-card";
 import { MarketplaceShell } from "@/features/marketplace/marketplace-shell";
 import { useAuth } from "@/features/auth/auth-context";
+import { usePrimaryBusiness } from "@/hooks/use-primary-business";
 import { canUseBusinessMode } from "@/lib/account-mode";
 import { haptic } from "@/lib/haptics";
 import { useTranslation } from "@/lib/i18n/context";
@@ -55,6 +58,7 @@ function Frame({ children }: { children: ReactNode }) {
 export function ShopProfileScreen() {
   const { t } = useTranslation();
   const { profile, session, loading } = useAuth();
+  const shopQuery = usePrimaryBusiness(profile?.id);
 
   const favQuery = useQuery({
     queryKey: ["marketplace-fav-count", profile?.id],
@@ -110,10 +114,11 @@ export function ShopProfileScreen() {
   const notifBadge = unreadQuery.data ?? 0;
 
   const menu: { to: string; label: string; icon: LucideIcon; badge?: number }[] = [
-    ...(canUseBusinessMode(profile)
+    ...(!demo && (canUseBusinessMode(profile) || shopQuery.data?.business)
       ? [
           { to: "/app", label: t("shop.profile.dashboard"), icon: LayoutDashboard },
           { to: "/shop/studio", label: t("shop.profile.studio"), icon: Sparkles },
+          { to: "/shop/payouts", label: "Bank account", icon: Landmark },
         ]
       : []),
     { to: "/app/learn", label: t("shop.profile.learn"), icon: BookOpen },
@@ -195,6 +200,12 @@ export function ShopProfileScreen() {
             <Link to="/shop/edit-profile">{t("shop.profile.edit")}</Link>
           </Button>
         )}
+
+        {shopQuery.data?.business ? (
+          <div className="px-4">
+            <BankAccountCard business={shopQuery.data.business} />
+          </div>
+        ) : null}
 
         <nav className="mt-4" aria-label={t("shop.profile.account")}>
           <ul>
